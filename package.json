@@ -1,0 +1,308 @@
+{
+  "name": "novacpp",
+  "displayName": "NovaCpp",
+  "description": "High-performance C/C++ language support, debugging, and tooling for Visual Studio Code",
+  "version": "0.1.0",
+  "publisher": "novacpp",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Debuggers",
+    "Formatters"
+  ],
+  "keywords": [
+    "c",
+    "c++",
+    "cpp",
+    "clangd",
+    "lldb",
+    "gdb"
+  ],
+  "activationEvents": [
+    "onLanguage:c",
+    "onLanguage:cpp",
+    "onLanguage:cuda-cpp",
+    "onCommand:novacpp.openSettings",
+    "onCommand:novacpp.restartServer",
+    "onCommand:novacpp.switchSourceHeader",
+    "onCommand:novacpp.installClangd",
+    "onDebugResolve:novacpp-debug",
+    "onTaskType:novacpp"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "novacpp.openSettings",
+        "title": "NovaCpp: Open Configuration Panel",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.restartServer",
+        "title": "NovaCpp: Restart Language Server",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.switchSourceHeader",
+        "title": "NovaCpp: Switch Header/Source",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.installClangd",
+        "title": "NovaCpp: Download and Install clangd",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.detectCompilers",
+        "title": "NovaCpp: Scan for Installed Compilers",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.generateCompileFlags",
+        "title": "NovaCpp: Generate compile_flags.txt",
+        "category": "C/C++"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "novacpp.switchSourceHeader",
+        "key": "alt+o",
+        "mac": "alt+cmd+o",
+        "when": "editorTextFocus && (editorLangId == c || editorLangId == cpp)"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "NovaCpp",
+      "properties": {
+        "novacpp.clangdPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the clangd executable. If empty, NovaCpp searches PATH and the auto-installed binary."
+        },
+        "novacpp.clangdArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional command-line arguments to pass to clangd."
+        },
+        "novacpp.debuggerPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to lldb-dap or gdb. If empty, NovaCpp will detect it automatically."
+        },
+        "novacpp.cppStandard": {
+          "type": "string",
+          "enum": [
+            "c++98",
+            "c++03",
+            "c++11",
+            "c++14",
+            "c++17",
+            "c++20",
+            "c++23",
+            "c++26"
+          ],
+          "default": "c++20",
+          "description": "Default C++ language standard for flag synthesis."
+        },
+        "novacpp.cStandard": {
+          "type": "string",
+          "enum": [
+            "c89",
+            "c99",
+            "c11",
+            "c17",
+            "c23"
+          ],
+          "default": "c17",
+          "description": "Default C language standard for flag synthesis."
+        },
+        "novacpp.inactiveRegionsDimming": {
+          "type": "boolean",
+          "default": true,
+          "description": "Dim inactive #ifdef preprocessor branches using native Clang AST."
+        },
+        "novacpp.postfixCompletions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable C++ Postfix Completion templates (.if, .for, .var, .unique, etc.)."
+        },
+        "novacpp.inlayHints.parameterNames": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display parameter name inlay hints in function and method calls."
+        },
+        "novacpp.inlayHints.deducedTypes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display deduced type inlay hints for auto variables."
+        },
+        "novacpp.inlayHints.designators": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display struct field designators in brace initialization."
+        }
+      }
+    },
+    "debuggers": [
+      {
+        "type": "novacpp-debug",
+        "label": "NovaCpp: C/C++ Debugger (lldb-dap / GDB)",
+        "languages": [
+          "c",
+          "cpp",
+          "cuda-cpp"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to the executable binary to debug.",
+                "default": "${workspaceFolder}/build/${fileBasenameNoExtension}"
+              },
+              "args": {
+                "type": "array",
+                "description": "Command line arguments passed to the program.",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Current working directory for the target process.",
+                "default": "${workspaceFolder}"
+              },
+              "stopAtEntry": {
+                "type": "boolean",
+                "description": "Automatically stop at program entry point (main).",
+                "default": false
+              },
+              "environment": {
+                "type": "array",
+                "description": "Environment variables to pass to the target program.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "default": []
+              },
+              "debuggerPath": {
+                "type": "string",
+                "description": "Explicit path to lldb-dap or gdb executable."
+              },
+              "debuggerType": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "lldb-dap",
+                  "gdb"
+                ],
+                "default": "auto",
+                "description": "Debugger backend to use."
+              }
+            }
+          }
+        }
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "novacpp",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "NovaCpp task action name (e.g. buildActiveFile, buildWorkspace)"
+          },
+          "file": {
+            "type": "string",
+            "description": "Source file to compile"
+          }
+        }
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "gcc",
+        "owner": "cpp",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error|note):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      },
+      {
+        "name": "msvc",
+        "owner": "cpp",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*)\\((\\d+)(?:,(\\d+))?\\):\\s+(warning|error)\\s+([A-Z0-9]+):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/novacpp/novacpp"
+  },
+  "license": "MIT",
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "check-types": "tsc --noEmit",
+    "test": "npm run check-types && mocha",
+    "package": "vsce package --no-dependencies --skip-license"
+  },
+  "dependencies": {
+    "@clangd/install": "^0.1.20",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@types/which": "^3.0.4",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.20.0",
+    "mocha": "^10.3.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}

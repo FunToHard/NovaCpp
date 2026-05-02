@@ -1,0 +1,12 @@
+.vscode/**
+src/**
+test/**
+node_modules/**
+.mocharc.json
+tsconfig.json
+esbuild.js
+playground/**
+*.vsix
+compile_flags.txt
+.clangd/**
+*.log
