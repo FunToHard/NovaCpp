@@ -105,6 +105,13 @@ export function parseSignature(code: string): ParsedFunctionSignature | null {
   } else if (normalized.includes('virtual')) {
     badges.push('virtual');
   }
+  if (
+    normalized.includes('std::') ||
+    normalized.includes('__gnu_cxx') ||
+    /\b(printf|malloc|free|memcpy|memset|fopen|fclose)\b/.test(normalized)
+  ) {
+    badges.push('Standard Library');
+  }
 
   // Extract template clause
   let templateClause: string | undefined;
@@ -390,7 +397,7 @@ export class HoverTransformer {
     // Interactive Action Links
     md.appendMarkdown('---\n');
     md.appendMarkdown(
-      '[Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)'
+      '[Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences) | [Open Docs (cppreference)](command:novacpp.openDocs)'
     );
 
     return new vscode.Hover([md], hover.range);

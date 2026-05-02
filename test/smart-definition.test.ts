@@ -6,7 +6,9 @@ import * as os from 'os';
 import * as vscode from 'vscode';
 import {
   findCounterpartFile,
-  prioritizeDefinitionLocations
+  prioritizeDefinitionLocations,
+  isSystemHeader,
+  getCppReferenceUrl
 } from '../src/intelligence/smart-definition';
 
 describe('Smart Definition & Navigation', () => {
@@ -95,6 +97,60 @@ describe('Smart Definition & Navigation', () => {
       );
       const res = prioritizeDefinitionLocations(singleLoc);
       assert.strictEqual(res, singleLoc);
+    });
+  });
+
+  describe('isSystemHeader', () => {
+    it('should identify MSVC STL and Windows SDK headers as system files', () => {
+      assert.strictEqual(
+        isSystemHeader('C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.51.36231/include/vector'),
+        true
+      );
+      assert.strictEqual(
+        isSystemHeader('C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/ucrt/stdio.h'),
+        true
+      );
+    });
+
+    it('should identify GCC/MinGW and Linux system headers as system files', () => {
+      assert.strictEqual(
+        isSystemHeader('C:/ProgramData/mingw64/include/c++/15.2.0/vector'),
+        true
+      );
+      assert.strictEqual(isSystemHeader('/usr/include/stdio.h'), true);
+    });
+
+    it('should identify user project files as non-system headers', () => {
+      assert.strictEqual(isSystemHeader('F:/project/src/main.cpp'), false);
+      assert.strictEqual(isSystemHeader('F:/project/include/entity.h'), false);
+    });
+  });
+
+  describe('getCppReferenceUrl', () => {
+    it('should resolve standard container and utility symbols to canonical URLs', () => {
+      assert.strictEqual(
+        getCppReferenceUrl('std::vector'),
+        'https://en.cppreference.com/w/cpp/container/vector'
+      );
+      assert.strictEqual(
+        getCppReferenceUrl('std::unique_ptr'),
+        'https://en.cppreference.com/w/cpp/memory/unique_ptr'
+      );
+      assert.strictEqual(
+        getCppReferenceUrl('std::format'),
+        'https://en.cppreference.com/w/cpp/utility/format/format'
+      );
+      assert.strictEqual(
+        getCppReferenceUrl('printf'),
+        'https://en.cppreference.com/w/cpp/io/c/fprintf'
+      );
+    });
+
+    it('should generate search fallback URL for other standard symbols', () => {
+      const url = getCppReferenceUrl('std::filesystem::path');
+      assert.ok(url);
+      assert.ok(url.includes('cppreference.com'));
+      assert.ok(url.includes('search='));
     });
   });
 });

@@ -64,8 +64,39 @@
         "command": "novacpp.generateCompileFlags",
         "title": "NovaCpp: Generate compile_flags.txt",
         "category": "C/C++"
+      },
+      {
+        "command": "novacpp.runFile",
+        "title": "Run C/C++ File",
+        "icon": "$(play)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.debugFile",
+        "title": "Debug C/C++ File",
+        "icon": "$(debug-alt)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.openDocs",
+        "title": "NovaCpp: Open C++ Reference Documentation",
+        "category": "C/C++"
       }
     ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "novacpp.runFile",
+          "when": "editorLangId == cpp || editorLangId == c",
+          "group": "navigation@1"
+        },
+        {
+          "command": "novacpp.debugFile",
+          "when": "editorLangId == cpp || editorLangId == c",
+          "group": "navigation@2"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "novacpp.switchSourceHeader",

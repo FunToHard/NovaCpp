@@ -16,6 +16,7 @@ import { PostfixCompletionProvider } from './intelligence/postfix-provider';
 import { NovaCppCodeActionProvider } from './intelligence/code-actions';
 import { SmartDefinitionManager } from './intelligence/smart-definition';
 import { InlayHintManager } from './intelligence/inlay-hints';
+import { RunController } from './tasks/run-controller';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -24,6 +25,7 @@ let synthesizer: FlagSynthesizer | null = null;
 let taskProvider: NovaCppTaskProvider | null = null;
 let cmakeWatcher: CMakeWatcher | null = null;
 let inactiveRegionsManager: InactiveRegionsManager | null = null;
+let runController: RunController | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('Activating NovaCpp extension...');
@@ -35,6 +37,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   synthesizer = new FlagSynthesizer(detector, extractor);
   taskProvider = new NovaCppTaskProvider(detector);
   inactiveRegionsManager = new InactiveRegionsManager();
+  runController = new RunController(detector);
 
   // Watch for compilation databases and seamless auto-reload
   cmakeWatcher = new CMakeWatcher(async () => {
@@ -168,6 +171,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       } catch (err: any) {
         vscode.window.showErrorMessage(`NovaCpp: Error generating flags: ${err.message ?? err}`);
       }
+    }),
+    vscode.commands.registerCommand('novacpp.runFile', async () => {
+      await runController?.runFile();
+    }),
+    vscode.commands.registerCommand('novacpp.debugFile', async () => {
+      await runController?.debugFile();
+    }),
+    vscode.commands.registerCommand('novacpp.openDocs', async (urlOrSymbol?: string) => {
+      await SmartDefinitionManager.openDocumentation(urlOrSymbol);
     })
   );
 

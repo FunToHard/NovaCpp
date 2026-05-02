@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Middleware } from 'vscode-languageclient';
 import { HoverTransformer } from '../intelligence/hover-transformer';
 import { prioritizeDefinitionLocations } from '../intelligence/smart-definition';
+import { DotToArrowController } from '../intelligence/dot-to-arrow';
 
 /**
  * Creates a debounced function that delays invoking func until after wait milliseconds
@@ -60,7 +61,13 @@ export function createClangdMiddleware(): Middleware {
       const rawItems = Array.isArray(list) ? list : list.items;
       const isIncomplete = Array.isArray(list) ? false : list.isIncomplete;
 
-      for (const item of rawItems) {
+      const items = await DotToArrowController.processCompletionItems(
+        document,
+        position,
+        rawItems
+      );
+
+      for (const item of items) {
         // A. Completion Re-Ranking Preservation
         let prefix = '';
         if (item.range) {
@@ -90,7 +97,7 @@ export function createClangdMiddleware(): Middleware {
         }
       }
 
-      return new vscode.CompletionList(rawItems, isIncomplete);
+      return new vscode.CompletionList(items, isIncomplete);
     },
 
     provideWorkspaceSymbols: async (

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { findCounterpartFile, HEADER_EXTENSIONS } from './smart-definition';
+import { findCounterpartFile, HEADER_EXTENSIONS, isSystemHeader } from './smart-definition';
 
 export const STD_HEADERS_CATALOG: Record<string, string> = {
   vector: '<vector>',
@@ -104,6 +104,9 @@ export class NovaCppCodeActionProvider implements vscode.CodeActionProvider {
     _token: vscode.CancellationToken
   ): vscode.ProviderResult<(vscode.Command | vscode.CodeAction)[]> {
     const actions: vscode.CodeAction[] = [];
+    if (isSystemHeader(document.uri.fsPath)) {
+      return actions;
+    }
     const lineIndex = range.start.line;
     const lineText = document.lineAt(lineIndex).text;
     const ext = path.extname(document.uri.fsPath).toLowerCase();
