@@ -99,6 +99,7 @@ End of search list.
       assert.ok(flags.includes('--driver-mode=cl'));
       assert.ok(flags.includes('-std:c++20'));
       assert.ok(flags.includes('/EHsc'));
+      assert.ok(flags.includes('/TP'));
       assert.ok(flags.includes('-IC:/msvc/include'));
     });
 

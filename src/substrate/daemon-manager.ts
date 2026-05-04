@@ -137,7 +137,7 @@ export class DaemonManager implements vscode.Disposable {
       },
       initializationOptions: {
         clangdFileStatus: true,
-        fallbackFlags: ['-std=c++20']
+        fallbackFlags: ['-std=c++20', '-xc++']
       },
       outputChannel: this.outputChannel,
       middleware: createClangdMiddleware(),

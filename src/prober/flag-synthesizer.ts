@@ -50,6 +50,7 @@ export class FlagSynthesizer {
       flags.push('--driver-mode=cl');
       flags.push(`-std:${standard}`);
       flags.push('/EHsc');
+      flags.push('/TP'); // Treat all files including .h headers as C++
       flags.push('/W4');
 
       for (const inc of includes) {
