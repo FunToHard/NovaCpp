@@ -76,10 +76,15 @@ export function createClangdMiddleware(): Middleware {
               ? item.range.start
               : (item.range as { inserting: vscode.Range; replacing: vscode.Range }).inserting.start;
           prefix = document.getText(new vscode.Range(start, position));
+          if (prefix.includes('.')) {
+            prefix = prefix.substring(prefix.lastIndexOf('.') + 1);
+          } else if (prefix.includes('->')) {
+            prefix = prefix.substring(prefix.lastIndexOf('->') + 2);
+          }
         }
 
         const labelText = typeof item.label === 'string' ? item.label : item.label.label;
-        if (prefix) {
+        if (prefix && !item.sortText?.startsWith('!00_')) {
           item.filterText = prefix + '_' + (item.filterText ?? labelText);
         }
 
