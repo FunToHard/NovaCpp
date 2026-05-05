@@ -17,6 +17,9 @@ import { NovaCppCodeActionProvider } from './intelligence/code-actions';
 import { SmartDefinitionManager } from './intelligence/smart-definition';
 import { InlayHintManager } from './intelligence/inlay-hints';
 import { RunController } from './tasks/run-controller';
+import { StlUsageCollector } from './telemetry/stl-collector';
+import { StlRankingTable } from './telemetry/ranking-table';
+import { BatchDispatcher } from './telemetry/batch-dispatcher';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -26,12 +29,21 @@ let taskProvider: NovaCppTaskProvider | null = null;
 let cmakeWatcher: CMakeWatcher | null = null;
 let inactiveRegionsManager: InactiveRegionsManager | null = null;
 let runController: RunController | null = null;
+let stlCollector: StlUsageCollector | null = null;
+let rankingTable: StlRankingTable | null = null;
+let batchDispatcher: BatchDispatcher | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('Activating NovaCpp extension...');
 
+  stlCollector = new StlUsageCollector();
+  rankingTable = new StlRankingTable();
+  const storagePath = context.globalStorageUri?.fsPath ?? context.storageUri?.fsPath;
+  batchDispatcher = new BatchDispatcher(stlCollector, storagePath);
+  batchDispatcher.start();
+
   installer = new ClangdInstaller(context);
-  daemonManager = new DaemonManager(context, installer);
+  daemonManager = new DaemonManager(context, installer, rankingTable);
   detector = new CompilerDetector();
   const extractor = new SystemIncludeExtractor();
   synthesizer = new FlagSynthesizer(detector, extractor);
@@ -180,6 +192,48 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.openDocs', async (urlOrSymbol?: string) => {
       await SmartDefinitionManager.openDocumentation(urlOrSymbol);
+    }),
+    vscode.commands.registerCommand(
+      'novacpp.onStlItemAccepted',
+      async (symbolKey: string, chainedCommand?: vscode.Command) => {
+        stlCollector?.recordCompletionAccepted({ label: symbolKey });
+        if (chainedCommand) {
+          await vscode.commands.executeCommand(chainedCommand.command, ...(chainedCommand.arguments ?? []));
+        }
+      }
+    ),
+    vscode.commands.registerCommand('novacpp.inspectTelemetry', () => {
+      const counts = stlCollector?.getPendingCounts() ?? {};
+      const totalSymbols = Object.keys(counts).length;
+      const totalInvocations = Object.values(counts).reduce((a, b) => a + b, 0);
+      const channel = vscode.window.createOutputChannel('NovaCpp Telemetry Buffer');
+      channel.clear();
+      channel.appendLine('=== NovaCpp Anonymous STL Telemetry Buffer ===');
+      channel.appendLine(`Tracked Distinct Symbols : ${totalSymbols}`);
+      channel.appendLine(`Total Recorded Calls     : ${totalInvocations}`);
+      channel.appendLine('Privacy Policy           : ISO C++ Standard Library Allowlist (Zero Code / Zero PII)');
+      channel.appendLine('--------------------------------------------------------------------------------');
+      channel.appendLine(JSON.stringify(counts, null, 2));
+      channel.show();
+    }),
+    vscode.commands.registerCommand('novacpp.flushTelemetry', async () => {
+      const success = await batchDispatcher?.flushNow(1);
+      vscode.window.showInformationMessage(
+        `NovaCpp: Telemetry batch ${success ? 'transmitted to server' : 'saved to offline queue'}.`
+      );
+    })
+  );
+
+  // On-Save Scanner: Passively scan C++ source files for STL references
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((doc) => {
+      if (!stlCollector?.isTelemetryAllowed()) return;
+      if (doc.languageId !== 'cpp' && doc.languageId !== 'c') return;
+      const text = doc.getText();
+      const matches = text.matchAll(/\bstd::(?:ranges::|views::|chrono::|filesystem::)?[a-zA-Z0-9_]+(?:::?[a-zA-Z0-9_]+)*/g);
+      for (const match of matches) {
+        stlCollector.recordAstCall(match[0]);
+      }
     })
   );
 
@@ -188,6 +242,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export async function deactivate(): Promise<void> {
+  if (batchDispatcher) {
+    await batchDispatcher.flushNow();
+    batchDispatcher.dispose();
+    batchDispatcher = null;
+  }
   if (daemonManager) {
     await daemonManager.stop();
     daemonManager = null;

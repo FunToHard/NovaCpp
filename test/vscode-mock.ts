@@ -535,6 +535,9 @@ export const mockVscode: any = {
     }
   },
   ViewColumn,
+  env: {
+    isTelemetryEnabled: true
+  },
   workspace: {
     getConfiguration: (_section?: string) => ({
       get: (key: string, defaultValue?: any) => defaultValue,

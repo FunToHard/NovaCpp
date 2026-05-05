@@ -3,6 +3,8 @@ import { Middleware } from 'vscode-languageclient';
 import { HoverTransformer } from '../intelligence/hover-transformer';
 import { prioritizeDefinitionLocations } from '../intelligence/smart-definition';
 import { DotToArrowController } from '../intelligence/dot-to-arrow';
+import { StlRankingTable } from '../telemetry/ranking-table';
+import { extractStlSymbolKey } from '../telemetry/allowlist';
 
 /**
  * Creates a debounced function that delays invoking func until after wait milliseconds
@@ -39,7 +41,9 @@ export function debounce<T extends (...args: any[]) => any>(
  * semantic precision, trigger parameter hints, format qualified symbols,
  * and debounce rapid editor UI events.
  */
-export function createClangdMiddleware(): Middleware {
+export function createClangdMiddleware(
+  rankingTable: StlRankingTable = new StlRankingTable()
+): Middleware {
   return {
     provideCompletionItem: async (
       document: vscode.TextDocument,
@@ -68,7 +72,10 @@ export function createClangdMiddleware(): Middleware {
       );
 
       for (const item of items) {
-        // A. Completion Re-Ranking Preservation
+        // A. Apply Adaptive Empirical STL Re-Ranking
+        rankingTable.applyStlRanking(item);
+
+        // B. Completion Re-Ranking Preservation
         let prefix = '';
         if (item.range) {
           const start =
@@ -91,14 +98,27 @@ export function createClangdMiddleware(): Middleware {
         // Avoid accidental commits on punctuation
         item.commitCharacters = [];
 
-        // B. Parameter Hints Trigger on Placeholder Insertion
-        if (item.insertText instanceof vscode.SnippetString && !item.command) {
+        // C. Parameter Hints & Usage Telemetry Hook on Insertion
+        const symbolKey = extractStlSymbolKey(item);
+        let baseCommand: vscode.Command | undefined = item.command;
+
+        if (!baseCommand && item.insertText instanceof vscode.SnippetString) {
           if (item.insertText.value.match(/[([{<,] ?\$\{?[01]\D/)) {
-            item.command = {
+            baseCommand = {
               title: 'Trigger Parameter Hints',
               command: 'editor.action.triggerParameterHints'
             };
           }
+        }
+
+        if (symbolKey) {
+          item.command = {
+            title: 'Record STL Usage',
+            command: 'novacpp.onStlItemAccepted',
+            arguments: [symbolKey, baseCommand]
+          };
+        } else if (baseCommand) {
+          item.command = baseCommand;
         }
       }
 

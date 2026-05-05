@@ -11,6 +11,7 @@ import {
 } from 'vscode-languageclient/node';
 import { ClangdInstaller } from './installer';
 import { createClangdMiddleware, EditorEventDebouncer } from './protocol-filter';
+import { StlRankingTable } from '../telemetry/ranking-table';
 
 export const defaultClangdArguments: string[] = [
   '--background-index',
@@ -53,7 +54,8 @@ export class DaemonManager implements vscode.Disposable {
 
   constructor(
     private readonly context: vscode.ExtensionContext,
-    private readonly installer: ClangdInstaller
+    private readonly installer: ClangdInstaller,
+    private readonly rankingTable: StlRankingTable = new StlRankingTable()
   ) {
     this.outputChannel = vscode.window.createOutputChannel('NovaCpp Language Server');
     this.eventDebouncer = new EditorEventDebouncer();
@@ -140,7 +142,7 @@ export class DaemonManager implements vscode.Disposable {
         fallbackFlags: ['-std=c++20', '-xc++']
       },
       outputChannel: this.outputChannel,
-      middleware: createClangdMiddleware(),
+      middleware: createClangdMiddleware(this.rankingTable),
       errorHandler: {
         error: (error, message, count) => {
           this.outputChannel.appendLine(`[Error] ${error.message} (${count})`);

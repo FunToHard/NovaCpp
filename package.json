@@ -81,6 +81,16 @@
         "command": "novacpp.openDocs",
         "title": "NovaCpp: Open C++ Reference Documentation",
         "category": "C/C++"
+      },
+      {
+        "command": "novacpp.inspectTelemetry",
+        "title": "NovaCpp: Inspect Anonymous STL Telemetry Buffer",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.flushTelemetry",
+        "title": "NovaCpp: Flush Telemetry Batch",
+        "category": "C/C++"
       }
     ],
     "menus": {
@@ -178,6 +188,16 @@
           "type": "boolean",
           "default": true,
           "description": "Display struct field designators in brace initialization."
+        },
+        "novacpp.telemetry.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable anonymous C++ Standard Library (STL) symbol frequency collection to boost autocomplete suggestion accuracy. Zero user code or PII is ever collected."
+        },
+        "novacpp.telemetry.endpoint": {
+          "type": "string",
+          "default": "https://telemetry.novacpp.dev/v1/telemetry/stl-usage",
+          "description": "Ingestion endpoint URL for anonymous STL usage telemetry batches."
         }
       }
     },
