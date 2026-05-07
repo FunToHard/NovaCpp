@@ -34,6 +34,57 @@ export function buildRunCommand(
 }
 
 /**
+ * Locates the Launch-VsDevShell.ps1 script associated with an installed Visual Studio / MSVC instance.
+ */
+export function findLaunchVsDevShell(compiler?: CompilerInfo): string | null {
+  if (process.platform !== 'win32') {
+    return null;
+  }
+
+  const candidateRoots: string[] = [];
+  if (compiler && compiler.type === 'msvc') {
+    if (compiler.path) {
+      candidateRoots.push(path.dirname(compiler.path));
+    }
+    if (compiler.msvcInstallDir) {
+      candidateRoots.push(compiler.msvcInstallDir);
+    }
+  }
+
+  for (const root of candidateRoots) {
+    let current = root;
+    while (current && path.dirname(current) !== current) {
+      const script = path.join(current, 'Common7', 'Tools', 'Launch-VsDevShell.ps1');
+      if (fs.existsSync(script)) {
+        return script;
+      }
+      current = path.dirname(current);
+    }
+  }
+
+  const commonVsRoots = [
+    'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise',
+    'C:\\Program Files\\Microsoft Visual Studio\\18\\Professional',
+    'C:\\Program Files\\Microsoft Visual Studio\\18\\Community',
+    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise',
+    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional',
+    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community',
+    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise',
+    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional',
+    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community'
+  ];
+
+  for (const vsRoot of commonVsRoots) {
+    const script = path.join(vsRoot, 'Common7', 'Tools', 'Launch-VsDevShell.ps1');
+    if (fs.existsSync(script)) {
+      return script;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Controller for running and debugging C/C++ source files from editor title bar buttons.
  */
 export class RunController {
@@ -77,8 +128,12 @@ export class RunController {
     const standard = config.get<string>('cppStandard', 'c++20');
     const runCmd = buildRunCommand(compiler, sourceFile, outputBinary, standard);
 
-    const terminal = this.getOrCreateTerminal();
+    const { terminal, isNew } = this.getOrCreateTerminal(compiler);
     terminal.show();
+    if (isNew && compiler.type === 'msvc' && process.platform === 'win32') {
+      // Allow Developer PowerShell environment initialization to finish
+      await new Promise((r) => setTimeout(r, 600));
+    }
     terminal.sendText(runCmd);
     return true;
   }
@@ -124,20 +179,38 @@ export class RunController {
       async () => {
         try {
           const isWindows = process.platform === 'win32';
-          const compileArgs: string[] = [];
 
           if (compiler.type === 'msvc') {
-            compileArgs.push('/EHsc', `/std:${standard}`, '/Zi', `/Fe:${outputBinary}`, sourceFile);
+            const devShellScript = isWindows ? findLaunchVsDevShell(compiler) : null;
+            if (devShellScript) {
+              const arch = compiler.is64Bit !== false ? 'x64' : 'x86';
+              const clCmd = `& "${compiler.path}" /EHsc /std:${standard} /Zi "${sourceFile}" /Fe:"${outputBinary}"`;
+              const psArgs = [
+                '-NoProfile',
+                '-ExecutionPolicy',
+                'Bypass',
+                '-Command',
+                `& '${devShellScript}' -Arch ${arch} -HostArch ${arch} -SkipAutomaticLocation -NoLogo ; ${clCmd}`
+              ];
+
+              await execFileAsync('powershell.exe', psArgs, {
+                cwd: path.dirname(sourceFile)
+              });
+            } else {
+              const compileArgs = ['/EHsc', `/std:${standard}`, '/Zi', `/Fe:${outputBinary}`, sourceFile];
+              await execFileAsync(compiler.path, compileArgs, {
+                cwd: path.dirname(sourceFile)
+              });
+            }
           } else {
-            compileArgs.push(sourceFile, `-std=${standard}`, '-g', '-o', outputBinary);
+            const compileArgs = [sourceFile, `-std=${standard}`, '-g', '-o', outputBinary];
             if (compiler.type === 'gcc' && isWindows) {
               compileArgs.push('-static-libgcc', '-static-libstdc++');
             }
+            await execFileAsync(compiler.path, compileArgs, {
+              cwd: path.dirname(sourceFile)
+            });
           }
-
-          await execFileAsync(compiler.path, compileArgs, {
-            cwd: path.dirname(sourceFile)
-          });
         } catch (err: any) {
           vscode.window.showErrorMessage(
             `NovaCpp: Compilation failed: ${err.stderr || err.message || err}`
@@ -152,7 +225,8 @@ export class RunController {
           request: 'launch',
           program: outputBinary,
           cwd: path.dirname(sourceFile),
-          stopOnEntry: false
+          stopOnEntry: false,
+          console: 'integratedTerminal'
         };
 
         return await vscode.debug.startDebugging(undefined, debugConfig);
@@ -160,15 +234,39 @@ export class RunController {
     );
   }
 
-  private getOrCreateTerminal(): vscode.Terminal {
+  private getOrCreateTerminal(compiler: CompilerInfo): { terminal: vscode.Terminal; isNew: boolean } {
+    const isWindows = process.platform === 'win32';
+    const isMsvc = compiler.type === 'msvc' && isWindows;
+    const terminalName = isMsvc ? 'Developer PowerShell for VS' : 'NovaCpp: Run';
+
     // Verify existing terminal is still alive
-    const existing = vscode.window.terminals?.find((t) => t.name === 'NovaCpp: Run');
+    const existing = vscode.window.terminals?.find((t) => t.name === terminalName);
     if (existing) {
       this.runTerminal = existing;
-      return existing;
+      return { terminal: existing, isNew: false };
     }
 
-    this.runTerminal = vscode.window.createTerminal('NovaCpp: Run');
-    return this.runTerminal;
+    if (isMsvc) {
+      const devShellScript = findLaunchVsDevShell(compiler);
+      if (devShellScript) {
+        const arch = compiler.is64Bit !== false ? 'x64' : 'x86';
+        const terminal = vscode.window.createTerminal({
+          name: terminalName,
+          shellPath: 'powershell.exe',
+          shellArgs: [
+            '-NoExit',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-Command',
+            `& '${devShellScript}' -Arch ${arch} -HostArch ${arch} -SkipAutomaticLocation`
+          ]
+        });
+        this.runTerminal = terminal;
+        return { terminal, isNew: true };
+      }
+    }
+
+    this.runTerminal = vscode.window.createTerminal(terminalName);
+    return { terminal: this.runTerminal, isNew: true };
   }
 }

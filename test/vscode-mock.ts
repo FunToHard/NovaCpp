@@ -498,6 +498,20 @@ export const mockVscode: any = {
       return task({ report: () => {} }, { onCancellationRequested: () => {} });
     },
     visibleTextEditors: [],
+    terminals: [] as any[],
+    createTerminal: (optionsOrName?: any, shellPath?: any, shellArgs?: any) => {
+      const termName = typeof optionsOrName === 'string' ? optionsOrName : (optionsOrName?.name ?? 'Terminal');
+      const term = {
+        name: termName,
+        options: typeof optionsOrName === 'object' ? optionsOrName : { name: optionsOrName, shellPath, shellArgs },
+        sendText: (_text: string) => {},
+        show: () => {},
+        hide: () => {},
+        dispose: () => {}
+      };
+      (mockVscode.window.terminals as any[]).push(term);
+      return term;
+    },
     onDidChangeActiveTextEditor: () => ({ dispose: () => {} }),
     onDidChangeTextEditorVisibleRanges: () => ({ dispose: () => {} }),
     onDidChangeTextEditorSelection: () => ({ dispose: () => {} }),
