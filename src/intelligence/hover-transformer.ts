@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { findStlDocumentation } from './stl-knowledge-base';
 
 export interface ParameterInfo {
   name: string;
@@ -10,9 +11,12 @@ export interface ParameterInfo {
 export interface ParsedFunctionSignature {
   isFunction: boolean;
   name: string;
+  scope?: string;
   returnType: string;
   templateClause?: string;
   requiresClause?: string;
+  isSpecialization?: boolean;
+  instantiationArgs?: string[];
   parameters: ParameterInfo[];
   badges: string[];
 }
@@ -70,6 +74,145 @@ export function inferParameterSemantics(paramType: string): string {
 }
 
 /**
+ * Strips compiler internal ugly prefixes (MSVC _Ty, _Args, GCC __first) into clean C++ names.
+ */
+export function deuglifyIdentifier(name: string): string {
+  if (!name) return name;
+  const trimmed = name.trim();
+  const knownMap: Record<string, string> = {
+    _Ty: 'T',
+    _Type: 'T',
+    _Types: 'Types',
+    _Args: 'args',
+    _Val: 'value',
+    _Elem: 'element',
+    _Fn: 'fn',
+    _Func: 'fn',
+    _Pred: 'pred',
+    _Count: 'count',
+    _Size: 'size',
+    _Left: 'left',
+    _Right: 'right',
+    _Key: 'key',
+    _Alloc: 'alloc'
+  };
+
+  if (knownMap[trimmed]) {
+    return knownMap[trimmed];
+  }
+
+  if (trimmed.startsWith('__')) {
+    return trimmed.substring(2);
+  }
+
+  if (/^_[A-Z]/.test(trimmed)) {
+    return trimmed.substring(1, 2).toLowerCase() + trimmed.substring(2);
+  }
+
+  return trimmed;
+}
+
+/**
+ * Cleans template instantiation arguments by removing internal SFINAE constants (0, nullptr)
+ * and unwrapping nested pack brackets (<double> -> double).
+ */
+export function cleanInstantiationArgs(raw: string): string[] {
+  if (!raw || !raw.trim()) return [];
+  const parts = splitParameters(raw);
+  const cleaned: string[] = [];
+
+  for (const p of parts) {
+    let item = p.trim();
+    // Filter out compiler internal SFINAE non-type tags (e.g. 0, 1, nullptr, false)
+    if (/^(0|1|nullptr|false|true)$/.test(item)) {
+      continue;
+    }
+    // Unwrap angle brackets if wrapped, e.g. <double> -> double
+    if (item.startsWith('<') && item.endsWith('>')) {
+      item = item.substring(1, item.length - 1).trim();
+    }
+    if (item) {
+      cleaned.push(item);
+    }
+  }
+
+  return cleaned;
+}
+
+/**
+ * Splits a code string on whitespace, while respecting angle (<...>),
+ * parenthesis ((...)), and square bracket ([...]) nesting.
+ */
+export function tokenizeTopLevel(text: string): string[] {
+  const tokens: string[] = [];
+  let current = '';
+  let angleDepth = 0;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (ch === '<') {
+      angleDepth++;
+    } else if (ch === '>') {
+      if (angleDepth > 0) angleDepth--;
+    } else if (ch === '(') {
+      parenDepth++;
+    } else if (ch === ')') {
+      if (parenDepth > 0) parenDepth--;
+    } else if (ch === '[') {
+      bracketDepth++;
+    } else if (ch === ']') {
+      if (bracketDepth > 0) bracketDepth--;
+    }
+
+    const isWhitespace = /\s/.test(ch);
+    if (isWhitespace && angleDepth === 0 && parenDepth === 0 && bracketDepth === 0) {
+      if (current.trim().length > 0) {
+        tokens.push(current.trim());
+        current = '';
+      }
+    } else {
+      current += ch;
+    }
+  }
+
+  if (current.trim().length > 0) {
+    tokens.push(current.trim());
+  }
+
+  return tokens;
+}
+
+/**
+ * Splits parameter string by comma, respecting template angle brackets and parens.
+ */
+export function splitParameters(content: string): string[] {
+  const result: string[] = [];
+  let depth = 0;
+  let current = '';
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    if (ch === '<' || ch === '(' || ch === '{' || ch === '[') {
+      depth++;
+    } else if (ch === '>' || ch === ')' || ch === '}' || ch === ']') {
+      if (depth > 0) depth--;
+    } else if (ch === ',' && depth === 0) {
+      result.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim().length > 0) {
+    result.push(current.trim());
+  }
+  return result;
+}
+
+/**
  * Parses raw C++ function signatures extracted from Clangd hover blocks.
  */
 export function parseSignature(code: string): ParsedFunctionSignature | null {
@@ -80,93 +223,152 @@ export function parseSignature(code: string): ParsedFunctionSignature | null {
     return null;
   }
 
+  // 1. Extract scope comment if emitted by Clangd (e.g. "// In namespace std" or "// In class geometry::Cube")
+  let scope: string | undefined;
+  const scopeMatch = normalized.match(/^\/\/\s*In\s+(?:namespace|class|struct)\s+([a-zA-Z0-9_:<> ]+)/m);
+  if (scopeMatch) {
+    scope = scopeMatch[1].trim();
+  }
+
+  // 2. Strip comment lines
+  const codeWithoutComments = normalized
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .join('\n')
+    .trim();
+
+  // 3. Badges detection
   const badges: string[] = [];
 
-  if (normalized.includes('noexcept')) {
+  if (codeWithoutComments.includes('noexcept')) {
     badges.push('noexcept');
   }
-  if (normalized.includes('[[nodiscard]]')) {
+  if (codeWithoutComments.includes('[[nodiscard]]')) {
     badges.push('[[nodiscard]]');
   }
-  if (normalized.includes('constexpr')) {
+  if (codeWithoutComments.includes('constexpr')) {
     badges.push('constexpr');
   }
-  if (normalized.includes('consteval')) {
+  if (codeWithoutComments.includes('consteval')) {
     badges.push('consteval');
   }
-  if (normalized.includes('explicit')) {
+  if (codeWithoutComments.includes('explicit')) {
     badges.push('explicit');
   }
-  if (normalized.includes('override')) {
+  if (codeWithoutComments.includes('inline')) {
+    badges.push('inline');
+  }
+  if (codeWithoutComments.includes('override')) {
     badges.push('override');
   }
-  if (normalized.includes('= 0')) {
+  if (codeWithoutComments.includes('= 0')) {
     badges.push('pure virtual');
-  } else if (normalized.includes('virtual')) {
+  } else if (codeWithoutComments.includes('virtual')) {
     badges.push('virtual');
   }
   if (
-    normalized.includes('std::') ||
-    normalized.includes('__gnu_cxx') ||
-    /\b(printf|malloc|free|memcpy|memset|fopen|fclose)\b/.test(normalized)
+    (scope && scope.startsWith('std')) ||
+    codeWithoutComments.includes('std::') ||
+    codeWithoutComments.includes('__gnu_cxx') ||
+    /\b(printf|malloc|free|memcpy|memset|fopen|fclose)\b/.test(codeWithoutComments)
   ) {
     badges.push('Standard Library');
   }
 
-  // Extract template clause
+  // 4. Template clause extraction
+  const isSpecialization = /template\s*<\s*>/.test(codeWithoutComments);
   let templateClause: string | undefined;
-  const templateMatch = normalized.match(/template\s*<([^>]+)>/);
-  if (templateMatch) {
+  const templateMatch = codeWithoutComments.match(/template\s*<([^>]+)>/);
+  if (templateMatch && !isSpecialization) {
     templateClause = templateMatch[1].trim();
   }
 
-  // Extract requires clause
+  // 5. Requires clause extraction
   let requiresClause: string | undefined;
-  const requiresMatch = normalized.match(/requires\s+([^\n(]+)(?:\n|\()/);
+  const requiresMatch = codeWithoutComments.match(/requires\s+([^\n(]+)(?:\n|\()/);
   if (requiresMatch) {
     requiresClause = requiresMatch[1].trim();
   }
 
-  // Extract parameter block between outermost matching parentheses
-  const firstParen = normalized.indexOf('(');
-  const lastParen = normalized.lastIndexOf(')');
+  // 6. Extract parameter block between outermost matching parentheses
+  const firstParen = codeWithoutComments.indexOf('(');
+  const lastParen = codeWithoutComments.lastIndexOf(')');
   if (firstParen === -1 || lastParen === -1 || lastParen <= firstParen) {
     return null;
   }
 
-  const beforeParen = normalized.substring(0, firstParen).trim();
-  const parenContent = normalized.substring(firstParen + 1, lastParen).trim();
-  const afterParen = normalized.substring(lastParen + 1).trim();
+  let beforeParen = codeWithoutComments.substring(0, firstParen).trim();
+  const parenContent = codeWithoutComments.substring(firstParen + 1, lastParen).trim();
+  const afterParen = codeWithoutComments.substring(lastParen + 1).trim();
 
-  // Parse function name and return type
-  // Check for trailing return type (auto func() -> Type)
+  // Strip template clause from beforeParen
+  if (beforeParen.startsWith('template')) {
+    const angleStart = beforeParen.indexOf('<');
+    if (angleStart !== -1) {
+      let d = 0;
+      let endIdx = -1;
+      for (let i = angleStart; i < beforeParen.length; i++) {
+        if (beforeParen[i] === '<') d++;
+        else if (beforeParen[i] === '>') {
+          d--;
+          if (d === 0) {
+            endIdx = i;
+            break;
+          }
+        }
+      }
+      if (endIdx !== -1) {
+        beforeParen = beforeParen.substring(endIdx + 1).trim();
+      }
+    }
+  }
+
+  // Strip requires clause from beforeParen
+  if (beforeParen.startsWith('requires')) {
+    const newlineIdx = beforeParen.indexOf('\n');
+    if (newlineIdx !== -1) {
+      beforeParen = beforeParen.substring(newlineIdx + 1).trim();
+    } else if (requiresClause) {
+      beforeParen = beforeParen.replace(`requires ${requiresClause}`, '').trim();
+    }
+  }
+
+  // 7. Tokenize preamble before parens respecting bracket balancing
+  const tokens = tokenizeTopLevel(beforeParen);
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  const funcToken = tokens[tokens.length - 1];
+  let funcName = funcToken;
+  let instantiationArgs: string[] | undefined;
+
+  if (funcToken.includes('<') && funcToken.endsWith('>')) {
+    const firstAngle = funcToken.indexOf('<');
+    const rawInst = funcToken.substring(firstAngle + 1, funcToken.length - 1);
+    funcName = funcToken.substring(0, firstAngle);
+    instantiationArgs = cleanInstantiationArgs(rawInst);
+  }
+
+  funcName = funcName.replace(/^[*&]+/, '');
+
+  // Determine return type
   let returnType = 'void';
-  let funcName = beforeParen;
-
   const trailingArrowMatch = afterParen.match(/->\s*([a-zA-Z0-9_:<>*& ]+)/);
   if (trailingArrowMatch) {
     returnType = trailingArrowMatch[1].trim();
-  }
-
-  const nameParts = beforeParen.split(/\s+/);
-  if (nameParts.length > 0) {
-    funcName = nameParts[nameParts.length - 1];
-    if (funcName.startsWith('*') || funcName.startsWith('&')) {
-      funcName = funcName.substring(1);
-    }
-    if (!trailingArrowMatch && nameParts.length > 1) {
-      // Return type precedes function name
-      const retTokens = nameParts.slice(0, nameParts.length - 1);
-      returnType = retTokens
-        .filter((t) => !['virtual', 'explicit', 'inline', 'constexpr', 'consteval'].includes(t))
-        .join(' ');
+  } else if (tokens.length > 1) {
+    const retTokens = tokens.slice(0, tokens.length - 1);
+    const filtered = retTokens.filter(
+      (t) => !['virtual', 'explicit', 'inline', 'constexpr', 'consteval', 'friend', 'static'].includes(t)
+    );
+    returnType = filtered.join(' ').trim();
+    if (!returnType) {
+      returnType = 'auto';
     }
   }
 
-  // Clean template annotations from funcName if any
-  funcName = funcName.replace(/<.*>$/, '');
-
-  // Parse parameter list
+  // 8. Parse parameter list
   const parameters: ParameterInfo[] = [];
   if (parenContent.length > 0) {
     const rawParams = splitParameters(parenContent);
@@ -174,7 +376,6 @@ export function parseSignature(code: string): ParsedFunctionSignature | null {
       const trimmedParam = raw.trim();
       if (!trimmedParam || trimmedParam === 'void') continue;
 
-      // Extract parameter name (last word or default assignment)
       let paramName = '';
       let paramType = trimmedParam;
 
@@ -195,6 +396,9 @@ export function parseSignature(code: string): ParsedFunctionSignature | null {
         paramName = `arg${parameters.length + 1}`;
       }
 
+      // De-uglify compiler parameter identifiers
+      paramName = deuglifyIdentifier(paramName);
+
       parameters.push({
         name: paramName,
         type: paramType,
@@ -206,39 +410,15 @@ export function parseSignature(code: string): ParsedFunctionSignature | null {
   return {
     isFunction: true,
     name: funcName,
+    scope,
     returnType: returnType || 'auto',
     templateClause,
     requiresClause,
+    isSpecialization,
+    instantiationArgs,
     parameters,
     badges
   };
-}
-
-/**
- * Splits parameter string by comma, respecting template angle brackets.
- */
-function splitParameters(content: string): string[] {
-  const result: string[] = [];
-  let depth = 0;
-  let current = '';
-
-  for (let i = 0; i < content.length; i++) {
-    const ch = content[i];
-    if (ch === '<' || ch === '(' || ch === '{') {
-      depth++;
-    } else if (ch === '>' || ch === ')' || ch === '}') {
-      depth--;
-    } else if (ch === ',' && depth === 0) {
-      result.push(current.trim());
-      current = '';
-      continue;
-    }
-    current += ch;
-  }
-  if (current.trim().length > 0) {
-    result.push(current.trim());
-  }
-  return result;
 }
 
 /**
@@ -341,64 +521,134 @@ export class HoverTransformer {
 
     const doxygen = parseDoxygen(docText);
 
-    // Attach descriptions to parameters
+    // Attach descriptions to parameters from Doxygen if present
     for (const param of sig.parameters) {
       if (doxygen.params.has(param.name)) {
         param.description = doxygen.params.get(param.name);
       }
     }
 
-    // Build rich Markdown card
+    // Check if this is a standard library function recognized by the Curated STL Knowledge Base
+    const stlDoc = findStlDocumentation(sig.name, sig.scope);
+
     const md = new vscode.MarkdownString();
     md.isTrusted = true;
 
-    md.appendMarkdown(`### \`${sig.name}\` *(function)*\n\n`);
-    md.appendCodeblock(codeBlock, 'cpp');
+    if (stlDoc) {
+      // --- Curated Standard Library Documentation Card ---
+      md.appendMarkdown(`### \`${stlDoc.symbol}\` *(Standard Library)*\n\n`);
 
-    // Badges line
-    if (sig.badges.length > 0) {
-      const badgeList = sig.badges.map((b) => `\`[${b}]\``).join(' ');
-      md.appendMarkdown(`**Specifiers**: ${badgeList}\n\n`);
-    }
-
-    // Brief description
-    if (doxygen.brief) {
-      md.appendMarkdown(`${doxygen.brief}\n\n`);
-    }
-
-    // Constraints and concepts
-    if (sig.requiresClause || sig.templateClause) {
-      md.appendMarkdown('#### Constraints & Concepts\n');
-      if (sig.templateClause) {
-        md.appendMarkdown(`- Template: \`<${sig.templateClause}>\`\n`);
+      // Badges: Standard Library, Header, ISO Standard, plus compiler specifiers
+      const specifiers = sig.badges.filter(
+        (b) => !['Standard Library'].includes(b)
+      );
+      const headerBadge = `\`[${stlDoc.header}]\``;
+      const standardBadge = `\`[${stlDoc.standard}]\``;
+      const specifierBadges = specifiers.map((s) => `\`[${s}]\``).join(' ');
+      md.appendMarkdown(`**Standard**: \`[Standard Library]\` ${headerBadge} ${standardBadge}`);
+      if (specifierBadges) {
+        md.appendMarkdown(` | **Specifiers**: ${specifierBadges}`);
       }
-      if (sig.requiresClause) {
-        md.appendMarkdown(`- Requires: \`${sig.requiresClause}\`\n`);
+      md.appendMarkdown('\n\n');
+
+      // Canonical signature
+      md.appendCodeblock(stlDoc.canonicalSignature, 'cpp');
+
+      // Instantiation note
+      if (sig.instantiationArgs && sig.instantiationArgs.length > 0) {
+        let instText = '';
+        if (sig.name === 'make_unique' || sig.name === 'make_shared') {
+          const tType = sig.instantiationArgs[0];
+          const argTypes = sig.instantiationArgs.slice(1);
+          const argsStr = argTypes.length > 0 ? `Args = [${argTypes.join(', ')}]` : 'Args = []';
+          instText = `T = ${tType}, ${argsStr}`;
+        } else {
+          instText = sig.instantiationArgs.join(', ');
+        }
+        md.appendMarkdown(`> **Instantiated for**: \`${instText}\`\n\n`);
       }
-      md.appendMarkdown('\n');
-    }
 
-    // Parameters table
-    if (sig.parameters.length > 0) {
-      md.appendMarkdown('#### Parameters\n\n');
-      md.appendMarkdown('| Parameter | Type | Semantics | Description |\n');
-      md.appendMarkdown('| :--- | :--- | :--- | :--- |\n');
-      for (const p of sig.parameters) {
-        const desc = p.description ? p.description : '-';
-        md.appendMarkdown(`| \`${p.name}\` | \`${p.type}\` | ${p.semantics} | ${desc} |\n`);
+      // Summary description
+      md.appendMarkdown(`${stlDoc.summary}\n\n`);
+
+      // Parameters table with curated STL explanations
+      if (sig.parameters.length > 0) {
+        md.appendMarkdown('#### Parameters\n\n');
+        md.appendMarkdown('| Parameter | Type | Semantics | Description |\n');
+        md.appendMarkdown('| :--- | :--- | :--- | :--- |\n');
+        for (const p of sig.parameters) {
+          let desc = p.description || stlDoc.parameters[p.name];
+          if (!desc) {
+            if (stlDoc.parameters['args'] && (p.name === 'args' || p.name.startsWith('arg'))) {
+              desc = stlDoc.parameters['args'];
+            } else if (stlDoc.parameters['value'] && (p.name === 'value' || p.name === 'val')) {
+              desc = stlDoc.parameters['value'];
+            }
+          }
+          md.appendMarkdown(`| \`${p.name}\` | \`${p.type}\` | ${p.semantics} | ${desc || '-'} |\n`);
+        }
+        md.appendMarkdown('\n');
       }
-      md.appendMarkdown('\n');
+
+      // Returns section
+      const retDoc = stlDoc.returns ? ` - ${stlDoc.returns}` : '';
+      md.appendMarkdown(`**Returns**: \`${sig.returnType}\`${retDoc}\n\n`);
+
+      // Documentation & Action links
+      md.appendMarkdown('---\n');
+      md.appendMarkdown(
+        `[📖 cppreference: ${stlDoc.symbol}](${stlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+      );
+    } else {
+      // --- User-Defined Function AST Card ---
+      md.appendMarkdown(`### \`${sig.name}\` *(function)*\n\n`);
+      md.appendCodeblock(codeBlock, 'cpp');
+
+      // Badges line
+      if (sig.badges.length > 0) {
+        const badgeList = sig.badges.map((b) => `\`[${b}]\``).join(' ');
+        md.appendMarkdown(`**Specifiers**: ${badgeList}\n\n`);
+      }
+
+      // Brief description
+      if (doxygen.brief) {
+        md.appendMarkdown(`${doxygen.brief}\n\n`);
+      }
+
+      // Constraints and concepts
+      if (sig.requiresClause || sig.templateClause) {
+        md.appendMarkdown('#### Constraints & Concepts\n');
+        if (sig.templateClause) {
+          md.appendMarkdown(`- Template: \`<${sig.templateClause}>\`\n`);
+        }
+        if (sig.requiresClause) {
+          md.appendMarkdown(`- Requires: \`${sig.requiresClause}\`\n`);
+        }
+        md.appendMarkdown('\n');
+      }
+
+      // Parameters table
+      if (sig.parameters.length > 0) {
+        md.appendMarkdown('#### Parameters\n\n');
+        md.appendMarkdown('| Parameter | Type | Semantics | Description |\n');
+        md.appendMarkdown('| :--- | :--- | :--- | :--- |\n');
+        for (const p of sig.parameters) {
+          const desc = p.description ? p.description : '-';
+          md.appendMarkdown(`| \`${p.name}\` | \`${p.type}\` | ${p.semantics} | ${desc} |\n`);
+        }
+        md.appendMarkdown('\n');
+      }
+
+      // Returns section
+      const retDoc = doxygen.returns ? ` - ${doxygen.returns}` : '';
+      md.appendMarkdown(`**Returns**: \`${sig.returnType}\`${retDoc}\n\n`);
+
+      // Interactive Action Links
+      md.appendMarkdown('---\n');
+      md.appendMarkdown(
+        '[Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences) | [Open Docs (cppreference)](command:novacpp.openDocs)'
+      );
     }
-
-    // Returns section
-    const retDoc = doxygen.returns ? ` - ${doxygen.returns}` : '';
-    md.appendMarkdown(`**Returns**: \`${sig.returnType}\`${retDoc}\n\n`);
-
-    // Interactive Action Links
-    md.appendMarkdown('---\n');
-    md.appendMarkdown(
-      '[Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences) | [Open Docs (cppreference)](command:novacpp.openDocs)'
-    );
 
     return new vscode.Hover([md], hover.range);
   }

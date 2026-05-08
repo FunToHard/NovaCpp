@@ -3,6 +3,9 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import {
   inferParameterSemantics,
+  deuglifyIdentifier,
+  cleanInstantiationArgs,
+  tokenizeTopLevel,
   parseSignature,
   parseDoxygen,
   HoverTransformer
@@ -47,6 +50,35 @@ describe('Rich AST Hover Transformer', () => {
     });
   });
 
+  describe('deuglifyIdentifier', () => {
+    it('should strip MSVC and GCC ugly identifier prefixes', () => {
+      assert.strictEqual(deuglifyIdentifier('_Args'), 'args');
+      assert.strictEqual(deuglifyIdentifier('_Ty'), 'T');
+      assert.strictEqual(deuglifyIdentifier('_Type'), 'T');
+      assert.strictEqual(deuglifyIdentifier('_Val'), 'value');
+      assert.strictEqual(deuglifyIdentifier('__first'), 'first');
+      assert.strictEqual(deuglifyIdentifier('_Pred'), 'pred');
+      assert.strictEqual(deuglifyIdentifier('customParam'), 'customParam');
+    });
+  });
+
+  describe('cleanInstantiationArgs', () => {
+    it('should clean nested template packs and remove internal SFINAE constants', () => {
+      const cleaned = cleanInstantiationArgs('geometry::Cube, <double>, 0');
+      assert.deepStrictEqual(cleaned, ['geometry::Cube', 'double']);
+    });
+  });
+
+  describe('tokenizeTopLevel', () => {
+    it('should respect nested angle brackets and commas', () => {
+      const tokens = tokenizeTopLevel('inline unique_ptr<geometry::Cube> make_unique<geometry::Cube, <double>, 0>');
+      assert.strictEqual(tokens.length, 3);
+      assert.strictEqual(tokens[0], 'inline');
+      assert.strictEqual(tokens[1], 'unique_ptr<geometry::Cube>');
+      assert.strictEqual(tokens[2], 'make_unique<geometry::Cube, <double>, 0>');
+    });
+  });
+
   describe('parseSignature', () => {
     it('should parse modern C++20 templated function with concepts and trailing return type', () => {
       const sigCode = `template <std::ranges::input_range R>
@@ -77,6 +109,28 @@ auto scaled_sum(const R& data, double multiplier) noexcept -> double`;
       assert.ok(parsed.badges.includes('virtual'));
       assert.ok(parsed.badges.includes('override'));
       assert.strictEqual(parsed.parameters.length, 0);
+    });
+
+    it('should correctly parse Clangd STL template specialization without producing 0>', () => {
+      const sigCode = `// In namespace std
+template <>
+inline unique_ptr<geometry::Cube>
+make_unique<geometry::Cube, <double>, 0>(double &&_Args)`;
+
+      const parsed = parseSignature(sigCode);
+      assert.ok(parsed);
+      assert.strictEqual(parsed.name, 'make_unique');
+      assert.notStrictEqual(parsed.name, '0>');
+      assert.strictEqual(parsed.scope, 'std');
+      assert.strictEqual(parsed.returnType, 'unique_ptr<geometry::Cube>');
+      assert.strictEqual(parsed.isSpecialization, true);
+      assert.deepStrictEqual(parsed.instantiationArgs, ['geometry::Cube', 'double']);
+      assert.strictEqual(parsed.parameters.length, 1);
+      assert.strictEqual(parsed.parameters[0].name, 'args');
+      assert.strictEqual(parsed.parameters[0].type, 'double &&');
+      assert.strictEqual(parsed.parameters[0].semantics, 'Move / Sink (Rvalue Ref)');
+      assert.ok(parsed.badges.includes('inline'));
+      assert.ok(parsed.badges.includes('Standard Library'));
     });
 
     it('should return null for non-callable constructs', () => {
@@ -120,6 +174,46 @@ auto scaled_sum(const R& data, double multiplier) noexcept -> double`;
       assert.ok(content.includes('Read-Only (Const Ref)'));
       assert.ok(content.includes('The element to process.'));
       assert.ok(content.includes('**Returns**: `bool` - Success flag.'));
+    });
+
+    it('should enrich std::make_unique with curated STL knowledge, canonical signature, and instantiation info', () => {
+      const rawCode = `\`\`\`cpp\n// In namespace std\ntemplate <>\ninline unique_ptr<geometry::Cube>\nmake_unique<geometry::Cube, <double>, 0>(double &&_Args)\n\`\`\``;
+
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
+      const transformed = HoverTransformer.transform(inputHover);
+
+      assert.ok(transformed);
+      assert.ok(transformed.contents.length > 0);
+
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      // Must not contain the broken 0>
+      assert.ok(!content.includes('### `0>`'));
+      // Must contain curated std::make_unique
+      assert.ok(content.includes('### `std::make_unique` *(Standard Library)*'));
+      assert.ok(content.includes('`[<memory>]`'));
+      assert.ok(content.includes('`[C++14]`'));
+      assert.ok(content.includes('`[Standard Library]`'));
+      assert.ok(content.includes('> **Instantiated for**: `T = geometry::Cube, Args = [double]`'));
+      assert.ok(content.includes('Constructs an object of type `T` on the heap'));
+      assert.ok(content.includes('`args`'));
+      assert.ok(content.includes('Move / Sink (Rvalue Ref)'));
+      assert.ok(content.includes('Arguments forwarded to the constructor of `T`'));
+      assert.ok(content.includes('**Returns**: `unique_ptr<geometry::Cube>`'));
+      assert.ok(content.includes('https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique'));
+    });
+
+    it('should enrich container member functions using class scope hint', () => {
+      const rawCode = `\`\`\`cpp\n// In class std::vector<int>\nvoid push_back(const int &_Val)\n\`\`\``;
+
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
+      const transformed = HoverTransformer.transform(inputHover);
+
+      assert.ok(transformed);
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      assert.ok(content.includes('### `std::vector::push_back` *(Standard Library)*'));
+      assert.ok(content.includes('`[<vector>]`'));
+      assert.ok(content.includes('Appends the given element'));
+      assert.ok(content.includes('`value`'));
     });
   });
 });
