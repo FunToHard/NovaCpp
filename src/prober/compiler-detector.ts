@@ -338,4 +338,72 @@ export class CompilerDetector {
 
     return all[0];
   }
+
+  /**
+   * Locates MSBuild executable on the system using vswhere or standard installation directories.
+   */
+  public findMsBuild(): string | null {
+    if (process.platform === 'win32') {
+      const vswherePath = path.join(
+        process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)',
+        'Microsoft Visual Studio',
+        'Installer',
+        'vswhere.exe'
+      );
+
+      if (fs.existsSync(vswherePath)) {
+        try {
+          const stdout = cp.execFileSync(
+            vswherePath,
+            ['-latest', '-products', '*', '-find', 'MSBuild\\**\\Bin\\MSBuild.exe'],
+            { encoding: 'utf8', timeout: 5000 }
+          );
+          const lines = stdout
+            .trim()
+            .split('\n')
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+          if (lines.length > 0 && fs.existsSync(lines[0])) {
+            return lines[0];
+          }
+        } catch {
+          // Fallback to checking standard paths
+        }
+      }
+
+      const defaultMsBuildPaths = [
+        'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\18\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe'
+      ];
+
+      for (const p of defaultMsBuildPaths) {
+        if (fs.existsSync(p)) {
+          return p;
+        }
+      }
+    }
+
+    try {
+      const resolved = which.sync('msbuild');
+      if (resolved) return resolved;
+    } catch {
+      // Ignore
+    }
+
+    try {
+      const dotnet = which.sync('dotnet');
+      if (dotnet) return dotnet;
+    } catch {
+      // Ignore
+    }
+
+    return null;
+  }
 }
+

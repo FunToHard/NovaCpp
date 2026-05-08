@@ -30,11 +30,49 @@
     "onCommand:novacpp.switchSourceHeader",
     "onCommand:novacpp.installClangd",
     "onDebugResolve:novacpp-debug",
-    "onTaskType:novacpp"
+    "onTaskType:novacpp",
+    "onTaskType:msbuild",
+    "workspaceContains:**/*.sln",
+    "workspaceContains:**/*.slnx"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "novacpp.solutionMenu",
+        "title": "NovaCpp: Solution Actions Menu",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.selectSolution",
+        "title": "NovaCpp: Select Active Solution (.sln / .slnx)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.selectSolutionConfiguration",
+        "title": "NovaCpp: Select Solution Configuration",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.buildSolution",
+        "title": "NovaCpp: Build Solution (MSBuild)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.rebuildSolution",
+        "title": "NovaCpp: Rebuild Solution (MSBuild)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.cleanSolution",
+        "title": "NovaCpp: Clean Solution (MSBuild)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.generateCompilationDbFromSolution",
+        "title": "NovaCpp: Generate compile_commands.json from Solution",
+        "category": "C/C++"
+      },
       {
         "command": "novacpp.openSettings",
         "title": "NovaCpp: Open Configuration Panel",
@@ -288,6 +326,34 @@
           "file": {
             "type": "string",
             "description": "Source file to compile"
+          }
+        }
+      },
+      {
+        "type": "msbuild",
+        "required": [
+          "solution"
+        ],
+        "properties": {
+          "solution": {
+            "type": "string",
+            "description": "Path to the .sln or .slnx solution file"
+          },
+          "project": {
+            "type": "string",
+            "description": "Optional project path to build"
+          },
+          "configuration": {
+            "type": "string",
+            "description": "Build configuration (e.g. Debug, Release)"
+          },
+          "platform": {
+            "type": "string",
+            "description": "Target platform (e.g. x64, x86, ARM64)"
+          },
+          "target": {
+            "type": "string",
+            "description": "MSBuild target (Build, Rebuild, Clean)"
           }
         }
       }

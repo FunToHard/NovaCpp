@@ -20,6 +20,8 @@ import { RunController } from './tasks/run-controller';
 import { StlUsageCollector } from './telemetry/stl-collector';
 import { StlRankingTable } from './telemetry/ranking-table';
 import { BatchDispatcher } from './telemetry/batch-dispatcher';
+import { SolutionManager } from './solution/solution-manager';
+import { SolutionTaskProvider } from './solution/solution-task-provider';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -32,6 +34,8 @@ let runController: RunController | null = null;
 let stlCollector: StlUsageCollector | null = null;
 let rankingTable: StlRankingTable | null = null;
 let batchDispatcher: BatchDispatcher | null = null;
+let solutionManager: SolutionManager | null = null;
+let solutionTaskProvider: SolutionTaskProvider | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('Activating NovaCpp extension...');
@@ -79,6 +83,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Register Build Task Provider
   context.subscriptions.push(
     vscode.tasks.registerTaskProvider(NovaCppTaskProvider.taskType, taskProvider)
+  );
+
+  // Initialize Visual Studio Solution (.sln & .slnx) Subsystem
+  solutionManager = new SolutionManager(detector, extractor, async () => {
+    await daemonManager?.restart();
+  });
+  await solutionManager.initialize();
+
+  solutionTaskProvider = new SolutionTaskProvider(
+    detector,
+    () => solutionManager?.getActiveSolution() ?? null,
+    () =>
+      solutionManager?.getActiveConfiguration() ?? {
+        configuration: 'Debug',
+        platform: 'x64',
+        key: 'Debug|x64'
+      }
+  );
+
+  context.subscriptions.push(
+    solutionManager,
+    vscode.tasks.registerTaskProvider(SolutionTaskProvider.taskType, solutionTaskProvider)
   );
 
   // Register Advanced Language Providers
@@ -221,6 +247,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.window.showInformationMessage(
         `NovaCpp: Telemetry batch ${success ? 'transmitted to server' : 'saved to offline queue'}.`
       );
+    }),
+    vscode.commands.registerCommand('novacpp.solutionMenu', async () => {
+      await solutionManager?.showSolutionMenu();
+    }),
+    vscode.commands.registerCommand('novacpp.selectSolution', async () => {
+      await solutionManager?.selectSolution();
+    }),
+    vscode.commands.registerCommand('novacpp.selectSolutionConfiguration', async () => {
+      await solutionManager?.selectConfiguration();
+    }),
+    vscode.commands.registerCommand('novacpp.buildSolution', async () => {
+      await solutionManager?.runMSBuildTask('Build');
+    }),
+    vscode.commands.registerCommand('novacpp.rebuildSolution', async () => {
+      await solutionManager?.runMSBuildTask('Rebuild');
+    }),
+    vscode.commands.registerCommand('novacpp.cleanSolution', async () => {
+      await solutionManager?.runMSBuildTask('Clean');
+    }),
+    vscode.commands.registerCommand('novacpp.generateCompilationDbFromSolution', async () => {
+      const generated = await solutionManager?.synthesizeCompilationDatabase();
+      if (generated) {
+        vscode.window.showInformationMessage(`NovaCpp: Generated compile_commands.json at ${generated}`);
+      } else {
+        vscode.window.showWarningMessage(
+          'NovaCpp: No solution or project files found to generate compile_commands.json.'
+        );
+      }
     })
   );
 
@@ -242,6 +296,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export async function deactivate(): Promise<void> {
+  if (solutionManager) {
+    solutionManager.dispose();
+    solutionManager = null;
+  }
   if (batchDispatcher) {
     await batchDispatcher.flushNow();
     batchDispatcher.dispose();
@@ -252,3 +310,4 @@ export async function deactivate(): Promise<void> {
     daemonManager = null;
   }
 }
+
