@@ -25,6 +25,7 @@ import { SolutionTaskProvider } from './solution/solution-task-provider';
 import { DiagnosticsLogger } from './diagnostics/diagnostics-logger';
 import { IndexManager } from './diagnostics/index-manager';
 import { DirectiveNavigator } from './navigation/directive-navigator';
+import { DoxygenGenerator, DoxygenCompletionProvider } from './documentation/doxygen-generator';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -127,6 +128,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       cppSelector,
       postfixProvider,
       ...PostfixCompletionProvider.triggerCharacters
+    ),
+    vscode.languages.registerCompletionItemProvider(
+      cppSelector,
+      new DoxygenCompletionProvider(),
+      ...DoxygenCompletionProvider.triggerCharacters
     ),
     vscode.languages.registerCodeActionsProvider(
       cppSelector,
@@ -294,6 +300,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.goToPrevDirectiveInGroup', async () => {
       await DirectiveNavigator.goToPrevDirective();
+    }),
+    vscode.commands.registerCommand('novacpp.generateDoxygenComment', async () => {
+      await DoxygenGenerator.generateForActiveEditor();
     })
   );
 

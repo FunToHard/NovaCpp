@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { findCounterpartFile, HEADER_EXTENSIONS, isSystemHeader } from './smart-definition';
+import { DoxygenGenerator, DoxygenStyle } from '../documentation/doxygen-generator';
 
 export const STD_HEADERS_CATALOG: Record<string, string> = {
   vector: '<vector>',
@@ -174,6 +175,34 @@ export class NovaCppCodeActionProvider implements vscode.CodeActionProvider {
       edit.insert(document.uri, new vscode.Position(lineIndex + 1, 0), snippet);
       switchAction.edit = edit;
       actions.push(switchAction);
+    }
+
+    // 4. Assist: Generate Doxygen Documentation
+    const doxygenEnabled = vscode.workspace.getConfiguration('novacpp').get<boolean>('doxygen.generateOnCodeAction', true);
+    if (doxygenEnabled) {
+      const target = DoxygenGenerator.findTargetDeclaration(document, lineIndex, 5);
+      if (target) {
+        const item = DoxygenGenerator.parseDeclaration(target.text);
+        if (item) {
+          const prevLineText = target.lineIndex > 0 ? document.lineAt(target.lineIndex - 1).text.trim() : '';
+          if (!prevLineText.endsWith('*/') && !prevLineText.startsWith('///') && !prevLineText.startsWith('//!')) {
+            const style = vscode.workspace.getConfiguration('novacpp').get<DoxygenStyle>('doxygen.generatedStyle', '/**');
+            const comment = DoxygenGenerator.generateComment(item, {
+              style,
+              asSnippet: false,
+              indent: target.indent
+            });
+            const action = new vscode.CodeAction(
+              `NovaCpp: Generate Doxygen Documentation for '${item.name}'`,
+              vscode.CodeActionKind.Refactor
+            );
+            const edit = new vscode.WorkspaceEdit();
+            edit.insert(document.uri, new vscode.Position(target.lineIndex, 0), comment + '\n');
+            action.edit = edit;
+            actions.push(action);
+          }
+        }
+      }
     }
 
     return actions;

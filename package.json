@@ -59,6 +59,11 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.generateDoxygenComment",
+        "title": "NovaCpp: Generate Doxygen Documentation Comment",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.solutionMenu",
         "title": "NovaCpp: Solution Actions Menu",
         "category": "C/C++"
@@ -231,6 +236,27 @@
           "type": "boolean",
           "default": true,
           "description": "Enable C++ Postfix Completion templates (.if, .for, .var, .unique, etc.)."
+        },
+        "novacpp.doxygen.generateOnType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically provide Doxygen completion snippet when typing /** above a C++ declaration."
+        },
+        "novacpp.doxygen.generateOnCodeAction": {
+          "type": "boolean",
+          "default": true,
+          "description": "Provide a lightbulb Code Action to generate Doxygen documentation comments for C++ declarations."
+        },
+        "novacpp.doxygen.generatedStyle": {
+          "type": "string",
+          "enum": [
+            "/**",
+            "/*!",
+            "///",
+            "//!"
+          ],
+          "default": "/**",
+          "description": "Comment style syntax used when generating Doxygen comment blocks."
         },
         "novacpp.inlayHints.parameterNames": {
           "type": "boolean",
