@@ -583,7 +583,14 @@ export const mockVscode: any = {
     registerCodeActionsProvider: () => ({ dispose: () => {} }),
     registerInlayHintsProvider: () => ({ dispose: () => {} }),
     registerHoverProvider: () => ({ dispose: () => {} }),
-    registerDefinitionProvider: () => ({ dispose: () => {} })
+    registerDefinitionProvider: () => ({ dispose: () => {} }),
+    createDiagnosticCollection: (name?: string) => ({
+      name: name ?? 'default',
+      set: () => {},
+      delete: () => {},
+      clear: () => {},
+      dispose: () => {}
+    })
   }
 };
 

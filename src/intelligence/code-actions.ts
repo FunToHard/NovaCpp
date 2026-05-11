@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { findCounterpartFile, HEADER_EXTENSIONS, isSystemHeader } from './smart-definition';
 import { DoxygenGenerator, DoxygenStyle } from '../documentation/doxygen-generator';
+import { splitParameters } from './hover-transformer';
 
 export const STD_HEADERS_CATALOG: Record<string, string> = {
   vector: '<vector>',
@@ -87,6 +88,28 @@ export function buildDefinitionStub(
   }
 
   return `\n${beforeParen}${fromParen} {\n    // TODO: Implementation\n}\n`;
+}
+
+export interface MacroDef {
+  name: string;
+  params?: string[];
+  body: string;
+}
+
+export function extractMacros(documentText: string): Map<string, MacroDef> {
+  const macros = new Map<string, MacroDef>();
+  const lines = documentText.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = trimmed.match(/^#\s*define\s+([a-zA-Z0-9_]+)(?:\(([^)]*)\))?\s+([\s\S]+)$/);
+    if (match) {
+      const name = match[1];
+      const params = match[2] !== undefined ? match[2].split(',').map((p) => p.trim()) : undefined;
+      const body = match[3].trim();
+      macros.set(name, { name, params, body });
+    }
+  }
+  return macros;
 }
 
 /**
@@ -201,6 +224,59 @@ export class NovaCppCodeActionProvider implements vscode.CodeActionProvider {
             action.edit = edit;
             actions.push(action);
           }
+        }
+      }
+    }
+
+    // 5. Refactor: Inline Macro
+    const macros = extractMacros(document.getText());
+    for (const [macroName, def] of macros.entries()) {
+      if (lineText.includes(macroName) && !lineText.trim().startsWith('#')) {
+        let expanded: string | null = null;
+        let matchRange: vscode.Range | null = null;
+
+        if (def.params) {
+          const regex = new RegExp(`\\b${macroName}\\s*\\(([^)]*)\\)`);
+          const match = lineText.match(regex);
+          if (match && match.index !== undefined) {
+            const rawArgs = splitParameters(match[1]);
+            let replacedBody = def.body;
+            for (let i = 0; i < def.params.length; i++) {
+              const pName = def.params[i];
+              const argVal = rawArgs[i] ?? '';
+              replacedBody = replacedBody.replace(new RegExp(`\\b${pName}\\b`, 'g'), argVal);
+            }
+            expanded = replacedBody;
+            matchRange = new vscode.Range(
+              lineIndex,
+              match.index,
+              lineIndex,
+              match.index + match[0].length
+            );
+          }
+        } else {
+          const regex = new RegExp(`\\b${macroName}\\b`);
+          const match = lineText.match(regex);
+          if (match && match.index !== undefined) {
+            expanded = def.body;
+            matchRange = new vscode.Range(
+              lineIndex,
+              match.index,
+              lineIndex,
+              match.index + match[0].length
+            );
+          }
+        }
+
+        if (expanded && matchRange) {
+          const action = new vscode.CodeAction(
+            `NovaCpp: Inline Macro '${macroName}'`,
+            vscode.CodeActionKind.Refactor
+          );
+          const edit = new vscode.WorkspaceEdit();
+          edit.replace(document.uri, matchRange, expanded);
+          action.edit = edit;
+          actions.push(action);
         }
       }
     }

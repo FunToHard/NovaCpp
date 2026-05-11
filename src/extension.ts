@@ -26,6 +26,7 @@ import { DiagnosticsLogger } from './diagnostics/diagnostics-logger';
 import { IndexManager } from './diagnostics/index-manager';
 import { DirectiveNavigator } from './navigation/directive-navigator';
 import { DoxygenGenerator, DoxygenCompletionProvider } from './documentation/doxygen-generator';
+import { ClangTidyManager } from './analysis/clang-tidy-manager';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -139,6 +140,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       codeActionProvider,
       {
         providedCodeActionKinds: NovaCppCodeActionProvider.providedCodeActionKinds
+      }
+    ),
+    vscode.languages.registerCodeActionsProvider(
+      cppSelector,
+      ClangTidyManager.getInstance(),
+      {
+        providedCodeActionKinds: ClangTidyManager.providedCodeActionKinds
       }
     ),
     inlayHintManager
@@ -303,6 +311,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.generateDoxygenComment', async () => {
       await DoxygenGenerator.generateForActiveEditor();
+    }),
+    vscode.commands.registerCommand('novacpp.runClangTidyOnActiveFile', async () => {
+      await ClangTidyManager.getInstance().runOnActiveFile();
+    }),
+    vscode.commands.registerCommand('novacpp.clearCodeAnalysisDiagnostics', () => {
+      ClangTidyManager.getInstance().clearDiagnostics();
     })
   );
 
@@ -337,5 +351,6 @@ export async function deactivate(): Promise<void> {
     await daemonManager.stop();
     daemonManager = null;
   }
+  ClangTidyManager.getInstance().dispose();
 }
 

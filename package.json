@@ -64,6 +64,16 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.runClangTidyOnActiveFile",
+        "title": "NovaCpp: Run Clang-Tidy Analysis on Active File",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.clearCodeAnalysisDiagnostics",
+        "title": "NovaCpp: Clear Clang-Tidy Diagnostics",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.solutionMenu",
         "title": "NovaCpp: Solution Actions Menu",
         "category": "C/C++"
@@ -257,6 +267,27 @@
           ],
           "default": "/**",
           "description": "Comment style syntax used when generating Doxygen comment blocks."
+        },
+        "novacpp.codeAnalysis.clangTidy.path": {
+          "type": "string",
+          "default": "",
+          "description": "Explicit filesystem path to clang-tidy binary. If empty, NovaCpp searches PATH and standard LLVM directories."
+        },
+        "novacpp.codeAnalysis.clangTidy.checks.enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of Clang-Tidy checks or families to enable (e.g. ['modernize-*', 'readability-*'])."
+        },
+        "novacpp.codeAnalysis.clangTidy.checks.disabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of Clang-Tidy checks or families to suppress (e.g. ['modernize-use-trailing-return-type'])."
         },
         "novacpp.inlayHints.parameterNames": {
           "type": "boolean",
