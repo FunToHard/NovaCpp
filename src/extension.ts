@@ -22,10 +22,14 @@ import { StlRankingTable } from './telemetry/ranking-table';
 import { BatchDispatcher } from './telemetry/batch-dispatcher';
 import { SolutionManager } from './solution/solution-manager';
 import { SolutionTaskProvider } from './solution/solution-task-provider';
+import { DiagnosticsLogger } from './diagnostics/diagnostics-logger';
+import { IndexManager } from './diagnostics/index-manager';
+import { DirectiveNavigator } from './navigation/directive-navigator';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
 let detector: CompilerDetector | null = null;
+let extractor: SystemIncludeExtractor | null = null;
 let synthesizer: FlagSynthesizer | null = null;
 let taskProvider: NovaCppTaskProvider | null = null;
 let cmakeWatcher: CMakeWatcher | null = null;
@@ -49,7 +53,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   installer = new ClangdInstaller(context);
   daemonManager = new DaemonManager(context, installer, rankingTable);
   detector = new CompilerDetector();
-  const extractor = new SystemIncludeExtractor();
+  extractor = new SystemIncludeExtractor();
   synthesizer = new FlagSynthesizer(detector, extractor);
   taskProvider = new NovaCppTaskProvider(detector);
   inactiveRegionsManager = new InactiveRegionsManager();
@@ -275,6 +279,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           'NovaCpp: No solution or project files found to generate compile_commands.json.'
         );
       }
+    }),
+    vscode.commands.registerCommand('novacpp.logDiagnostics', async () => {
+      if (!detector || !extractor) return;
+      await DiagnosticsLogger.logDiagnostics(detector, extractor, solutionManager, stlCollector);
+    }),
+    vscode.commands.registerCommand('novacpp.resetIndex', async () => {
+      await IndexManager.resetIndex(undefined, async () => {
+        await daemonManager?.restart();
+      });
+    }),
+    vscode.commands.registerCommand('novacpp.goToNextDirectiveInGroup', async () => {
+      await DirectiveNavigator.goToNextDirective();
+    }),
+    vscode.commands.registerCommand('novacpp.goToPrevDirectiveInGroup', async () => {
+      await DirectiveNavigator.goToPrevDirective();
     })
   );
 

@@ -39,6 +39,26 @@
   "contributes": {
     "commands": [
       {
+        "command": "novacpp.logDiagnostics",
+        "title": "NovaCpp: Log Diagnostics",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.resetIndex",
+        "title": "NovaCpp: Reset Clangd Symbol Index",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.goToNextDirectiveInGroup",
+        "title": "NovaCpp: Go to Next Directive in Group",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.goToPrevDirectiveInGroup",
+        "title": "NovaCpp: Go to Previous Directive in Group",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.solutionMenu",
         "title": "NovaCpp: Solution Actions Menu",
         "category": "C/C++"
