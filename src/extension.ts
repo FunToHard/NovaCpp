@@ -28,6 +28,7 @@ import { DirectiveNavigator } from './navigation/directive-navigator';
 import { DoxygenGenerator, DoxygenCompletionProvider } from './documentation/doxygen-generator';
 import { ClangTidyManager } from './analysis/clang-tidy-manager';
 import { VsEnvironmentManager } from './tasks/vs-environment-manager';
+import { VcpkgAdvisor } from './ecosystem/vcpkg-advisor';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -151,6 +152,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       ClangTidyManager.getInstance(),
       {
         providedCodeActionKinds: ClangTidyManager.providedCodeActionKinds
+      }
+    ),
+    vscode.languages.registerCodeActionsProvider(
+      cppSelector,
+      new VcpkgAdvisor(),
+      {
+        providedCodeActionKinds: VcpkgAdvisor.providedCodeActionKinds
       }
     ),
     inlayHintManager
@@ -328,6 +336,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.clearVsDeveloperEnvironment', () => {
       VsEnvironmentManager.clearVsDeveloperEnvironment(context);
+    }),
+    vscode.commands.registerCommand('novacpp.copyToClipboard', async (text: string) => {
+      await vscode.env.clipboard.writeText(text);
+      vscode.window.showInformationMessage(`NovaCpp: Copied "${text}" to clipboard.`);
+    }),
+    vscode.commands.registerCommand('novacpp.runInTerminal', (command: string) => {
+      const term = vscode.window.createTerminal('NovaCpp Package Manager');
+      term.show();
+      term.sendText(command);
     })
   );
 

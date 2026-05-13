@@ -2,11 +2,13 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { CompilerDetector, CompilerInfo } from './compiler-detector';
 import { SystemIncludeExtractor } from './system-includes';
+import { VcpkgAdvisor } from '../ecosystem/vcpkg-advisor';
 
 export interface SynthesisOptions {
   standard?: string;
   extraFlags?: string[];
   forceOverwrite?: boolean;
+  workspaceRoot?: string;
 }
 
 export class FlagSynthesizer {
@@ -73,6 +75,21 @@ export class FlagSynthesizer {
       flags.push(...options.extraFlags);
     }
 
+    if (options.workspaceRoot) {
+      const vcpkgRoot = VcpkgAdvisor.findVcpkgRoot(options.workspaceRoot);
+      if (vcpkgRoot) {
+        const vcpkgIncludes = VcpkgAdvisor.findInstalledIncludePaths(vcpkgRoot);
+        for (const inc of vcpkgIncludes) {
+          flags.push(`-I${inc.replace(/\\/g, '/')}`);
+        }
+      }
+
+      const nodeIncludes = VcpkgAdvisor.findNodeAddonIncludePaths(options.workspaceRoot);
+      for (const inc of nodeIncludes) {
+        flags.push(`-I${inc.replace(/\\/g, '/')}`);
+      }
+    }
+
     return flags;
   }
 
@@ -93,7 +110,12 @@ export class FlagSynthesizer {
       throw new Error('NovaCpp: No suitable C/C++ compiler found on the system.');
     }
 
-    const flags = await this.generateFlags(compiler, options);
+    const effectiveOptions: SynthesisOptions = {
+      workspaceRoot,
+      ...options
+    };
+
+    const flags = await this.generateFlags(compiler, effectiveOptions);
     const targetFile = path.join(workspaceRoot, 'compile_flags.txt');
 
     // compile_flags.txt format: one flag per line

@@ -304,6 +304,16 @@
           "default": true,
           "description": "Preserve the selected Visual Studio Developer Environment across editor restarts on Windows."
         },
+        "novacpp.vcpkg.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable intelligent header recommendations and Code Actions for vcpkg packages."
+        },
+        "novacpp.addNodeAddonIncludePaths": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-detect and inject include paths for nan and node-addon-api if detected in package.json."
+        },
         "novacpp.inlayHints.parameterNames": {
           "type": "boolean",
           "default": true,
