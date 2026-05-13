@@ -27,6 +27,7 @@ import { IndexManager } from './diagnostics/index-manager';
 import { DirectiveNavigator } from './navigation/directive-navigator';
 import { DoxygenGenerator, DoxygenCompletionProvider } from './documentation/doxygen-generator';
 import { ClangTidyManager } from './analysis/clang-tidy-manager';
+import { VsEnvironmentManager } from './tasks/vs-environment-manager';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -60,6 +61,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   taskProvider = new NovaCppTaskProvider(detector);
   inactiveRegionsManager = new InactiveRegionsManager();
   runController = new RunController(detector);
+
+  // Restore saved Visual Studio Developer Environment if configured
+  await VsEnvironmentManager.restoreSavedEnvironment(context);
 
   // Watch for compilation databases and seamless auto-reload
   cmakeWatcher = new CMakeWatcher(async () => {
@@ -317,6 +321,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.clearCodeAnalysisDiagnostics', () => {
       ClangTidyManager.getInstance().clearDiagnostics();
+    }),
+    vscode.commands.registerCommand('novacpp.setVsDeveloperEnvironment', async () => {
+      if (!detector) return;
+      await VsEnvironmentManager.setVsDeveloperEnvironment(context, detector);
+    }),
+    vscode.commands.registerCommand('novacpp.clearVsDeveloperEnvironment', () => {
+      VsEnvironmentManager.clearVsDeveloperEnvironment(context);
     })
   );
 
