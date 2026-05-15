@@ -84,6 +84,11 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.selectProfile",
+        "title": "NovaCpp: Select Target Configuration Profile",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.solutionMenu",
         "title": "NovaCpp: Solution Actions Menu",
         "category": "C/C++"
@@ -313,6 +318,14 @@
           "type": "boolean",
           "default": true,
           "description": "Auto-detect and inject include paths for nan and node-addon-api if detected in package.json."
+        },
+        "novacpp.default.forcedInclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of header files to force-include before compilation (/FI on MSVC, -include on GCC/Clang)."
         },
         "novacpp.inlayHints.parameterNames": {
           "type": "boolean",

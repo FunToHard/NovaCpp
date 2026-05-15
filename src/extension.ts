@@ -30,6 +30,7 @@ import { ClangTidyManager } from './analysis/clang-tidy-manager';
 import { VsEnvironmentManager } from './tasks/vs-environment-manager';
 import { VcpkgAdvisor } from './ecosystem/vcpkg-advisor';
 import { NovaCppConfigurationTool } from './ai/language-model-tool';
+import { ProfileManager } from './config/profile-manager';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -45,6 +46,7 @@ let rankingTable: StlRankingTable | null = null;
 let batchDispatcher: BatchDispatcher | null = null;
 let solutionManager: SolutionManager | null = null;
 let solutionTaskProvider: SolutionTaskProvider | null = null;
+let profileManager: ProfileManager | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('Activating NovaCpp extension...');
@@ -66,6 +68,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Restore saved Visual Studio Developer Environment if configured
   await VsEnvironmentManager.restoreSavedEnvironment(context);
+
+  // Initialize Multi-Target Configuration Profile Manager
+  profileManager = new ProfileManager(detector, async () => {
+    await daemonManager?.restart();
+  });
+  context.subscriptions.push(profileManager);
 
   // Watch for compilation databases and seamless auto-reload
   cmakeWatcher = new CMakeWatcher(async () => {
@@ -354,6 +362,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const term = vscode.window.createTerminal('NovaCpp Package Manager');
       term.show();
       term.sendText(command);
+    }),
+    vscode.commands.registerCommand('novacpp.selectProfile', async () => {
+      await profileManager?.selectProfile();
     })
   );
 
@@ -387,6 +398,10 @@ export async function deactivate(): Promise<void> {
   if (daemonManager) {
     await daemonManager.stop();
     daemonManager = null;
+  }
+  if (profileManager) {
+    profileManager.dispose();
+    profileManager = null;
   }
   ClangTidyManager.getInstance().dispose();
 }
