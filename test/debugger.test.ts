@@ -45,7 +45,7 @@ describe('Integrated Debugger (DAP Engine)', () => {
       assert.strictEqual(config.type, 'novacpp-debug');
       assert.strictEqual(config.request, 'launch');
       assert.strictEqual(config.name, 'NovaCpp: Debug Active File');
-      assert.ok(config.program.includes('${fileBasenameNoExtension}'));
+      assert.ok(config.program!.includes('${fileBasenameNoExtension}'));
     });
 
     it('should resolve workspace and active file variables', () => {
@@ -84,8 +84,9 @@ describe('Integrated Debugger (DAP Engine)', () => {
     it('should provide default debug configuration list', () => {
       const configs = configProvider.provideDebugConfigurations(undefined);
       assert.ok(Array.isArray(configs));
-      assert.strictEqual(configs.length, 1);
+      assert.strictEqual(configs.length, 2);
       assert.strictEqual(configs[0].type, 'novacpp-debug');
+      assert.strictEqual(configs[1].request, 'attach');
     });
 
     it('should create DebugAdapterExecutable for active session', () => {

@@ -89,6 +89,11 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.pickProcess",
+        "title": "NovaCpp: Pick Process to Attach",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.solutionMenu",
         "title": "NovaCpp: Solution Actions Menu",
         "category": "C/C++"

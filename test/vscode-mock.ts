@@ -80,6 +80,10 @@ export class InlayHint {
   constructor(public position: Position, public label: string | any[], public kind?: any) {}
 }
 
+export class EvaluatableExpression {
+  constructor(public readonly range: Range, public readonly expression?: string) {}
+}
+
 export class CallHierarchyItem {
   constructor(
     public kind: number,
@@ -584,6 +588,7 @@ export const mockVscode: any = {
     registerInlayHintsProvider: () => ({ dispose: () => {} }),
     registerHoverProvider: () => ({ dispose: () => {} }),
     registerDefinitionProvider: () => ({ dispose: () => {} }),
+    registerEvaluatableExpressionProvider: () => ({ dispose: () => {} }),
     createDiagnosticCollection: (name?: string) => ({
       name: name ?? 'default',
       set: () => {},
@@ -591,7 +596,8 @@ export const mockVscode: any = {
       clear: () => {},
       dispose: () => {}
     })
-  }
+  },
+  EvaluatableExpression
 };
 
 const originalRequire = (Module.prototype as any).require;

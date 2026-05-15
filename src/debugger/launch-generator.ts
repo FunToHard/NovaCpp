@@ -6,14 +6,17 @@ export interface DebugLaunchConfiguration extends vscode.DebugConfiguration {
   name: string;
   type: string;
   request: 'launch' | 'attach';
-  program: string;
-  args: string[];
-  stopAtEntry: boolean;
-  cwd: string;
-  environment: Array<{ name: string; value: string }>;
-  externalConsole: boolean;
+  program?: string;
+  args?: string[];
+  stopAtEntry?: boolean;
+  cwd?: string;
+  environment?: Array<{ name: string; value: string }>;
+  externalConsole?: boolean;
   debuggerType?: 'auto' | 'lldb-dap' | 'gdb';
   debuggerPath?: string;
+  processId?: string | number;
+  sourceFileMap?: Record<string, string>;
+  coreDumpPath?: string;
 }
 
 export class LaunchGenerator {
@@ -56,6 +59,21 @@ export class LaunchGenerator {
       cwd: '${workspaceFolder}',
       environment: [],
       externalConsole: false,
+      debuggerType: 'auto'
+    };
+  }
+
+  /**
+   * Generates default attach-to-process configuration using process picker.
+   */
+  public static createAttachConfiguration(
+    processId: string = '${command:novacpp.pickProcess}'
+  ): DebugLaunchConfiguration {
+    return {
+      name: 'NovaCpp: Attach to Process',
+      type: 'novacpp-debug',
+      request: 'attach',
+      processId,
       debuggerType: 'auto'
     };
   }

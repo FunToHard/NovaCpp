@@ -8,6 +8,7 @@ import {
   NovaCppDebugConfigurationProvider,
   NovaCppDebugAdapterDescriptorFactory
 } from './debugger/dap-session';
+import { ProcessPicker, CppEvaluatableExpressionProvider } from './debugger/process-picker';
 import { NovaCppTaskProvider } from './tasks/task-provider';
 import { ConfigPanel } from './webview/config-panel';
 import { CMakeWatcher } from './bridge/cmake-watcher';
@@ -177,6 +178,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       {
         providedCodeActionKinds: VcpkgAdvisor.providedCodeActionKinds
       }
+    ),
+    vscode.languages.registerEvaluatableExpressionProvider(
+      cppSelector,
+      new CppEvaluatableExpressionProvider()
     ),
     inlayHintManager
   );
@@ -365,6 +370,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.selectProfile', async () => {
       await profileManager?.selectProfile();
+    }),
+    vscode.commands.registerCommand('novacpp.pickProcess', async () => {
+      return await ProcessPicker.pickProcess();
     })
   );
 
