@@ -494,6 +494,15 @@
           "message": 6
         }
       }
+    ],
+    "languageModelTools": [
+      {
+        "name": "novacpp_configuration",
+        "toolReferenceName": "cpp",
+        "displayName": "C/C++ Project Configuration",
+        "canBeReferencedInPrompt": true,
+        "modelDescription": "For the active C or C++ file, this tool provides: the language (C, C++, or CUDA), the language standard version, the compiler (GCC, Clang, or MSVC), the target platform, active preprocessor defines, and solution/build configuration."
+      }
     ]
   },
   "repository": {

@@ -29,6 +29,7 @@ import { DoxygenGenerator, DoxygenCompletionProvider } from './documentation/dox
 import { ClangTidyManager } from './analysis/clang-tidy-manager';
 import { VsEnvironmentManager } from './tasks/vs-environment-manager';
 import { VcpkgAdvisor } from './ecosystem/vcpkg-advisor';
+import { NovaCppConfigurationTool } from './ai/language-model-tool';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -117,6 +118,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     solutionManager,
     vscode.tasks.registerTaskProvider(SolutionTaskProvider.taskType, solutionTaskProvider)
   );
+
+  // Register Language Model Tool (#cpp) for Copilot Chat
+  if (typeof (vscode as any).lm?.registerTool === 'function') {
+    const configTool = new NovaCppConfigurationTool(detector, solutionManager);
+    context.subscriptions.push(
+      (vscode as any).lm.registerTool('novacpp_configuration', configTool)
+    );
+  }
 
   // Register Advanced Language Providers
   const cppSelector: vscode.DocumentSelector = [
