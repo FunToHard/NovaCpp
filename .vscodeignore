@@ -10,3 +10,8 @@ playground/**
 compile_flags.txt
 .clangd/**
 *.log
+*.obj
+*.pdb
+*.ilk
+*.exe
+.cache/**
