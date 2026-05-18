@@ -216,6 +216,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('novacpp.restartServer', async () => {
       await daemonManager?.restart();
     }),
+    vscode.commands.registerCommand('novacpp.toggleDimInactiveRegions', async () => {
+      const config = vscode.workspace.getConfiguration('novacpp');
+      const current = config.get<boolean>('inactiveRegionsDimming', true);
+      await config.update('inactiveRegionsDimming', !current, vscode.ConfigurationTarget.Global);
+      vscode.window.showInformationMessage(
+        `NovaCpp: Inactive regions dimming ${!current ? 'enabled' : 'disabled'}.`
+      );
+    }),
     vscode.commands.registerCommand('novacpp.switchSourceHeader', async () => {
       const switched = await SmartDefinitionManager.switchSourceHeader();
       if (!switched && daemonManager) {

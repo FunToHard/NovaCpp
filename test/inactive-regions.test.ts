@@ -120,5 +120,51 @@ describe('Build System Bridge & Inactive Regions', () => {
       mockVscode.window.visibleTextEditors = [];
       manager.dispose();
     });
+
+    it('should create decoration type with disabledForeground theme color by default', () => {
+      const manager = new InactiveRegionsManager();
+      const dec: any = manager.getDecorationType();
+      assert.ok(dec);
+      assert.ok(dec.options);
+      assert.strictEqual(dec.options.opacity, '0.6');
+      assert.ok(dec.options.color instanceof mockVscode.ThemeColor);
+      assert.strictEqual((dec.options.color as any).id, 'disabledForeground');
+      manager.dispose();
+    });
+
+    it('should recreate decoration type with custom hex color and opacity', () => {
+      const manager = new InactiveRegionsManager();
+      (mockVscode.workspace as any)._config = {
+        'novacpp.inactiveRegionForegroundColor': '#888888',
+        'novacpp.inactiveRegionOpacity': 0.45,
+        'novacpp.inactiveRegionBackgroundColor': '#222222'
+      };
+
+      manager.recreateDecorationType();
+      const dec: any = manager.getDecorationType();
+      assert.ok(dec.options);
+      assert.strictEqual(dec.options.color, '#888888');
+      assert.strictEqual(dec.options.opacity, '0.45');
+      assert.strictEqual(dec.options.backgroundColor, '#222222');
+
+      // Reset mock config
+      (mockVscode.workspace as any)._config = {};
+      manager.dispose();
+    });
+
+    it('should allow omitting color when foreground is set to none', () => {
+      const manager = new InactiveRegionsManager();
+      (mockVscode.workspace as any)._config = {
+        'novacpp.inactiveRegionForegroundColor': 'none'
+      };
+
+      manager.recreateDecorationType();
+      const dec: any = manager.getDecorationType();
+      assert.ok(dec.options);
+      assert.strictEqual(dec.options.color, undefined);
+
+      (mockVscode.workspace as any)._config = {};
+      manager.dispose();
+    });
   });
 });

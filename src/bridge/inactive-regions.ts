@@ -7,13 +7,9 @@ export class InactiveRegionsManager implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
 
   constructor() {
-    this.decorationType = vscode.window.createTextEditorDecorationType({
-      opacity: '0.55',
-      isWholeLine: false
-    });
+    this.decorationType = this.createDecorationType();
 
     this.disposables.push(
-      this.decorationType,
       vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (editor) {
           this.applyDecorations(editor);
@@ -23,11 +19,74 @@ export class InactiveRegionsManager implements vscode.Disposable {
         this.inactiveRegionsMap.delete(doc.uri.toString());
       }),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('novacpp.inactiveRegionsDimming')) {
+        if (
+          e.affectsConfiguration('novacpp.inactiveRegionsDimming') ||
+          e.affectsConfiguration('novacpp.inactiveRegionForegroundColor') ||
+          e.affectsConfiguration('novacpp.inactiveRegionBackgroundColor') ||
+          e.affectsConfiguration('novacpp.inactiveRegionOpacity')
+        ) {
+          this.recreateDecorationType();
           this.refreshAllVisibleEditors();
         }
       })
     );
+  }
+
+  /**
+   * Constructs decoration styling so inactive regions are explicitly grayed out
+   * rather than simply faded or matching theme comment colors.
+   */
+  public createDecorationType(): vscode.TextEditorDecorationType {
+    const config = vscode.workspace.getConfiguration('novacpp');
+    const opacityVal = config.get<number>('inactiveRegionOpacity', 0.6);
+    const foregroundSetting = config.get<string>('inactiveRegionForegroundColor', 'disabledForeground');
+    const backgroundSetting = config.get<string>('inactiveRegionBackgroundColor', '');
+
+    let color: string | vscode.ThemeColor | undefined;
+    if (foregroundSetting && foregroundSetting.trim() !== '') {
+      const trimmed = foregroundSetting.trim();
+      const lower = trimmed.toLowerCase();
+      if (lower !== 'none' && lower !== 'syntax') {
+        if (trimmed.startsWith('#') || trimmed.startsWith('rgb') || trimmed.startsWith('hsl')) {
+          color = trimmed;
+        } else {
+          color = new vscode.ThemeColor(trimmed);
+        }
+      }
+    }
+
+    let backgroundColor: string | vscode.ThemeColor | undefined;
+    if (backgroundSetting && backgroundSetting.trim() !== '') {
+      const trimmed = backgroundSetting.trim();
+      if (trimmed.startsWith('#') || trimmed.startsWith('rgb') || trimmed.startsWith('hsl')) {
+        backgroundColor = trimmed;
+      } else {
+        backgroundColor = new vscode.ThemeColor(trimmed);
+      }
+    }
+
+    const opacity =
+      typeof opacityVal === 'number' && !isNaN(opacityVal)
+        ? Math.max(0.1, Math.min(1.0, opacityVal)).toString()
+        : '0.6';
+
+    return vscode.window.createTextEditorDecorationType({
+      opacity,
+      color,
+      backgroundColor,
+      isWholeLine: false,
+      rangeBehavior: vscode.DecorationRangeBehavior.OpenOpen
+    });
+  }
+
+  public recreateDecorationType(): void {
+    const oldDecoration = this.decorationType;
+    this.decorationType = this.createDecorationType();
+    oldDecoration.dispose();
+  }
+
+  public getDecorationType(): vscode.TextEditorDecorationType {
+    return this.decorationType;
   }
 
   /**
@@ -81,6 +140,7 @@ export class InactiveRegionsManager implements vscode.Disposable {
   }
 
   public dispose(): void {
+    this.decorationType.dispose();
     this.inactiveRegionsMap.clear();
     for (const d of this.disposables) {
       d.dispose();

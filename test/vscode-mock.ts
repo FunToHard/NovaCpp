@@ -227,6 +227,13 @@ export class FileSystemError extends Error {
   }
 }
 
+export enum DecorationRangeBehavior {
+  OpenBottomRight = 0,
+  OpenOpen = 1,
+  ClosedBottomRight = 2,
+  ClosedClosed = 3
+}
+
 export class ThemeColor {
   constructor(public id: string) {}
 }
@@ -464,6 +471,7 @@ export const mockVscode: any = {
   FileSystemError,
   ThemeColor,
   ThemeIcon,
+  DecorationRangeBehavior,
   RelativePattern,
   ConfigurationTarget,
   DebugAdapterExecutable,
@@ -519,7 +527,10 @@ export const mockVscode: any = {
     onDidChangeActiveTextEditor: () => ({ dispose: () => {} }),
     onDidChangeTextEditorVisibleRanges: () => ({ dispose: () => {} }),
     onDidChangeTextEditorSelection: () => ({ dispose: () => {} }),
-    createTextEditorDecorationType: () => ({ dispose: () => {} }),
+    createTextEditorDecorationType: (options?: any) => ({
+      dispose: () => {},
+      options
+    }),
     createWebviewPanel: (viewType: string, title: string, showOptions: any, options: any) => {
       let messageListener: any = null;
       let disposeListener: any = null;
@@ -557,9 +568,21 @@ export const mockVscode: any = {
     isTelemetryEnabled: true
   },
   workspace: {
-    getConfiguration: (_section?: string) => ({
-      get: (key: string, defaultValue?: any) => defaultValue,
-      update: async () => {}
+    getConfiguration: (section?: string) => ({
+      get: (key: string, defaultValue?: any) => {
+        const fullKey = section ? `${section}.${key}` : key;
+        const configStore = (mockVscode.workspace as any)._config || {};
+        if (fullKey in configStore) return configStore[fullKey];
+        if (key in configStore) return configStore[key];
+        return defaultValue;
+      },
+      update: async (key: string, value: any) => {
+        const fullKey = section ? `${section}.${key}` : key;
+        const configStore = (mockVscode.workspace as any)._config || {};
+        configStore[fullKey] = value;
+        configStore[key] = value;
+        (mockVscode.workspace as any)._config = configStore;
+      }
     }),
     createFileSystemWatcher: () => ({
       onDidChange: () => ({ dispose: () => {} }),

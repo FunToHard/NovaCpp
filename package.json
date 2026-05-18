@@ -139,6 +139,11 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.toggleDimInactiveRegions",
+        "title": "NovaCpp: Toggle Inactive Regions Dimming",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.switchSourceHeader",
         "title": "NovaCpp: Switch Header/Source",
         "category": "C/C++"
@@ -261,6 +266,23 @@
           "type": "boolean",
           "default": true,
           "description": "Dim inactive #ifdef preprocessor branches using native Clang AST."
+        },
+        "novacpp.inactiveRegionForegroundColor": {
+          "type": "string",
+          "default": "disabledForeground",
+          "description": "Font color applied to inactive preprocessor regions. Accepts a ThemeColor id (e.g. 'disabledForeground', 'descriptionForeground'), a hexadecimal color (e.g. '#808080'), or 'none' to preserve original syntax colors."
+        },
+        "novacpp.inactiveRegionOpacity": {
+          "type": "number",
+          "default": 0.6,
+          "minimum": 0.1,
+          "maximum": 1,
+          "description": "Opacity level applied to inactive preprocessor code regions (0.1 to 1.0)."
+        },
+        "novacpp.inactiveRegionBackgroundColor": {
+          "type": "string",
+          "default": "",
+          "description": "Optional background color applied to inactive preprocessor regions (hex color or ThemeColor id)."
         },
         "novacpp.postfixCompletions": {
           "type": "boolean",

@@ -8,6 +8,7 @@ esbuild.js
 playground/**
 *.vsix
 compile_flags.txt
+compile_commands.json
 .clangd/**
 *.log
 *.obj
