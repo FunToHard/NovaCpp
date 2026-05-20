@@ -32,6 +32,37 @@ export class InactiveRegionsManager implements vscode.Disposable {
     );
   }
 
+  private normalizeUri(uriStr: string): string {
+    try {
+      const decoded = decodeURIComponent(uriStr);
+      return vscode.Uri.parse(decoded).toString();
+    } catch {
+      return uriStr;
+    }
+  }
+
+  private static parseColor(colorStr: string): string | vscode.ThemeColor | undefined {
+    const trimmed = colorStr.trim();
+    if (!trimmed) return undefined;
+    const lower = trimmed.toLowerCase();
+    if (lower === 'none' || lower === 'syntax') return undefined;
+
+    const namedCssColors = new Set([
+      'gray', 'grey', 'silver', 'dimgray', 'dimgrey', 'lightgray', 'lightgrey',
+      'darkgray', 'darkgrey', 'black', 'white', 'red', 'green', 'blue', 'yellow'
+    ]);
+
+    if (
+      trimmed.startsWith('#') ||
+      trimmed.startsWith('rgb') ||
+      trimmed.startsWith('hsl') ||
+      namedCssColors.has(lower)
+    ) {
+      return trimmed;
+    }
+    return new vscode.ThemeColor(trimmed);
+  }
+
   /**
    * Constructs decoration styling so inactive regions are explicitly grayed out
    * rather than simply faded or matching theme comment colors.
@@ -42,28 +73,8 @@ export class InactiveRegionsManager implements vscode.Disposable {
     const foregroundSetting = config.get<string>('inactiveRegionForegroundColor', 'disabledForeground');
     const backgroundSetting = config.get<string>('inactiveRegionBackgroundColor', '');
 
-    let color: string | vscode.ThemeColor | undefined;
-    if (foregroundSetting && foregroundSetting.trim() !== '') {
-      const trimmed = foregroundSetting.trim();
-      const lower = trimmed.toLowerCase();
-      if (lower !== 'none' && lower !== 'syntax') {
-        if (trimmed.startsWith('#') || trimmed.startsWith('rgb') || trimmed.startsWith('hsl')) {
-          color = trimmed;
-        } else {
-          color = new vscode.ThemeColor(trimmed);
-        }
-      }
-    }
-
-    let backgroundColor: string | vscode.ThemeColor | undefined;
-    if (backgroundSetting && backgroundSetting.trim() !== '') {
-      const trimmed = backgroundSetting.trim();
-      if (trimmed.startsWith('#') || trimmed.startsWith('rgb') || trimmed.startsWith('hsl')) {
-        backgroundColor = trimmed;
-      } else {
-        backgroundColor = new vscode.ThemeColor(trimmed);
-      }
-    }
+    const color = foregroundSetting ? InactiveRegionsManager.parseColor(foregroundSetting) : undefined;
+    const backgroundColor = backgroundSetting ? InactiveRegionsManager.parseColor(backgroundSetting) : undefined;
 
     const opacity =
       typeof opacityVal === 'number' && !isNaN(opacityVal)
@@ -75,7 +86,7 @@ export class InactiveRegionsManager implements vscode.Disposable {
       color,
       backgroundColor,
       isWholeLine: false,
-      rangeBehavior: vscode.DecorationRangeBehavior.OpenOpen
+      rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
     });
   }
 
@@ -93,7 +104,7 @@ export class InactiveRegionsManager implements vscode.Disposable {
    * Updates inactive regions for a document and refreshes decorations.
    */
   public handleInactiveRegions(params: InactiveRegionsParams): void {
-    const uriStr = params.textDocument.uri;
+    const uriStr = this.normalizeUri(params.textDocument.uri);
 
     // Convert raw ranges if necessary
     const ranges = params.regions.map((r) => {
@@ -106,7 +117,7 @@ export class InactiveRegionsManager implements vscode.Disposable {
     this.inactiveRegionsMap.set(uriStr, ranges);
 
     for (const editor of vscode.window.visibleTextEditors) {
-      if (editor.document.uri.toString() === uriStr) {
+      if (this.normalizeUri(editor.document.uri.toString()) === uriStr) {
         this.applyDecorations(editor);
       }
     }
@@ -124,8 +135,11 @@ export class InactiveRegionsManager implements vscode.Disposable {
       return;
     }
 
-    const uriStr = editor.document.uri.toString();
-    const regions = this.inactiveRegionsMap.get(uriStr) ?? [];
+    const uriStr = this.normalizeUri(editor.document.uri.toString());
+    const rawRegions = this.inactiveRegionsMap.get(uriStr) ?? [];
+    const regions = rawRegions
+      .filter((r) => (r && r.isEmpty !== undefined ? !r.isEmpty : true))
+      .map((r) => (typeof editor.document?.validateRange === 'function' ? editor.document.validateRange(r) : r));
     editor.setDecorations(this.decorationType, regions);
   }
 
@@ -136,7 +150,7 @@ export class InactiveRegionsManager implements vscode.Disposable {
   }
 
   public getRegions(uriStr: string): vscode.Range[] | undefined {
-    return this.inactiveRegionsMap.get(uriStr);
+    return this.inactiveRegionsMap.get(this.normalizeUri(uriStr));
   }
 
   public dispose(): void {

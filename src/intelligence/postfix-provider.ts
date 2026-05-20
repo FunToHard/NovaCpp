@@ -140,14 +140,20 @@ export const POSTFIX_TEMPLATES: PostfixTemplate[] = [
     label: '.log',
     description: 'std::cout << expr << std::endl;',
     detail: 'Postfix: Stream expression to std::cout',
-    buildSnippet: (expr) => `std::cout << "${expr}: " << ${expr} << std::endl;`
+    buildSnippet: (expr) => {
+      const escaped = expr.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      return `std::cout << "${escaped}: " << ${expr} << std::endl;`;
+    }
   },
   {
     trigger: 'dbg',
     label: '.dbg',
     description: 'std::cout << expr << std::endl;',
     detail: 'Postfix: Stream expression to std::cout',
-    buildSnippet: (expr) => `std::cout << "${expr}: " << ${expr} << std::endl;`
+    buildSnippet: (expr) => {
+      const escaped = expr.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      return `std::cout << "${escaped}: " << ${expr} << std::endl;`;
+    }
   },
   {
     trigger: 'format',
@@ -190,6 +196,8 @@ export function extractExpressionBeforeDot(
 
   let parenDepth = 0;
   let bracketDepth = 0;
+  let braceDepth = 0;
+  let angleDepth = 0;
   let inString = false;
   let inChar = false;
   const endIndex = i + 1;
@@ -259,8 +267,48 @@ export function extractExpressionBeforeDot(
       }
     }
 
-    // When outside any parentheses or brackets, statement boundary characters terminate the expression
-    if (parenDepth === 0 && bracketDepth === 0) {
+    if (ch === '}') {
+      braceDepth++;
+      i--;
+      continue;
+    }
+
+    if (ch === '{') {
+      if (braceDepth > 0) {
+        braceDepth--;
+        i--;
+        continue;
+      } else {
+        // Enclosing brace boundary reached
+        break;
+      }
+    }
+
+    // Handle template angle brackets, distinguishing '->'
+    if (ch === '>') {
+      if (i > 0 && lineText[i - 1] === '-') {
+        // Part of '->'
+        i--;
+        continue;
+      }
+      angleDepth++;
+      i--;
+      continue;
+    }
+
+    if (ch === '<') {
+      if (angleDepth > 0) {
+        angleDepth--;
+        i--;
+        continue;
+      } else {
+        // Enclosing angle bracket boundary reached
+        break;
+      }
+    }
+
+    // When outside any parentheses, brackets, braces, or angle brackets, statement boundaries terminate
+    if (parenDepth === 0 && bracketDepth === 0 && braceDepth === 0 && angleDepth === 0) {
       // Allow member arrow '->'
       if (ch === '-' && i + 1 < lineText.length && lineText[i + 1] === '>') {
         i--;
@@ -323,7 +371,7 @@ export function extractExpressionBeforeDot(
   const startIndex = i + 1;
   const expr = lineText.substring(startIndex, endIndex).trim();
 
-  if (!expr || expr.length === 0) {
+  if (!expr || expr.length === 0 || /^\d/.test(expr)) {
     return null;
   }
 
@@ -350,6 +398,21 @@ export class PostfixCompletionProvider implements vscode.CompletionItemProvider 
     const dotIndex = textBeforeCursor.lastIndexOf('.');
     if (dotIndex === -1) {
       return [];
+    }
+
+    // Validate that suffix between dot and cursor is strictly a valid identifier prefix
+    const suffix = textBeforeCursor.substring(dotIndex + 1);
+    if (!/^[a-zA-Z0-9_]*$/.test(suffix)) {
+      return [];
+    }
+
+    // Guard against floating point numeric literals e.g. "3.14"
+    if (dotIndex > 0 && /\d/.test(lineText[dotIndex - 1])) {
+      // Check if preceding token is purely a number
+      const beforeDot = lineText.substring(0, dotIndex).trim();
+      if (/^\d+(\.\d+)?$/.test(beforeDot) || /(?:^|[\s+\-*/%=;,({[])\d+$/.test(beforeDot)) {
+        return [];
+      }
     }
 
     // Extract expression prior to the dot

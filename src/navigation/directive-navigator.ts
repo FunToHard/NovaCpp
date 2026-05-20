@@ -8,16 +8,53 @@ export interface PreprocessorDirective {
 }
 
 export class DirectiveNavigator {
+  public static toLines(input: string[] | { lineCount: number; lineAt(i: number): { text: string } }): string[] {
+    if (Array.isArray(input)) {
+      return input;
+    }
+    if (input && typeof (input as any).lineCount === 'number') {
+      const result: string[] = [];
+      for (let i = 0; i < input.lineCount; i++) {
+        result.push(input.lineAt(i).text);
+      }
+      return result;
+    }
+    return [];
+  }
+
   /**
    * Scans a document or line array to extract preprocessor directives with nesting depth.
    */
-  public static extractDirectives(lines: string[]): PreprocessorDirective[] {
+  public static extractDirectives(
+    input: string[] | { lineCount: number; lineAt(i: number): { text: string } }
+  ): PreprocessorDirective[] {
+    const lines = this.toLines(input);
     const directives: PreprocessorDirective[] = [];
     let depth = 0;
+    let inBlockComment = false;
 
     for (let i = 0; i < lines.length; i++) {
-      const lineText = lines[i].trim();
-      const match = lineText.match(/^#\s*(if|ifdef|ifndef|elif|elifdef|elifndef|else|endif)\b/);
+      const rawLine = lines[i];
+      const trimmed = rawLine.trim();
+
+      // Handle multi-line block comments
+      if (inBlockComment) {
+        if (trimmed.includes('*/')) {
+          inBlockComment = false;
+        }
+        continue;
+      }
+      if (trimmed.startsWith('/*')) {
+        if (!trimmed.includes('*/')) {
+          inBlockComment = true;
+        }
+        continue;
+      }
+
+      // Ignore single-line comments
+      if (trimmed.startsWith('//')) continue;
+
+      const match = trimmed.match(/^#(?:\/\*.*?\*\/|\s)*(if|ifdef|ifndef|elif|elifdef|elifndef|else|endif)\b/);
       if (!match) continue;
 
       const keyword = match[1];
@@ -28,28 +65,28 @@ export class DirectiveNavigator {
           line: i,
           type: 'if',
           depth,
-          text: lineText
+          text: trimmed
         });
       } else if (keyword.startsWith('elif')) {
         directives.push({
           line: i,
           type: 'elif',
           depth,
-          text: lineText
+          text: trimmed
         });
       } else if (keyword === 'else') {
         directives.push({
           line: i,
           type: 'else',
           depth,
-          text: lineText
+          text: trimmed
         });
       } else if (keyword === 'endif') {
         directives.push({
           line: i,
           type: 'endif',
           depth,
-          text: lineText
+          text: trimmed
         });
         if (depth > 0) depth--;
       }
@@ -61,8 +98,11 @@ export class DirectiveNavigator {
   /**
    * Finds the line number of the next directive in the active preprocessor group.
    */
-  public static findNextDirective(lines: string[], currentLine: number): number | null {
-    const directives = this.extractDirectives(lines);
+  public static findNextDirective(
+    input: string[] | { lineCount: number; lineAt(i: number): { text: string } },
+    currentLine: number
+  ): number | null {
+    const directives = this.extractDirectives(input);
     if (directives.length === 0) return null;
 
     // Find closest enclosing or preceding directive to determine group depth
@@ -101,17 +141,21 @@ export class DirectiveNavigator {
   /**
    * Finds the line number of the previous directive in the active preprocessor group.
    */
-  public static findPrevDirective(lines: string[], currentLine: number): number | null {
-    const directives = this.extractDirectives(lines);
+  public static findPrevDirective(
+    input: string[] | { lineCount: number; lineAt(i: number): { text: string } },
+    currentLine: number
+  ): number | null {
+    const directives = this.extractDirectives(input);
     if (directives.length === 0) return null;
 
     // Find directives strictly before currentLine
     const candidates = directives.filter((d) => d.line < currentLine);
     if (candidates.length === 0) return null;
 
-    // Find the last candidate
+    // If currentLine is directly on a directive, use its depth as targetDepth
+    const currentDir = directives.find((d) => d.line === currentLine);
     const lastCandidate = candidates[candidates.length - 1];
-    const targetDepth = lastCandidate.depth;
+    const targetDepth = currentDir ? currentDir.depth : lastCandidate.depth;
 
     // Try finding candidate at the same depth
     for (let i = candidates.length - 1; i >= 0; i--) {

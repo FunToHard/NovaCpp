@@ -120,45 +120,97 @@ export class DoxygenGenerator {
     }
 
     // Check function or method declaration
-    const openParen = trimmed.indexOf('(');
-    const closeParen = trimmed.lastIndexOf(')');
+    let searchStr = trimmed.replace(/template\s*<[\s\S]*?>/g, '').trim();
+    // Strip requires clause if preceding parameter list
+    searchStr = searchStr.replace(/\brequires\s*\([\s\S]*?\)/g, '').trim();
 
-    if (openParen !== -1 && closeParen > openParen) {
-      const beforeParen = trimmed.substring(0, openParen).trim();
-      const paramsContent = trimmed.substring(openParen + 1, closeParen).trim();
+    // Check for operator overloads (e.g. operator(), operator[], operator->, operator bool)
+    let openParen = -1;
+    let explicitFnName: string | undefined;
+    const opMatch = searchStr.match(/\boperator\s*(\(\)|\[\]|->|<<|>>|[+\-*/%^&|!=<>]=?|[a-zA-Z_][a-zA-Z0-9_]*)/);
+    if (opMatch && opMatch.index !== undefined) {
+      explicitFnName = opMatch[0];
+      openParen = searchStr.indexOf('(', opMatch.index + opMatch[0].length);
+    } else {
+      openParen = searchStr.indexOf('(');
+    }
 
-      // Find function name: last word token before '('
-      const fnTokens = beforeParen.replace(/template\s*<[\s\S]*?>/g, '').trim().split(/\s+/);
-      const fnName = fnTokens[fnTokens.length - 1]?.replace(/^[*&]+/, '') ?? 'function';
-
-      // Determine return type (tokens before fnName, minus keywords)
-      const rawRet = fnTokens.slice(0, fnTokens.length - 1).join(' ');
-      const cleanRet = rawRet
-        .replace(/\b(virtual|static|inline|constexpr|consteval|explicit|friend)\b/g, '')
-        .trim();
-
-      const returnType = cleanRet.length > 0 && cleanRet !== 'void' ? cleanRet : undefined;
-
-      // Extract parameter names
-      const rawParams = splitParameters(paramsContent);
-      const params: { name: string; type?: string }[] = [];
-
-      for (const p of rawParams) {
-        const pName = this.extractParamName(p);
-        if (pName) {
-          params.push({ name: pName, type: p.trim() });
+    if (openParen !== -1) {
+      // Balance parentheses from openParen forward to find the true closing paren of the parameter list
+      let depth = 0;
+      let closeParen = -1;
+      for (let pIdx = openParen; pIdx < searchStr.length; pIdx++) {
+        if (searchStr[pIdx] === '(') depth++;
+        else if (searchStr[pIdx] === ')') {
+          depth--;
+          if (depth === 0) {
+            closeParen = pIdx;
+            break;
+          }
         }
       }
 
-      return {
-        brief: `Executes ${fnName}.`,
-        templateParams,
-        params,
-        returnType,
-        isFunction: true,
-        isClassOrStruct: false,
-        name: fnName
-      };
+      if (closeParen !== -1) {
+        const beforeParen = searchStr.substring(0, openParen).trim();
+        const paramsContent = searchStr.substring(openParen + 1, closeParen).trim();
+        const afterClose = searchStr.substring(closeParen + 1).trim();
+
+        // Check for trailing return type: auto foo(...) -> ReturnType
+        const trailingMatch = afterClose.match(/^->\s*([^;{]+)/);
+        let returnType: string | undefined;
+
+        // Find function name
+        const fnTokens = beforeParen.split(/\s+/);
+        let fnName = explicitFnName;
+        let ptrPrefix = '';
+
+        if (!fnName) {
+          const lastToken = fnTokens[fnTokens.length - 1] ?? 'function';
+          const matchPtr = lastToken.match(/^([*&]+)/);
+          if (matchPtr) {
+            ptrPrefix = matchPtr[1];
+          }
+          fnName = lastToken.replace(/^[*&]+/, '');
+        }
+
+        if (trailingMatch) {
+          returnType = trailingMatch[1].trim();
+        } else {
+          // Determine return type from tokens before fnName
+          const rawTokens = explicitFnName
+            ? fnTokens.slice(0, fnTokens.findIndex((t) => t.includes('operator')))
+            : fnTokens.slice(0, fnTokens.length - 1);
+          let rawRet = rawTokens.join(' ').trim();
+          if (ptrPrefix) {
+            rawRet += ptrPrefix;
+          }
+          const cleanRet = rawRet
+            .replace(/\b(virtual|static|inline|constexpr|consteval|explicit|friend)\b/g, '')
+            .trim();
+          returnType = cleanRet.length > 0 && cleanRet !== 'void' ? cleanRet : undefined;
+        }
+
+        // Extract parameter names
+        const rawParams = splitParameters(paramsContent);
+        const params: { name: string; type?: string }[] = [];
+
+        for (const p of rawParams) {
+          const pName = this.extractParamName(p);
+          if (pName) {
+            params.push({ name: pName, type: p.trim() });
+          }
+        }
+
+        return {
+          brief: `Executes ${fnName}.`,
+          templateParams,
+          params,
+          returnType,
+          isFunction: true,
+          isClassOrStruct: false,
+          name: fnName
+        };
+      }
     }
 
     return null;
@@ -258,8 +310,8 @@ export class DoxygenGenerator {
 
       accumulated += (accumulated ? ' ' : '') + trimmed;
 
-      // If line ends with ';' or '{', or is a complete statement
-      if (trimmed.endsWith(';') || trimmed.endsWith('{') || (trimmed.includes('(') && trimmed.includes(')'))) {
+      // If line ends with ';' or '{'
+      if (trimmed.endsWith(';') || trimmed.endsWith('{')) {
         return {
           lineIndex: startIdx,
           text: accumulated,

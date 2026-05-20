@@ -50,12 +50,12 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
       } else if (typeof diagnostic.code === 'object' && 'value' in diagnostic.code) {
         codeStr = String((diagnostic.code as any).value ?? '');
       }
-      if (/^[a-z0-9]+-[a-z0-9-]+$/i.test(codeStr)) {
+      if (/^[a-zA-Z0-9_.-]+$/i.test(codeStr)) {
         return codeStr;
       }
     }
 
-    const match = diagnostic.message.match(/\[([a-z0-9]+-[a-z0-9-]+)\]\s*$/i);
+    const match = diagnostic.message.match(/\[([a-zA-Z0-9_.-]+)\]\s*$/i);
     if (match) {
       return match[1];
     }
@@ -67,6 +67,10 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
    * Generates official LLVM documentation URL for a given Clang-Tidy check.
    */
   public static getDocUrl(checkName: string): string {
+    if (checkName.startsWith('clang-analyzer-')) {
+      const sub = checkName.substring('clang-analyzer-'.length);
+      return `https://clang.llvm.org/extra/clang-tidy/checks/clang-analyzer/${sub}.html`;
+    }
     const dashIdx = checkName.indexOf('-');
     if (dashIdx !== -1) {
       const family = checkName.substring(0, dashIdx);
@@ -259,7 +263,7 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
       },
       (_progress, token) => {
         return new Promise<void>((resolve) => {
-          const child = spawn(clangTidyBin, args, { shell: true });
+          const child = spawn(clangTidyBin, args, { shell: false });
 
           token.onCancellationRequested(() => {
             child.kill();
@@ -285,9 +289,12 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
             this.outputChannel.appendLine(`\n[Clang-Tidy finished with exit code ${code}]`);
 
             // Parse diagnostics from stdout/stderr:
-            // Example: F:/DEV/project/main.cpp:15:5: warning: message [check-name]
-            const lineRegex = /^([^:\r\n]+):(\d+):(\d+):\s+(warning|error|note):\s+(.*?)(?:\s+\[([a-z0-9-]+)\])?\s*$/;
+            // Example: C:\path\to\main.cpp:15:5: warning: message [clang-analyzer-core.NullDereference]
+            const lineRegex = /^((?:[a-zA-Z]:)?[^:\r\n]+):(\d+):(\d+):\s+(warning|error|note):\s+(.*?)(?:\s+\[([a-zA-Z0-9_.-]+)\])?\s*$/;
             const outputLines = (stdoutData + '\n' + stderrData).split(/\r?\n/);
+
+            const fileDiagnosticsMap = new Map<string, { uri: vscode.Uri; diags: vscode.Diagnostic[] }>();
+            fileDiagnosticsMap.set(doc.uri.toString(), { uri: doc.uri, diags: [] });
 
             for (const outLine of outputLines) {
               const match = outLine.match(lineRegex);
@@ -314,11 +321,25 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
                 if (check) {
                   diag.code = check;
                 }
+
+                const rawFile = match[1];
+                const absPath = path.isAbsolute(rawFile)
+                  ? rawFile
+                  : path.resolve(path.dirname(filePath), rawFile);
+                const targetUri = vscode.Uri.file(absPath);
+                const uriKey = targetUri.toString();
+
+                if (!fileDiagnosticsMap.has(uriKey)) {
+                  fileDiagnosticsMap.set(uriKey, { uri: targetUri, diags: [] });
+                }
+                fileDiagnosticsMap.get(uriKey)!.diags.push(diag);
                 diagnostics.push(diag);
               }
             }
 
-            this.diagnosticCollection.set(doc.uri, diagnostics);
+            for (const { uri, diags } of fileDiagnosticsMap.values()) {
+              this.diagnosticCollection.set(uri, diags);
+            }
             vscode.window.showInformationMessage(
               `NovaCpp: Clang-Tidy completed with ${diagnostics.length} diagnostic(s).`
             );

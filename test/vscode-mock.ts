@@ -251,10 +251,14 @@ export class Uri {
     return new Uri('file', path);
   }
   static parse(uriStr: string): Uri {
-    if (uriStr.startsWith('file://')) {
-      return new Uri('file', uriStr.substring(7).replace(/^\/+/, ''));
+    let clean = uriStr;
+    try {
+      clean = decodeURIComponent(uriStr);
+    } catch {}
+    if (clean.startsWith('file://')) {
+      return new Uri('file', clean.substring(7).replace(/^\/+/, ''));
     }
-    return new Uri('file', uriStr);
+    return new Uri('file', clean);
   }
   static joinPath(base: Uri, ...pathSegments: string[]): Uri {
     const p = require('path');
