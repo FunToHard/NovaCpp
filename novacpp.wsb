@@ -1,0 +1,26 @@
+<Configuration>
+  <!-- Networking enabled to allow extension downloads and clangd language server setup -->
+  <Networking>Default</Networking>
+
+  <!-- Folder Redirection / Mapping -->
+  <MappedFolders>
+    <!-- Map Host Downloads directory containing VSCodeSetup-x64-1.137.0.exe (Read-Only) -->
+    <MappedFolder>
+      <HostFolder>C:\Users\legen\Downloads</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\Downloads</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+
+    <!-- Map NovaCpp Project Directory (Read/Write) -->
+    <MappedFolder>
+      <HostFolder>F:\DEV\projects\NovaCpp</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\NovaCpp</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+
+  <!-- Automated Logon Command: Installs VS Code and opens NovaCpp workspace -->
+  <LogonCommand>
+    <Command>powershell.exe -ExecutionPolicy Bypass -NoProfile -File C:\Users\WDAGUtilityAccount\Desktop\NovaCpp\scripts\sandbox-setup.ps1</Command>
+  </LogonCommand>
+</Configuration>
