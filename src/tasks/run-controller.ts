@@ -240,7 +240,9 @@ export class RunController {
     const terminalName = isMsvc ? 'Developer PowerShell for VS' : 'NovaCpp: Run';
 
     // Verify existing terminal is still alive
-    const existing = vscode.window.terminals?.find((t) => t.name === terminalName);
+    const existing = vscode.window.terminals?.find(
+      (t) => t.name === terminalName && (t as any).exitStatus === undefined
+    );
     if (existing) {
       this.runTerminal = existing;
       return { terminal: existing, isNew: false };

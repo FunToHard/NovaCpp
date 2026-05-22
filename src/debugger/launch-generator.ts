@@ -89,16 +89,16 @@ export class LaunchGenerator {
     let resolved = value;
 
     if (workspaceRoot) {
-      resolved = resolved.replace(/\$\{workspaceFolder\}/g, workspaceRoot);
+      resolved = resolved.replace(/\$\{workspaceFolder\}/g, () => workspaceRoot);
     }
 
     if (activeFile) {
       const parsed = path.parse(activeFile);
-      resolved = resolved.replace(/\$\{file\}/g, activeFile);
-      resolved = resolved.replace(/\$\{fileBasename\}/g, parsed.base);
-      resolved = resolved.replace(/\$\{fileBasenameNoExtension\}/g, parsed.name);
-      resolved = resolved.replace(/\$\{fileDirname\}/g, parsed.dir);
-      resolved = resolved.replace(/\$\{fileExtname\}/g, parsed.ext);
+      resolved = resolved.replace(/\$\{file\}/g, () => activeFile);
+      resolved = resolved.replace(/\$\{fileBasename\}/g, () => parsed.base);
+      resolved = resolved.replace(/\$\{fileBasenameNoExtension\}/g, () => parsed.name);
+      resolved = resolved.replace(/\$\{fileDirname\}/g, () => parsed.dir);
+      resolved = resolved.replace(/\$\{fileExtname\}/g, () => parsed.ext);
     }
 
     return resolved;

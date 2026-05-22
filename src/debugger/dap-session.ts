@@ -33,23 +33,10 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
       Object.assign(config, generated);
     }
 
-    // Handle Attach mode
-    if (config.request === 'attach') {
-      if (!config.processId) {
-        config.processId = '${command:novacpp.pickProcess}';
-      }
-      return config;
-    }
-
-    if (!config.program) {
-      vscode.window.showErrorMessage(
-        'NovaCpp Debug: Missing "program" property in launch configuration.'
-      );
-      return null;
-    }
-
     // Resolve variables in program path, cwd, coreDumpPath, and sourceFileMap
-    config.program = LaunchGenerator.resolveVariables(config.program, activeFile, workspaceRoot);
+    if (config.program) {
+      config.program = LaunchGenerator.resolveVariables(config.program, activeFile, workspaceRoot);
+    }
     if (config.cwd) {
       config.cwd = LaunchGenerator.resolveVariables(config.cwd, activeFile, workspaceRoot);
     }
@@ -63,6 +50,26 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
           LaunchGenerator.resolveVariables(String(v), activeFile, workspaceRoot);
       }
       config.sourceFileMap = remapped;
+      if (!config.sourceMap) {
+        config.sourceMap = Object.entries(remapped);
+      }
+    }
+
+    // Handle Attach mode
+    if (config.request === 'attach') {
+      if (!config.processId) {
+        config.processId = '${command:novacpp.pickProcess}';
+      } else if (typeof config.processId === 'string' && /^\d+$/.test(config.processId.trim())) {
+        config.processId = parseInt(config.processId.trim(), 10);
+      }
+      return config;
+    }
+
+    if (!config.program) {
+      vscode.window.showErrorMessage(
+        'NovaCpp Debug: Missing "program" property in launch configuration.'
+      );
+      return null;
     }
 
     // Check if binary exists

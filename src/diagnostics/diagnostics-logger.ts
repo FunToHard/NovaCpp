@@ -111,17 +111,21 @@ export class DiagnosticsLogger {
       const compFlags = path.join(rootPath, 'compile_flags.txt');
       const buildCompCommands = path.join(rootPath, 'build', 'compile_commands.json');
 
-      if (fs.existsSync(compCommands)) {
-        const stats = fs.statSync(compCommands);
-        lines.push(`Found: ${compCommands} (${stats.size} bytes)`);
-      } else if (fs.existsSync(buildCompCommands)) {
-        const stats = fs.statSync(buildCompCommands);
-        lines.push(`Found: ${buildCompCommands} (${stats.size} bytes)`);
-      } else if (fs.existsSync(compFlags)) {
-        const stats = fs.statSync(compFlags);
-        lines.push(`Found: ${compFlags} (${stats.size} bytes)`);
-      } else {
-        lines.push('No compile_commands.json or compile_flags.txt in root or build/.');
+      try {
+        if (fs.existsSync(compCommands)) {
+          const stats = fs.statSync(compCommands);
+          lines.push(`Found: ${compCommands} (${stats.size} bytes)`);
+        } else if (fs.existsSync(buildCompCommands)) {
+          const stats = fs.statSync(buildCompCommands);
+          lines.push(`Found: ${buildCompCommands} (${stats.size} bytes)`);
+        } else if (fs.existsSync(compFlags)) {
+          const stats = fs.statSync(compFlags);
+          lines.push(`Found: ${compFlags} (${stats.size} bytes)`);
+        } else {
+          lines.push('No compile_commands.json or compile_flags.txt in root or build/.');
+        }
+      } catch (err: any) {
+        lines.push(`Error checking compilation database: ${err.message ?? err}`);
       }
     }
 

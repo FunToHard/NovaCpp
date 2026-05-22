@@ -99,8 +99,19 @@ export function extractExpressionAtColumn(
 ): { start: number; end: number; text: string } | null {
   if (col < 0 || col >= line.length) return null;
 
+  // Whitespace guard: cursor directly on whitespace should not evaluate adjacent tokens
+  if (/\s/.test(line[col])) return null;
+
+  // If cursor is on '>' in '->' or second ':' in '::', adjust seed to operator start
+  let seedCol = col;
+  if (line[col] === '>' && col > 0 && line[col - 1] === '-') {
+    seedCol = col - 1;
+  } else if (line[col] === ':' && col > 0 && line[col - 1] === ':') {
+    seedCol = col - 1;
+  }
+
   // Find start boundary
-  let start = col;
+  let start = seedCol;
   while (start > 0) {
     const prevChar = line[start - 1];
     if (/[a-zA-Z0-9_]/.test(prevChar)) {
@@ -125,13 +136,49 @@ export function extractExpressionAtColumn(
       } else {
         break;
       }
+    } else if (prevChar === ')') {
+      // Backtrack matching opening paren '(' for (*ptr).field
+      let parenDepth = 1;
+      let pIdx = start - 2;
+      while (pIdx >= 0 && parenDepth > 0) {
+        if (line[pIdx] === ')') parenDepth++;
+        else if (line[pIdx] === '(') parenDepth--;
+        pIdx--;
+      }
+      if (parenDepth === 0) {
+        start = pIdx + 1;
+      } else {
+        break;
+      }
+    } else if (prevChar === '>' && start >= 2 && line[start - 2] !== '-') {
+      // Backtrack matching opening template angle bracket '<'
+      let angleDepth = 1;
+      let aIdx = start - 2;
+      while (aIdx >= 0 && angleDepth > 0) {
+        if (line[aIdx] === '>') angleDepth++;
+        else if (line[aIdx] === '<') angleDepth--;
+        aIdx--;
+      }
+      if (angleDepth === 0) {
+        start = aIdx + 1;
+      } else {
+        break;
+      }
     } else {
       break;
     }
   }
 
+  // Check for unary leading '*' or '&' (e.g. *ptr, &var)
+  if (start > 0 && (line[start - 1] === '*' || line[start - 1] === '&')) {
+    const beforeOp = start >= 2 ? line[start - 2] : ' ';
+    if (/[\s(,=;+\-*/%]/.test(beforeOp)) {
+      start--;
+    }
+  }
+
   // Find end boundary
-  let end = col;
+  let end = seedCol;
   while (end < line.length) {
     const ch = line[end];
     if (/[a-zA-Z0-9_]/.test(ch)) {
@@ -153,6 +200,20 @@ export function extractExpressionAtColumn(
       }
       if (bracketDepth === 0) {
         end = bIdx;
+      } else {
+        break;
+      }
+    } else if (ch === '<' && (end === 0 || !/[\s(,=;+\-*/%]/.test(line[end - 1]))) {
+      // Fast forward matching closing angle bracket '>' for template args
+      let angleDepth = 1;
+      let aIdx = end + 1;
+      while (aIdx < line.length && angleDepth > 0) {
+        if (line[aIdx] === '<') angleDepth++;
+        else if (line[aIdx] === '>') angleDepth--;
+        aIdx++;
+      }
+      if (angleDepth === 0) {
+        end = aIdx;
       } else {
         break;
       }

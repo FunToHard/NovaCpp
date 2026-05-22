@@ -27,7 +27,7 @@ export class VsEnvironmentManager {
 
     // Standard VS installation directories
     const progFiles = process.env['ProgramFiles'] ?? 'C:\\Program Files';
-    const editions = ['Enterprise', 'Professional', 'Community'];
+    const editions = ['Enterprise', 'Professional', 'Community', 'BuildTools', 'Preview'];
     for (const year of ['18', '2022', '2019']) {
       for (const ed of editions) {
         candidateRoots.push(path.join(progFiles, 'Microsoft Visual Studio', year, ed));
@@ -187,14 +187,16 @@ export class VsEnvironmentManager {
     ];
 
     for (const key of replaceKeys) {
-      if (env[key]) {
-        col.replace(key, env[key]);
+      const matchKey = Object.keys(env).find((k) => k.toUpperCase() === key.toUpperCase());
+      if (matchKey && env[matchKey]) {
+        col.replace(key, env[matchKey]);
       }
     }
 
-    // Prepend PATH so cl.exe, link.exe, msbuild.exe take precedence
-    if (env['PATH']) {
-      col.prepend('PATH', env['PATH'] + ';');
+    // Prepend PATH case-insensitively so cl.exe, link.exe, msbuild.exe take precedence
+    const pathKey = Object.keys(env).find((k) => k.toUpperCase() === 'PATH');
+    if (pathKey && env[pathKey]) {
+      col.prepend('PATH', env[pathKey] + ';');
     }
   }
 
