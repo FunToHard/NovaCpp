@@ -37,12 +37,24 @@ export function parseDotConfig(content: string): string[] {
       const key = trimmed.substring(0, eqIdx).trim();
       let val = trimmed.substring(eqIdx + 1).trim();
 
-      if (val === 'y') {
+      // Handle quoted string values with potential inline comments after closing quote
+      if (val.startsWith('"')) {
+        const closingQuoteIdx = val.indexOf('"', 1);
+        if (closingQuoteIdx !== -1) {
+          val = val.substring(0, closingQuoteIdx + 1);
+        }
+      } else {
+        // Strip inline comments (#, //, /* ... */)
+        val = val.replace(/\s*(?:#|\/\/|\/\*).*$/, '').trim();
+      }
+
+      // 'n' means disabled/undefined in Kconfig; defining -DCONFIG_FOO=n would evaluate to true!
+      if (val === 'n' || val === 'N') {
+        continue;
+      }
+
+      if (val === 'y' || val === 'Y' || val === 'm' || val === 'M') {
         defines.push(`${key}=1`);
-      } else if (val === 'm') {
-        defines.push(`${key}=1`);
-      } else if (val.startsWith('"') && val.endsWith('"')) {
-        defines.push(`${key}=${val}`);
       } else {
         defines.push(`${key}=${val}`);
       }

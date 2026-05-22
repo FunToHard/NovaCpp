@@ -49,5 +49,6 @@ export interface VcxProjectModel {
 export interface CompileCommandEntry {
   directory: string;
   command: string;
+  arguments?: string[];
   file: string;
 }

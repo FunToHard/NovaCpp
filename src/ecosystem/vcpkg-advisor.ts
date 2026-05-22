@@ -60,7 +60,8 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
     const match = trimmed.match(/^#\s*include\s*[<"]([^>"]+)[>"]/);
     if (!match) return null;
 
-    const header = match[1];
+    const rawHeader = match[1];
+    const header = rawHeader.replace(/\\/g, '/');
 
     // Direct match
     if (VCPKG_HEADERS_CATALOG[header]) {
