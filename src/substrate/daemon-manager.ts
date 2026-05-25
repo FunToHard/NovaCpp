@@ -21,7 +21,8 @@ export const defaultClangdArguments: string[] = [
   '--function-arg-placeholders=true',
   '--fallback-style=llvm',
   '--header-insertion-decorators=true',
-  '-j=0'
+  '-j=0',
+  '--offset-encoding=utf-16'
 ];
 
 export interface InactiveRegionsParams {
@@ -116,6 +117,13 @@ export class DaemonManager implements vscode.Disposable {
       return arg;
     });
 
+    // Ensure --offset-encoding=utf-16 is present. Clangd defaults to utf-8, but vscode-languageclient v9
+    // strictly expects UTF-16 position encoding and will reject initialization with:
+    // "Unsupported position encoding (utf-8) received from server NovaCpp Language Server"
+    if (!finalArgs.some((arg) => arg.startsWith('--offset-encoding'))) {
+      finalArgs.push('--offset-encoding=utf-16');
+    }
+
     const serverOptions: ServerOptions = {
       command: clangdPath,
       args: finalArgs,
@@ -139,14 +147,19 @@ export class DaemonManager implements vscode.Disposable {
       },
       initializationOptions: {
         clangdFileStatus: true,
-        fallbackFlags: ['-std=c++20', '-xc++']
+        fallbackFlags: ['-std=c++20', '-xc++'],
+        offsetEncoding: ['utf-16']
+      },
+      initializationFailedHandler: (error: any) => {
+        this.outputChannel.appendLine(`[Initialization Failed] ${error?.message ?? error}`);
+        return false;
       },
       outputChannel: this.outputChannel,
       middleware: createClangdMiddleware(this.rankingTable),
       errorHandler: {
         error: (error, message, count) => {
           this.outputChannel.appendLine(`[Error] ${error.message} (${count})`);
-          return { action: 1 }; // Continue
+          return { action: 1, handled: true }; // Continue
         },
         closed: () => {
           this.outputChannel.appendLine('[Closed] Connection to clangd closed.');
@@ -162,13 +175,13 @@ export class DaemonManager implements vscode.Disposable {
               `[Watchdog] Attempting auto-restart (${this.restartCount}/${this.maxRestarts})...`
             );
             this.restart();
-            return { action: 2 }; // Restart
+            return { action: 2, handled: true }; // Restart
           } else {
             vscode.window.showErrorMessage(
               'NovaCpp: clangd daemon crashed repeatedly. Auto-restart aborted.'
             );
             this.updateStatusBar('$(error) NovaCpp: Crashed', 'Click to restart language server');
-            return { action: 1 }; // Do not restart
+            return { action: 1, handled: true }; // Do not restart
           }
         }
       }

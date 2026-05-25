@@ -15,6 +15,7 @@ describe('Language Server Substrate & Clangd Configuration', () => {
       assert.ok(defaultClangdArguments.includes('--fallback-style=llvm'));
       assert.ok(defaultClangdArguments.includes('--header-insertion-decorators=true'));
       assert.ok(defaultClangdArguments.includes('-j=0'));
+      assert.ok(defaultClangdArguments.includes('--offset-encoding=utf-16'));
     });
   });
 
