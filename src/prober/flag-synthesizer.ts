@@ -3,12 +3,14 @@ import * as fs from 'fs';
 import { CompilerDetector, CompilerInfo } from './compiler-detector';
 import { SystemIncludeExtractor } from './system-includes';
 import { VcpkgAdvisor } from '../ecosystem/vcpkg-advisor';
+import { ExternalSdkDetector } from './external-sdk-detector';
 
 export interface SynthesisOptions {
   standard?: string;
   extraFlags?: string[];
   forceOverwrite?: boolean;
   workspaceRoot?: string;
+  detectExternalSdks?: boolean;
 }
 
 export class FlagSynthesizer {
@@ -87,6 +89,16 @@ export class FlagSynthesizer {
       const nodeIncludes = VcpkgAdvisor.findNodeAddonIncludePaths(options.workspaceRoot);
       for (const inc of nodeIncludes) {
         flags.push(`-I${inc.replace(/\\/g, '/')}`);
+      }
+    }
+
+    if (options.detectExternalSdks !== false) {
+      const sdkIncludes = ExternalSdkDetector.getAllIncludePaths();
+      for (const inc of sdkIncludes) {
+        const flag = `-I${inc.replace(/\\/g, '/')}`;
+        if (!flags.includes(flag)) {
+          flags.push(flag);
+        }
       }
     }
 

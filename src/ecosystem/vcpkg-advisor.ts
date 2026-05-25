@@ -43,7 +43,15 @@ export const VCPKG_HEADERS_CATALOG: Record<string, VcpkgPortInfo> = {
   'napi.h': { port: 'node-addon-api', description: 'Node.js C++ addon API', homepage: 'https://github.com/nodejs/node-addon-api' },
   'tbb/tbb.h': { port: 'tbb', description: 'Threading Building Blocks (oneTBB)', homepage: 'https://github.com/oneapi-src/oneTBB' },
   'range/v3/all.hpp': { port: 'range-v3', description: 'Range library for C++14/17/20', homepage: 'https://github.com/ericniebler/range-v3' },
-  'magic_enum.hpp': { port: 'magic_enum', description: 'Static reflection for enums', homepage: 'https://github.com/Neargye/magic_enum' }
+  'magic_enum.hpp': { port: 'magic_enum', description: 'Static reflection for enums', homepage: 'https://github.com/Neargye/magic_enum' },
+  'vulkan/vulkan.h': { port: 'vulkan', description: 'Vulkan Graphics and Compute API', homepage: 'https://www.vulkan.org' },
+  'vulkan/vulkan.hpp': { port: 'vulkan-hpp', description: 'C++ bindings for Vulkan API', homepage: 'https://github.com/KhronosGroup/Vulkan-Hpp' },
+  'raylib.h': { port: 'raylib', description: 'Simple and easy-to-use library to enjoy videogames programming', homepage: 'https://www.raylib.com' },
+  'SDL.h': { port: 'sdl2', description: 'Simple DirectMedia Layer (SDL2)', homepage: 'https://www.libsdl.org' },
+  'SDL2/SDL.h': { port: 'sdl2', description: 'Simple DirectMedia Layer (SDL2)', homepage: 'https://www.libsdl.org' },
+  'SDL3/SDL.h': { port: 'sdl3', description: 'Simple DirectMedia Layer (SDL3)', homepage: 'https://www.libsdl.org' },
+  'cuda.h': { port: 'cuda', description: 'NVIDIA CUDA Driver API', homepage: 'https://developer.nvidia.com/cuda-toolkit' },
+  'cuda_runtime.h': { port: 'cuda', description: 'NVIDIA CUDA Runtime API', homepage: 'https://developer.nvidia.com/cuda-toolkit' }
 };
 
 export class VcpkgAdvisor implements vscode.CodeActionProvider {
@@ -85,6 +93,24 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
       return {
         header,
         info: { port: 'eigen3', description: 'Eigen linear algebra library', homepage: 'https://eigen.tuxfamily.org' }
+      };
+    }
+    if (header.startsWith('vulkan/')) {
+      return {
+        header,
+        info: { port: 'vulkan', description: 'Vulkan Graphics and Compute API', homepage: 'https://www.vulkan.org' }
+      };
+    }
+    if (header.startsWith('SDL2/')) {
+      return {
+        header,
+        info: { port: 'sdl2', description: 'Simple DirectMedia Layer (SDL2)', homepage: 'https://www.libsdl.org' }
+      };
+    }
+    if (header.startsWith('SDL3/')) {
+      return {
+        header,
+        info: { port: 'sdl3', description: 'Simple DirectMedia Layer (SDL3)', homepage: 'https://www.libsdl.org' }
       };
     }
 

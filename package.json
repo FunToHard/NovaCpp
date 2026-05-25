@@ -346,6 +346,11 @@
           "default": true,
           "description": "Auto-detect and inject include paths for nan and node-addon-api if detected in package.json."
         },
+        "novacpp.discovery.detectExternalSdks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-detect common external SDKs (Vulkan SDK, raylib, CUDA Toolkit, Boost, SDL) for fallback IntelliSense flags and flag synthesis."
+        },
         "novacpp.default.forcedInclude": {
           "type": "array",
           "items": {

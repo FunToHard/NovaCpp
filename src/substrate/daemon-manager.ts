@@ -12,6 +12,7 @@ import {
 import { ClangdInstaller } from './installer';
 import { createClangdMiddleware, EditorEventDebouncer } from './protocol-filter';
 import { StlRankingTable } from '../telemetry/ranking-table';
+import { ExternalSdkDetector } from '../prober/external-sdk-detector';
 
 export const defaultClangdArguments: string[] = [
   '--background-index',
@@ -132,6 +133,15 @@ export class DaemonManager implements vscode.Disposable {
       }
     };
 
+    const detectExternalSdks = config.get<boolean>('discovery.detectExternalSdks', true);
+    const fallbackFlags = ['-std=c++20', '-xc++'];
+    if (detectExternalSdks) {
+      const sdkIncludes = ExternalSdkDetector.getAllIncludePaths();
+      for (const inc of sdkIncludes) {
+        fallbackFlags.push(`-I${inc.replace(/\\/g, '/')}`);
+      }
+    }
+
     const clientOptions: LanguageClientOptions = {
       documentSelector: [
         { scheme: 'file', language: 'c' },
@@ -147,7 +157,7 @@ export class DaemonManager implements vscode.Disposable {
       },
       initializationOptions: {
         clangdFileStatus: true,
-        fallbackFlags: ['-std=c++20', '-xc++'],
+        fallbackFlags,
         offsetEncoding: ['utf-16']
       },
       initializationFailedHandler: (error: any) => {
