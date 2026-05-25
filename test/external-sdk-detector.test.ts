@@ -236,4 +236,49 @@ describe('External SDKs Auto-Discovery Subsystem', () => {
       assert.ok(flags.includes('-IC:/MSVC/include'));
     });
   });
+
+  describe('syncWorkspaceClangdConfig', () => {
+    it('should create .clangd file with CompileFlags.Add if none exists', () => {
+      const vulkanDir = path.join(tempDir, 'VulkanSDK');
+      const vulkanInc = path.join(vulkanDir, 'Include');
+      fs.mkdirSync(vulkanInc, { recursive: true });
+
+      const synced = ExternalSdkDetector.syncWorkspaceClangdConfig(tempDir, {
+        env: { VULKAN_SDK: vulkanDir },
+        allowFsScan: false
+      });
+
+      assert.strictEqual(synced, true);
+      const clangdFile = path.join(tempDir, '.clangd');
+      assert.ok(fs.existsSync(clangdFile));
+      const content = fs.readFileSync(clangdFile, 'utf8');
+      assert.ok(content.includes('CompileFlags:'));
+      assert.ok(content.includes('Add:'));
+      assert.ok(content.includes(vulkanInc.replace(/\\/g, '/')));
+    });
+
+    it('should update existing .clangd non-destructively', () => {
+      const clangdFile = path.join(tempDir, '.clangd');
+      fs.writeFileSync(
+        clangdFile,
+        'CompileFlags:\n  Add:\n    - "-std=c++20"\n',
+        'utf8'
+      );
+
+      const raylibDir = path.join(tempDir, 'raylib');
+      const raylibInc = path.join(raylibDir, 'include');
+      fs.mkdirSync(raylibInc, { recursive: true });
+      fs.writeFileSync(path.join(raylibInc, 'raylib.h'), '// raylib');
+
+      const synced = ExternalSdkDetector.syncWorkspaceClangdConfig(tempDir, {
+        env: { RAYLIB_DIR: raylibDir },
+        allowFsScan: false
+      });
+
+      assert.strictEqual(synced, true);
+      const updated = fs.readFileSync(clangdFile, 'utf8');
+      assert.ok(updated.includes('"-std=c++20"'));
+      assert.ok(updated.includes(raylibInc.replace(/\\/g, '/')));
+    });
+  });
 });

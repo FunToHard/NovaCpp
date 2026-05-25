@@ -23,6 +23,7 @@ playground/
 # Synthesized compilation databases & Clangd cache
 compile_flags.txt
 compile_commands.json
+.clangd
 .clangd/
 .cache/
 

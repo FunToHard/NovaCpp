@@ -4,6 +4,7 @@ import { DaemonManager } from './substrate/daemon-manager';
 import { CompilerDetector } from './prober/compiler-detector';
 import { SystemIncludeExtractor } from './prober/system-includes';
 import { FlagSynthesizer } from './prober/flag-synthesizer';
+import { ExternalSdkDetector } from './prober/external-sdk-detector';
 import {
   NovaCppDebugConfigurationProvider,
   NovaCppDebugAdapterDescriptorFactory
@@ -186,10 +187,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     inlayHintManager
   );
 
-  // Auto-synthesize compile_flags.txt if missing in workspace root
+  // Auto-synthesize configuration and discover external SDKs in workspace root
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
     const rootPath = workspaceFolders[0].uri.fsPath;
+    const config = vscode.workspace.getConfiguration('novacpp');
+    if (config.get<boolean>('discovery.detectExternalSdks', true)) {
+      ExternalSdkDetector.syncWorkspaceClangdConfig(rootPath);
+    }
     try {
       const generated = await synthesizer.synthesizeFlagsFile(rootPath);
       if (generated) {

@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { SolutionModel, VcxProjectModel, CompileCommandEntry } from './solution-models';
 import { CompilerInfo } from '../prober/compiler-detector';
+import { ExternalSdkDetector } from '../prober/external-sdk-detector';
 
 export class CompilationDatabaseGenerator {
   /**
@@ -22,6 +23,8 @@ export class CompilationDatabaseGenerator {
       activeConfiguration ||
       (solution.configurations.length > 0 ? solution.configurations[0].key : 'Debug|x64');
 
+    const externalSdkIncludes = ExternalSdkDetector.getAllIncludePaths();
+
     for (const project of projects) {
       const projectDir = path.dirname(project.filePath).replace(/\\/g, '/');
       const projectOpts =
@@ -29,12 +32,13 @@ export class CompilationDatabaseGenerator {
 
       const standard = projectOpts.languageStandard || 'c++20';
 
-      // Assemble all includes: project directory + project additional includes + system includes
+      // Assemble all includes: project directory + project additional includes + system includes + external SDKs
       const allIncludes = Array.from(
         new Set([
           projectDir,
           ...projectOpts.includeDirectories.map((d) => d.replace(/\\/g, '/')),
-          ...systemIncludes.map((s) => s.replace(/\\/g, '/'))
+          ...systemIncludes.map((s) => s.replace(/\\/g, '/')),
+          ...externalSdkIncludes
         ])
       );
 
