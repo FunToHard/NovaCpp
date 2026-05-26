@@ -8,6 +8,14 @@ import { isCppFile, getOutputBinaryPath } from './runner';
 
 const execFileAsync = promisify(execFile);
 
+function escapePwshDoubleQuoted(s: string): string {
+  return s.replace(/[`$""]/g, '`$&');
+}
+
+function escapePosixDoubleQuoted(s: string): string {
+  return s.replace(/[`$"\\!]/g, '\\$&');
+}
+
 /**
  * Builds the shell command string for compiling and immediately running a C/C++ source file.
  */
@@ -18,19 +26,23 @@ export function buildRunCommand(
   standard: string = 'c++20',
   isWindows: boolean = process.platform === 'win32'
 ): string {
+  const compilerEscaped = isWindows ? escapePwshDoubleQuoted(compiler.path) : escapePosixDoubleQuoted(compiler.path);
+  const sourceEscaped = isWindows ? escapePwshDoubleQuoted(sourceFile) : escapePosixDoubleQuoted(sourceFile);
+  const outputEscaped = isWindows ? escapePwshDoubleQuoted(outputBinary) : escapePosixDoubleQuoted(outputBinary);
+
   if (compiler.type === 'msvc') {
     if (isWindows) {
-      return `& "${compiler.path}" /EHsc /std:${standard} /Zi "${sourceFile}" /Fe:"${outputBinary}" ; if ($LASTEXITCODE -eq 0) { & "${outputBinary}" }`;
+      return `& "${compilerEscaped}" /EHsc /std:${standard} /Zi "${sourceEscaped}" /Fe:"${outputEscaped}" ; if ($LASTEXITCODE -eq 0) { & "${outputEscaped}" }`;
     }
-    return `"${compiler.path}" /EHsc /std:${standard} /Zi "${sourceFile}" /Fe:"${outputBinary}" && "${outputBinary}"`;
+    return `"${compilerEscaped}" /EHsc /std:${standard} /Zi "${sourceEscaped}" /Fe:"${outputEscaped}" && "${outputEscaped}"`;
   }
 
   // GCC / Clang
   const winLibs = compiler.type === 'gcc' && isWindows ? ' -static-libgcc -static-libstdc++' : '';
   if (isWindows) {
-    return `& "${compiler.path}" "${sourceFile}" -std=${standard} -g${winLibs} -o "${outputBinary}" ; if ($LASTEXITCODE -eq 0) { & "${outputBinary}" }`;
+    return `& "${compilerEscaped}" "${sourceEscaped}" -std=${standard} -g${winLibs} -o "${outputEscaped}" ; if ($LASTEXITCODE -eq 0) { & "${outputEscaped}" }`;
   }
-  return `"${compiler.path}" "${sourceFile}" -std=${standard} -g -o "${outputBinary}" && "${outputBinary}"`;
+  return `"${compilerEscaped}" "${sourceEscaped}" -std=${standard} -g -o "${outputEscaped}" && "${outputEscaped}"`;
 }
 
 /**
@@ -87,15 +99,27 @@ export function findLaunchVsDevShell(compiler?: CompilerInfo): string | null {
 /**
  * Controller for running and debugging C/C++ source files from editor title bar buttons.
  */
-export class RunController {
+export class RunController implements vscode.Disposable {
   private runTerminal: vscode.Terminal | null = null;
 
   constructor(private detector: CompilerDetector) {}
+
+  public dispose(): void {
+    if (this.runTerminal) {
+      this.runTerminal.dispose();
+      this.runTerminal = null;
+    }
+  }
 
   /**
    * Compiles the active C/C++ file and executes it in the integrated terminal.
    */
   public async runFile(document?: vscode.TextDocument): Promise<boolean> {
+    if (vscode.workspace.isTrusted === false) {
+      vscode.window.showErrorMessage('NovaCpp: Running code is disabled in untrusted workspaces.');
+      return false;
+    }
+
     const doc = document || vscode.window.activeTextEditor?.document;
     if (!doc || !isCppFile(doc)) {
       vscode.window.showWarningMessage('NovaCpp: Open a valid C/C++ source file to run.');
@@ -142,6 +166,11 @@ export class RunController {
    * Compiles the active C/C++ file with debug flags and launches a NovaCpp DAP debug session.
    */
   public async debugFile(document?: vscode.TextDocument): Promise<boolean> {
+    if (vscode.workspace.isTrusted === false) {
+      vscode.window.showErrorMessage('NovaCpp: Debugging is disabled in untrusted workspaces.');
+      return false;
+    }
+
     const doc = document || vscode.window.activeTextEditor?.document;
     if (!doc || !isCppFile(doc)) {
       vscode.window.showWarningMessage('NovaCpp: Open a valid C/C++ source file to debug.');

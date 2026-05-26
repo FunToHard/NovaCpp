@@ -23,9 +23,13 @@ export class SolutionManager implements vscode.Disposable {
   private compDbGenerator = new CompilationDatabaseGenerator();
 
   private debouncedReload = debounce(async () => {
-    await this.refreshSolutions();
-    if (this.activeSolution) {
-      await this.synthesizeCompilationDatabase();
+    try {
+      await this.refreshSolutions();
+      if (this.activeSolution) {
+        await this.synthesizeCompilationDatabase();
+      }
+    } catch (err) {
+      console.warn('NovaCpp: Solution reload failed:', err);
     }
   }, 1200);
 

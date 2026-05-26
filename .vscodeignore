@@ -16,3 +16,6 @@ compile_commands.json
 *.ilk
 *.exe
 .cache/**
+dist/**/*.map
+.clangd
+scratch/**

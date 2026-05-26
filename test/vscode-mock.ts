@@ -596,7 +596,8 @@ export const mockVscode: any = {
     }),
     onDidCloseTextDocument: () => ({ dispose: () => {} }),
     onDidChangeConfiguration: () => ({ dispose: () => {} }),
-    workspaceFolders: []
+    workspaceFolders: [],
+    isTrusted: true
   },
   commands: {
     registerCommand: (_cmd: string, _callback: any) => ({ dispose: () => {} }),

@@ -196,10 +196,12 @@ export class ConfigPanel {
       } else if (data.outputFormat === 'clangd_yaml') {
         const addFlags: string[] = [`-std=${data.cppStandard}`];
         for (const inc of data.includes) {
-          addFlags.push(`-I${inc.replace(/\\/g, '/')}`);
+          const sanitizedInc = inc.replace(/[\r\n]/g, '').replace(/"/g, '\\"').replace(/\\/g, '/');
+          addFlags.push(`-I${sanitizedInc}`);
         }
         for (const def of data.defines) {
-          addFlags.push(`-D${def}`);
+          const sanitizedDef = def.replace(/[\r\n]/g, '').replace(/"/g, '\\"');
+          addFlags.push(`-D${sanitizedDef}`);
         }
 
         const yamlContent = [
@@ -236,10 +238,17 @@ export class ConfigPanel {
       vscode.Uri.joinPath(this.extensionUri, 'src', 'webview', 'media', 'style.css')
     );
 
+    let nonce = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+      nonce += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="${styleUri}">
   <title>NovaCpp Configuration</title>
@@ -329,7 +338,7 @@ export class ConfigPanel {
     </div>
   </div>
 
-  <script src="${scriptUri}"></script>
+  <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
   }

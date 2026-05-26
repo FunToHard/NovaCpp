@@ -16,6 +16,13 @@ export class DiagnosticsLogger {
     return this.channel;
   }
 
+  public static dispose(): void {
+    if (this.channel) {
+      this.channel.dispose();
+      this.channel = null;
+    }
+  }
+
   /**
    * Generates a comprehensive diagnostic report of active compilers, flags,
    * includes, solutions, and language server status.

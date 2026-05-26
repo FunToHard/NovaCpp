@@ -36,6 +36,12 @@
     "workspaceContains:**/*.slnx"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Running, debugging, and task execution are disabled in untrusted workspaces."
+    }
+  },
   "contributes": {
     "commands": [
       {

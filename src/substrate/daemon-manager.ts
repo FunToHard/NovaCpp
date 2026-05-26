@@ -47,6 +47,7 @@ export class DaemonManager implements vscode.Disposable {
   private outputChannel: vscode.OutputChannel;
   private eventDebouncer: EditorEventDebouncer;
   private disposables: vscode.Disposable[] = [];
+  private clientDisposables: vscode.Disposable[] = [];
   private onInactiveRegionsEmitter = new vscode.EventEmitter<InactiveRegionsParams>();
   public readonly onInactiveRegions = this.onInactiveRegionsEmitter.event;
 
@@ -210,14 +211,16 @@ export class DaemonManager implements vscode.Disposable {
       clientOptions
     );
 
-    this.client.onDidChangeState((event) => {
-      if (event.newState === State.Running) {
-        this.updateStatusBar('$(check) NovaCpp: Ready', 'clangd is active and ready');
-        this.registerCustomProtocolHandlers();
-      } else if (event.newState === State.Stopped) {
-        this.updateStatusBar('$(circle-slash) NovaCpp: Stopped', 'Click to start language server');
-      }
-    });
+    this.clientDisposables.push(
+      this.client.onDidChangeState((event) => {
+        if (event.newState === State.Running) {
+          this.updateStatusBar('$(check) NovaCpp: Ready', 'clangd is active and ready');
+          this.registerCustomProtocolHandlers();
+        } else if (event.newState === State.Stopped) {
+          this.updateStatusBar('$(circle-slash) NovaCpp: Stopped', 'Click to start language server');
+        }
+      })
+    );
 
     try {
       await this.client.start();
@@ -282,6 +285,11 @@ export class DaemonManager implements vscode.Disposable {
   }
 
   public async stop(): Promise<void> {
+    for (const d of this.clientDisposables) {
+      d.dispose();
+    }
+    this.clientDisposables = [];
+
     if (this.client) {
       try {
         if (this.client.isRunning()) {
@@ -308,6 +316,10 @@ export class DaemonManager implements vscode.Disposable {
 
   dispose(): void {
     this.stop();
+    for (const d of this.clientDisposables) {
+      d.dispose();
+    }
+    this.clientDisposables = [];
     for (const d of this.disposables) {
       d.dispose();
     }
