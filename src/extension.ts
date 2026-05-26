@@ -33,6 +33,7 @@ import { VsEnvironmentManager } from './tasks/vs-environment-manager';
 import { VcpkgAdvisor } from './ecosystem/vcpkg-advisor';
 import { NovaCppConfigurationTool } from './ai/language-model-tool';
 import { ProfileManager } from './config/profile-manager';
+import { MemoryLayoutInspector } from './inspector/memory-layout-inspector';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -207,6 +208,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  // Memory Layout Inspector
+  const memoryLayoutInspector = new MemoryLayoutInspector();
+  context.subscriptions.push(memoryLayoutInspector);
+
   // Register Commands
   context.subscriptions.push(
     vscode.commands.registerCommand('novacpp.openSettings', () => {
@@ -219,6 +224,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           await daemonManager?.restart();
         }
       );
+    }),
+    vscode.commands.registerCommand('novacpp.inspectMemoryLayout', () => {
+      memoryLayoutInspector.inspectCurrentStruct();
     }),
     vscode.commands.registerCommand('novacpp.restartServer', async () => {
       await daemonManager?.restart();

@@ -140,6 +140,11 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.inspectMemoryLayout",
+        "title": "NovaCpp: Inspect Type & Memory Layout (Struct Padding / Alignment)",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.restartServer",
         "title": "NovaCpp: Restart Language Server",
         "category": "C/C++"
