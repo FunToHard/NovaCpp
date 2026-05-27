@@ -595,6 +595,8 @@ export const mockVscode: any = {
       dispose: () => {}
     }),
     onDidCloseTextDocument: () => ({ dispose: () => {} }),
+    onDidOpenTextDocument: () => ({ dispose: () => {} }),
+    onDidChangeTextDocument: () => ({ dispose: () => {} }),
     onDidChangeConfiguration: () => ({ dispose: () => {} }),
     workspaceFolders: [],
     isTrusted: true
@@ -624,6 +626,58 @@ export const mockVscode: any = {
       clear: () => {},
       dispose: () => {}
     })
+  },
+  tests: {
+    createTestController: (id: string, label: string) => {
+      const itemsMap = new Map<string, any>();
+      const controller: any = {
+        id,
+        label,
+        items: {
+          get: (k: string) => itemsMap.get(k),
+          add: (item: any) => itemsMap.set(item.id, item),
+          delete: (k: string) => itemsMap.delete(k),
+          replace: (items: any[]) => {
+            itemsMap.clear();
+            items.forEach((it) => itemsMap.set(it.id, it));
+          },
+          forEach: (fn: any) => itemsMap.forEach(fn),
+          [Symbol.iterator]: () => itemsMap.values()
+        },
+        createTestItem: (itemId: string, itemLabel: string, uri?: any) => {
+          const childrenMap = new Map<string, any>();
+          return {
+            id: itemId,
+            label: itemLabel,
+            uri,
+            range: undefined,
+            children: {
+              get: (k: string) => childrenMap.get(k),
+              add: (c: any) => childrenMap.set(c.id, c),
+              delete: (k: string) => childrenMap.delete(k),
+              replace: (cItems: any[]) => {
+                childrenMap.clear();
+                cItems.forEach((c) => childrenMap.set(c.id, c));
+              },
+              forEach: (fn: any) => childrenMap.forEach(fn),
+              [Symbol.iterator]: () => childrenMap.values()
+            }
+          };
+        },
+        createRunProfile: (name: string, kind: number, _handler: any) => ({
+          name,
+          kind,
+          dispose: () => {}
+        }),
+        dispose: () => {}
+      };
+      return controller;
+    }
+  },
+  TestRunProfileKind: {
+    Run: 1,
+    Debug: 2,
+    Coverage: 3
   },
   EvaluatableExpression
 };

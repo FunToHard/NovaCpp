@@ -155,6 +155,11 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.refreshTests",
+        "title": "NovaCpp: Discover & Refresh Unit Tests",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.restartServer",
         "title": "NovaCpp: Restart Language Server",
         "category": "C/C++"

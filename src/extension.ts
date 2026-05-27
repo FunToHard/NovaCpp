@@ -35,6 +35,7 @@ import { NovaCppConfigurationTool } from './ai/language-model-tool';
 import { ProfileManager } from './config/profile-manager';
 import { MemoryLayoutInspector } from './inspector/memory-layout-inspector';
 import { IncludeVisualizerManager } from './analysis/include-visualizer';
+import { CppTestController } from './testing/test-controller';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -209,10 +210,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
-  // Memory Layout Inspector & Include Visualizer
+  // Memory Layout Inspector, Include Visualizer & Test Controller
   const memoryLayoutInspector = new MemoryLayoutInspector();
   const includeVisualizer = new IncludeVisualizerManager();
-  context.subscriptions.push(memoryLayoutInspector, includeVisualizer);
+  const testController = new CppTestController();
+  context.subscriptions.push(memoryLayoutInspector, includeVisualizer, testController);
 
   // Register Commands
   context.subscriptions.push(
@@ -235,6 +237,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.visualizeTimeTrace', async (uri?: vscode.Uri) => {
       await includeVisualizer.visualizeTimeTraceFile(uri);
+    }),
+    vscode.commands.registerCommand('novacpp.refreshTests', async () => {
+      const count = await testController.refreshAll();
+      vscode.window.showInformationMessage(`NovaCpp: Discovered ${count} C/C++ unit test(s).`);
     }),
     vscode.commands.registerCommand('novacpp.restartServer', async () => {
       await daemonManager?.restart();
