@@ -145,6 +145,16 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.analyzeIncludes",
+        "title": "NovaCpp: Analyze #include Hierarchy & Dependencies",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.visualizeTimeTrace",
+        "title": "NovaCpp: Visualize Clang -ftime-trace Build Bottlenecks",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.restartServer",
         "title": "NovaCpp: Restart Language Server",
         "category": "C/C++"

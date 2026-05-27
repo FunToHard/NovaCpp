@@ -34,6 +34,7 @@ import { VcpkgAdvisor } from './ecosystem/vcpkg-advisor';
 import { NovaCppConfigurationTool } from './ai/language-model-tool';
 import { ProfileManager } from './config/profile-manager';
 import { MemoryLayoutInspector } from './inspector/memory-layout-inspector';
+import { IncludeVisualizerManager } from './analysis/include-visualizer';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -208,9 +209,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
-  // Memory Layout Inspector
+  // Memory Layout Inspector & Include Visualizer
   const memoryLayoutInspector = new MemoryLayoutInspector();
-  context.subscriptions.push(memoryLayoutInspector);
+  const includeVisualizer = new IncludeVisualizerManager();
+  context.subscriptions.push(memoryLayoutInspector, includeVisualizer);
 
   // Register Commands
   context.subscriptions.push(
@@ -227,6 +229,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.inspectMemoryLayout', () => {
       memoryLayoutInspector.inspectCurrentStruct();
+    }),
+    vscode.commands.registerCommand('novacpp.analyzeIncludes', () => {
+      includeVisualizer.analyzeActiveDocument();
+    }),
+    vscode.commands.registerCommand('novacpp.visualizeTimeTrace', async (uri?: vscode.Uri) => {
+      await includeVisualizer.visualizeTimeTraceFile(uri);
     }),
     vscode.commands.registerCommand('novacpp.restartServer', async () => {
       await daemonManager?.restart();
