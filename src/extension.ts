@@ -37,6 +37,7 @@ import { MemoryLayoutInspector } from './inspector/memory-layout-inspector';
 import { IncludeVisualizerManager } from './analysis/include-visualizer';
 import { CppTestController } from './testing/test-controller';
 import { MacroEvaluatorManager } from './intelligence/macro-evaluator';
+import { DisassemblyContentProvider } from './compiler/disassembly-view';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -211,12 +212,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
-  // Next-Gen Managers: Memory Layout, Include Visualizer, Test Controller & Macro Evaluator
+  // Next-Gen Managers: Memory Layout, Include Visualizer, Test Controller, Macro Evaluator & Disassembly View
   const memoryLayoutInspector = new MemoryLayoutInspector();
   const includeVisualizer = new IncludeVisualizerManager();
   const testController = new CppTestController();
   const macroEvaluator = new MacroEvaluatorManager();
-  context.subscriptions.push(memoryLayoutInspector, includeVisualizer, testController, macroEvaluator);
+  const disasmProvider = new DisassemblyContentProvider(detector);
+  context.subscriptions.push(
+    memoryLayoutInspector,
+    includeVisualizer,
+    testController,
+    macroEvaluator,
+    disasmProvider,
+    vscode.workspace.registerTextDocumentContentProvider(DisassemblyContentProvider.scheme, disasmProvider)
+  );
 
   // Register Commands
   context.subscriptions.push(
@@ -249,6 +258,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('novacpp.evaluateConstexpr', () => {
       macroEvaluator.evaluateConstexprAtCursor();
+    }),
+    vscode.commands.registerCommand('novacpp.viewDisassembly', async () => {
+      await disasmProvider.openDisassemblyForActiveEditor();
+    }),
+    vscode.commands.registerCommand('novacpp.setDisassemblyOptimizationLevel', async () => {
+      const selected = await vscode.window.showQuickPick(['O0', 'O1', 'O2', 'O3', 'Os', 'Ofast'], {
+        placeHolder: 'Select compiler optimization level for disassembly'
+      });
+      if (selected) {
+        disasmProvider.setOptimizationLevel(selected as any);
+        vscode.window.showInformationMessage(`NovaCpp: Disassembly optimization set to -${selected}.`);
+      }
     }),
     vscode.commands.registerCommand('novacpp.restartServer', async () => {
       await daemonManager?.restart();

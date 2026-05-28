@@ -170,6 +170,16 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.viewDisassembly",
+        "title": "NovaCpp: Open Inline Compiler Disassembly (Assembly View)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.setDisassemblyOptimizationLevel",
+        "title": "NovaCpp: Set Disassembly Optimization Level",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.restartServer",
         "title": "NovaCpp: Restart Language Server",
         "category": "C/C++"
