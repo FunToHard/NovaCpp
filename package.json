@@ -160,6 +160,16 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.expandMacro",
+        "title": "NovaCpp: Expand Macro at Cursor (Step-by-Step)",
+        "category": "C/C++"
+      },
+      {
+        "command": "novacpp.evaluateConstexpr",
+        "title": "NovaCpp: Evaluate constexpr Expression at Cursor",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.restartServer",
         "title": "NovaCpp: Restart Language Server",
         "category": "C/C++"

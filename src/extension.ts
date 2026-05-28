@@ -36,6 +36,7 @@ import { ProfileManager } from './config/profile-manager';
 import { MemoryLayoutInspector } from './inspector/memory-layout-inspector';
 import { IncludeVisualizerManager } from './analysis/include-visualizer';
 import { CppTestController } from './testing/test-controller';
+import { MacroEvaluatorManager } from './intelligence/macro-evaluator';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -210,11 +211,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
-  // Memory Layout Inspector, Include Visualizer & Test Controller
+  // Next-Gen Managers: Memory Layout, Include Visualizer, Test Controller & Macro Evaluator
   const memoryLayoutInspector = new MemoryLayoutInspector();
   const includeVisualizer = new IncludeVisualizerManager();
   const testController = new CppTestController();
-  context.subscriptions.push(memoryLayoutInspector, includeVisualizer, testController);
+  const macroEvaluator = new MacroEvaluatorManager();
+  context.subscriptions.push(memoryLayoutInspector, includeVisualizer, testController, macroEvaluator);
 
   // Register Commands
   context.subscriptions.push(
@@ -241,6 +243,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('novacpp.refreshTests', async () => {
       const count = await testController.refreshAll();
       vscode.window.showInformationMessage(`NovaCpp: Discovered ${count} C/C++ unit test(s).`);
+    }),
+    vscode.commands.registerCommand('novacpp.expandMacro', () => {
+      macroEvaluator.expandMacroAtCursor();
+    }),
+    vscode.commands.registerCommand('novacpp.evaluateConstexpr', () => {
+      macroEvaluator.evaluateConstexprAtCursor();
     }),
     vscode.commands.registerCommand('novacpp.restartServer', async () => {
       await daemonManager?.restart();
