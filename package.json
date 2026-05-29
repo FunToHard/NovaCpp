@@ -180,6 +180,11 @@
         "category": "C/C++"
       },
       {
+        "command": "novacpp.showTypeHierarchy",
+        "title": "NovaCpp: Show Visual Type & Inheritance Hierarchy Graph",
+        "category": "C/C++"
+      },
+      {
         "command": "novacpp.restartServer",
         "title": "NovaCpp: Restart Language Server",
         "category": "C/C++"

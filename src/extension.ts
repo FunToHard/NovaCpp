@@ -38,6 +38,7 @@ import { IncludeVisualizerManager } from './analysis/include-visualizer';
 import { CppTestController } from './testing/test-controller';
 import { MacroEvaluatorManager } from './intelligence/macro-evaluator';
 import { DisassemblyContentProvider } from './compiler/disassembly-view';
+import { HierarchyGraphManager } from './hierarchy/hierarchy-graph';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -212,18 +213,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
-  // Next-Gen Managers: Memory Layout, Include Visualizer, Test Controller, Macro Evaluator & Disassembly View
+  // Inspection & Analysis Managers: Memory Layout, Include Visualizer, Test Controller, Macro Evaluator, Disassembly View & Hierarchy Graph
   const memoryLayoutInspector = new MemoryLayoutInspector();
   const includeVisualizer = new IncludeVisualizerManager();
   const testController = new CppTestController();
   const macroEvaluator = new MacroEvaluatorManager();
   const disasmProvider = new DisassemblyContentProvider(detector);
+  const hierarchyManager = new HierarchyGraphManager();
   context.subscriptions.push(
     memoryLayoutInspector,
     includeVisualizer,
     testController,
     macroEvaluator,
     disasmProvider,
+    hierarchyManager,
     vscode.workspace.registerTextDocumentContentProvider(DisassemblyContentProvider.scheme, disasmProvider)
   );
 
@@ -270,6 +273,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         disasmProvider.setOptimizationLevel(selected as any);
         vscode.window.showInformationMessage(`NovaCpp: Disassembly optimization set to -${selected}.`);
       }
+    }),
+    vscode.commands.registerCommand('novacpp.showTypeHierarchy', () => {
+      hierarchyManager.showTypeHierarchy();
     }),
     vscode.commands.registerCommand('novacpp.restartServer', async () => {
       await daemonManager?.restart();
