@@ -1,5 +1,6 @@
 # NovaCpp: Fast C/C++ Extension for Visual Studio Code
 
+[![CI](https://github.com/FunToHard/NovaCpp/actions/workflows/ci.yml/badge.svg)](https://github.com/FunToHard/NovaCpp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![VS Code Engine](https://img.shields.io/badge/VS%20Code-%5E1.85.0-brightgreen.svg)](https://code.visualstudio.com/)
 [![Language](https://img.shields.io/badge/Language-C%20%2F%20C%2B%2B%20%2F%20CUDA-00599C.svg)](https://isocpp.org/)
