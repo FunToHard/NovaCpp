@@ -45,36 +45,16 @@ export class SystemIncludeExtractor {
    * Probes GCC or Clang using the standard preprocessor command.
    */
   public extractGccClangIncludes(compilerPath: string): string[] {
-    const isWindows = process.platform === 'win32';
-    const nullDevice = isWindows ? 'NUL' : '/dev/null';
-
     try {
-      // Run: compiler -E -x c++ - -v < NUL
-      let stderr = '';
-      if (isWindows) {
-        // cmd.exe handles '< NUL' redirection reliably on Windows
-        stderr = cp.execSync(`cmd.exe /c ""${compilerPath}" -E -x c++ - -v < NUL"`, {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-          timeout: 5000
-        });
-      } else {
-        stderr = cp.execSync(`"${compilerPath}" -E -x c++ - -v < /dev/null`, {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-          timeout: 5000
-        });
-      }
+      const res = cp.spawnSync(compilerPath, ['-E', '-x', 'c++', '-', '-v'], {
+        input: '',
+        encoding: 'utf8',
+        timeout: 5000
+      });
 
-      return this.parseSearchList(stderr);
-    } catch (err: any) {
-      // The output of -v is printed to stderr by GCC/Clang
-      if (err.stderr) {
-        return this.parseSearchList(err.stderr.toString());
-      }
-      if (err.stdout) {
-        return this.parseSearchList(err.stdout.toString());
-      }
+      const output = (res.stderr || '') + '\n' + (res.stdout || '');
+      return this.parseSearchList(output);
+    } catch {
       return [];
     }
   }

@@ -46,7 +46,10 @@ Global
 EndGlobal
 `;
 
-      const parsed = parseSln(sampleSln, 'F:/Projects/NovaEngine/NovaEngine.sln');
+      const slnPath = process.platform === 'win32' ? 'F:/Projects/NovaEngine/NovaEngine.sln' : '/projects/NovaEngine/NovaEngine.sln';
+      const expectedProjPath = process.platform === 'win32' ? 'f:/projects/novaengine/geometry/novageometry.vcxproj' : '/projects/novaengine/geometry/novageometry.vcxproj';
+
+      const parsed = parseSln(sampleSln, slnPath);
       assert.strictEqual(parsed.format, 'sln');
       assert.strictEqual(parsed.name, 'NovaEngine');
       assert.strictEqual(parsed.projects.length, 2); // Only .vcxproj, ignores Solution Items folder
@@ -55,7 +58,7 @@ EndGlobal
       assert.strictEqual(parsed.projects[0].relativePath, 'Geometry/NovaGeometry.vcxproj');
       assert.strictEqual(
         parsed.projects[0].fullPath.replace(/\\/g, '/').toLowerCase(),
-        'f:/projects/novaengine/geometry/novageometry.vcxproj'
+        expectedProjPath
       );
 
       assert.strictEqual(parsed.projects[1].name, 'NovaApp');
@@ -88,7 +91,10 @@ EndGlobal
 </Solution>
 `;
 
-      const parsed = parseSlnx(sampleSlnx, 'F:/Projects/GameEngine/GameEngine.slnx');
+      const slnxPath = process.platform === 'win32' ? 'F:/Projects/GameEngine/GameEngine.slnx' : '/projects/GameEngine/GameEngine.slnx';
+      const expectedCorePath = process.platform === 'win32' ? 'f:/projects/gameengine/engine/core/core.vcxproj' : '/projects/gameengine/engine/core/core.vcxproj';
+
+      const parsed = parseSlnx(sampleSlnx, slnxPath);
       assert.strictEqual(parsed.format, 'slnx');
       assert.strictEqual(parsed.name, 'GameEngine');
       assert.strictEqual(parsed.projects.length, 3);
@@ -97,7 +103,7 @@ EndGlobal
       assert.strictEqual(parsed.projects[0].relativePath, 'Engine/Core/Core.vcxproj');
       assert.strictEqual(
         parsed.projects[0].fullPath.replace(/\\/g, '/').toLowerCase(),
-        'f:/projects/gameengine/engine/core/core.vcxproj'
+        expectedCorePath
       );
 
       assert.strictEqual(parsed.projects[1].name, 'Renderer');
@@ -160,7 +166,12 @@ EndGlobal
   </ItemGroup>
 </Project>`;
 
-      const parsed = parseVcxproj(sampleVcxproj, 'F:/Projects/Geometry/GeometryEngine.vcxproj');
+      const vcxprojPath = process.platform === 'win32' ? 'F:/Projects/Geometry/GeometryEngine.vcxproj' : '/projects/Geometry/GeometryEngine.vcxproj';
+      const expectedMainPath = process.platform === 'win32' ? 'f:/projects/geometry/main.cpp' : '/projects/geometry/main.cpp';
+      const expectedCubePath = process.platform === 'win32' ? 'f:/projects/geometry/src/cube.cpp' : '/projects/geometry/src/cube.cpp';
+      const expectedHdrPath = process.platform === 'win32' ? 'f:/projects/geometry/include/cube.h' : '/projects/geometry/include/cube.h';
+
+      const parsed = parseVcxproj(sampleVcxproj, vcxprojPath);
       assert.strictEqual(parsed.name, 'GeometryEngine');
       assert.strictEqual(parsed.configurationType, 'Application');
       assert.strictEqual(parsed.guid, '{ABCDEF12-3456-7890-ABCD-EF1234567890}');
@@ -168,17 +179,17 @@ EndGlobal
       assert.strictEqual(parsed.sourceFiles.length, 3);
       assert.strictEqual(
         parsed.sourceFiles[0].replace(/\\/g, '/').toLowerCase(),
-        'f:/projects/geometry/main.cpp'
+        expectedMainPath
       );
       assert.strictEqual(
         parsed.sourceFiles[1].replace(/\\/g, '/').toLowerCase(),
-        'f:/projects/geometry/src/cube.cpp'
+        expectedCubePath
       );
 
       assert.strictEqual(parsed.headerFiles.length, 2);
       assert.strictEqual(
         parsed.headerFiles[0].replace(/\\/g, '/').toLowerCase(),
-        'f:/projects/geometry/include/cube.h'
+        expectedHdrPath
       );
 
       const debugOpts = parsed.compileOptionsByConfig.get('Debug|x64');

@@ -1,5 +1,7 @@
 import './vscode-mock';
 import * as assert from 'assert';
+import * as path from 'path';
+import * as os from 'os';
 import * as vscode from 'vscode';
 import { buildRunCommand, findLaunchVsDevShell, RunController } from '../src/tasks/run-controller';
 import { CompilerInfo, CompilerDetector } from '../src/prober/compiler-detector';
@@ -111,7 +113,7 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
 
         const controller = new RunController(mockDetector);
         const mockDoc = {
-          fileName: 'F:/project/test.cpp',
+          fileName: path.join(os.tmpdir(), 'novacpp-run-test', 'test.cpp'),
           isDirty: false
         } as unknown as vscode.TextDocument;
 
@@ -133,7 +135,7 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
       const mockGcc: CompilerInfo = {
         name: 'GCC 15.2',
         type: 'gcc',
-        path: 'C:\\ProgramData\\mingw64\\bin\\g++.exe'
+        path: process.platform === 'win32' ? 'C:\\ProgramData\\mingw64\\bin\\g++.exe' : '/usr/bin/g++'
       };
 
       const mockDetector = {
@@ -142,7 +144,7 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
 
       const controller = new RunController(mockDetector);
       const mockDoc = {
-        fileName: 'F:/project/test.cpp',
+        fileName: path.join(os.tmpdir(), 'novacpp-run-test', 'test.cpp'),
         isDirty: false
       } as unknown as vscode.TextDocument;
 
