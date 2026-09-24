@@ -19,3 +19,4 @@ compile_commands.json
 dist/**/*.map
 .clangd
 scratch/**
+context*.md

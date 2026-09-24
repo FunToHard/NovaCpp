@@ -20,16 +20,28 @@ export class CMakeWatcher implements vscode.Disposable {
     }
   }, 1500);
 
-  constructor(private readonly onReload: () => Promise<void>) {
-    // Watch for build artifacts: compile_commands.json, compile_flags.txt, .clangd
+  constructor(
+    private readonly onReload: () => Promise<void>,
+    private readonly onCmakeUpdate?: (uri: vscode.Uri) => Promise<void>
+  ) {
+    // Watch for build artifacts and CMake configuration changes
     this.watcher = vscode.workspace.createFileSystemWatcher(
-      '{**/compile_commands.json,**/compile_flags.txt,**/.clangd}'
+      '{**/compile_commands.json,**/compile_flags.txt,**/.clangd,**/CMakeLists.txt,**/CMakePresets.json,**/CMakeUserPresets.json}'
     );
 
     this.disposables.push(
-      this.watcher.onDidChange((uri) => this.debouncedReload(uri)),
-      this.watcher.onDidCreate((uri) => this.debouncedReload(uri)),
-      this.watcher.onDidDelete(() => this.debouncedReload({ fsPath: '' } as any))
+      this.watcher.onDidChange(async (uri) => {
+        if (this.onCmakeUpdate) await this.onCmakeUpdate(uri);
+        this.debouncedReload(uri);
+      }),
+      this.watcher.onDidCreate(async (uri) => {
+        if (this.onCmakeUpdate) await this.onCmakeUpdate(uri);
+        this.debouncedReload(uri);
+      }),
+      this.watcher.onDidDelete(async (uri) => {
+        if (this.onCmakeUpdate) await this.onCmakeUpdate(uri);
+        this.debouncedReload({ fsPath: '' } as any);
+      })
     );
   }
 
