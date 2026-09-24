@@ -238,10 +238,27 @@ describe('External SDKs Auto-Discovery Subsystem', () => {
   });
 
   describe('syncWorkspaceClangdConfig', () => {
-    it('should create .clangd file with CompileFlags.Add if none exists', () => {
+    it('should NOT create .clangd file in a non-Vulkan project', () => {
       const vulkanDir = path.join(tempDir, 'VulkanSDK');
       const vulkanInc = path.join(vulkanDir, 'Include');
       fs.mkdirSync(vulkanInc, { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'main.cpp'), '#include <iostream>\nint main() { return 0; }\n');
+
+      const synced = ExternalSdkDetector.syncWorkspaceClangdConfig(tempDir, {
+        env: { VULKAN_SDK: vulkanDir },
+        allowFsScan: false
+      });
+
+      assert.strictEqual(synced, false, 'Must not sync or generate .clangd for non-Vulkan project');
+      const clangdFile = path.join(tempDir, '.clangd');
+      assert.strictEqual(fs.existsSync(clangdFile), false, '.clangd must not be created');
+    });
+
+    it('should create .clangd file with CompileFlags.Add if project references Vulkan', () => {
+      const vulkanDir = path.join(tempDir, 'VulkanSDK');
+      const vulkanInc = path.join(vulkanDir, 'Include');
+      fs.mkdirSync(vulkanInc, { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'app.cpp'), '#include <vulkan/vulkan.h>\n');
 
       const synced = ExternalSdkDetector.syncWorkspaceClangdConfig(tempDir, {
         env: { VULKAN_SDK: vulkanDir },
@@ -257,11 +274,11 @@ describe('External SDKs Auto-Discovery Subsystem', () => {
       assert.ok(content.includes(vulkanInc.replace(/\\/g, '/')));
     });
 
-    it('should update existing .clangd non-destructively', () => {
+    it('should update existing .clangd non-destructively and preserve custom sections', () => {
       const clangdFile = path.join(tempDir, '.clangd');
       fs.writeFileSync(
         clangdFile,
-        'CompileFlags:\n  Add:\n    - "-std=c++20"\n',
+        'Diagnostics:\n  UnusedIncludes: Strict\nCompileFlags:\n  Add:\n    - "-std=c++20"\n',
         'utf8'
       );
 
@@ -269,6 +286,7 @@ describe('External SDKs Auto-Discovery Subsystem', () => {
       const raylibInc = path.join(raylibDir, 'include');
       fs.mkdirSync(raylibInc, { recursive: true });
       fs.writeFileSync(path.join(raylibInc, 'raylib.h'), '// raylib');
+      fs.writeFileSync(path.join(tempDir, 'game.cpp'), '#include "raylib.h"\n');
 
       const synced = ExternalSdkDetector.syncWorkspaceClangdConfig(tempDir, {
         env: { RAYLIB_DIR: raylibDir },
@@ -277,8 +295,9 @@ describe('External SDKs Auto-Discovery Subsystem', () => {
 
       assert.strictEqual(synced, true);
       const updated = fs.readFileSync(clangdFile, 'utf8');
-      assert.ok(updated.includes('"-std=c++20"'));
-      assert.ok(updated.includes(raylibInc.replace(/\\/g, '/')));
+      assert.ok(updated.includes('UnusedIncludes: Strict'), 'Must preserve existing Diagnostics section');
+      assert.ok(updated.includes('"-std=c++20"'), 'Must preserve existing flags');
+      assert.ok(updated.includes(raylibInc.replace(/\\/g, '/')), 'Must append raylib include flag');
     });
   });
 });

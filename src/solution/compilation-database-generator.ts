@@ -23,7 +23,8 @@ export class CompilationDatabaseGenerator {
       activeConfiguration ||
       (solution.configurations.length > 0 ? solution.configurations[0].key : 'Debug|x64');
 
-    const externalSdkIncludes = ExternalSdkDetector.getAllIncludePaths();
+    const solutionDir = path.dirname(solution.filePath);
+    const externalSdkIncludes = ExternalSdkDetector.getWorkspaceIncludePaths(solutionDir);
 
     for (const project of projects) {
       const projectDir = path.dirname(project.filePath).replace(/\\/g, '/');

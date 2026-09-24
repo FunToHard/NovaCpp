@@ -93,7 +93,9 @@ export class FlagSynthesizer {
     }
 
     if (options.detectExternalSdks !== false) {
-      const sdkIncludes = ExternalSdkDetector.getAllIncludePaths();
+      const sdkIncludes = options.workspaceRoot
+        ? ExternalSdkDetector.getWorkspaceIncludePaths(options.workspaceRoot)
+        : ExternalSdkDetector.getAllIncludePaths();
       for (const inc of sdkIncludes) {
         const flag = `-I${inc.replace(/\\/g, '/')}`;
         if (!flags.includes(flag)) {

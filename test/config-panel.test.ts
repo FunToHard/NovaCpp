@@ -156,4 +156,65 @@ describe('Configuration Webview Editor', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('should append to existing .clangd without overriding user configuration', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-clangd-append-'));
+    let reloaded = false;
+    const onReload = async () => {
+      reloaded = true;
+    };
+
+    mockVscode.workspace.workspaceFolders = [
+      {
+        uri: mockVscode.Uri.file(tmpDir),
+        name: 'test-workspace',
+        index: 0
+      }
+    ];
+
+    try {
+      const clangdFile = path.join(tmpDir, '.clangd');
+      fs.writeFileSync(
+        clangdFile,
+        '# Custom User Config\nDiagnostics:\n  ClangTidy:\n    Add: [modernize*]\nIndex:\n  Background: Build\nCompileFlags:\n  Add:\n    - "-DUSER_FLAG=1"\n',
+        'utf8'
+      );
+
+      const panel = ConfigPanel.render(
+        mockVscode.Uri.file(path.resolve('.')),
+        detector,
+        synthesizer,
+        onReload
+      );
+
+      const compilers = await detector.detectAllCompilers();
+      const compilerPath = compilers[0]?.path ?? 'gcc';
+
+      const result = await panel.handleSaveSettings({
+        compilerPath,
+        cppStandard: 'c++23',
+        cStandard: 'c17',
+        outputFormat: 'clangd_yaml',
+        includes: ['extra/include'],
+        defines: ['APPEND_FLAG=1']
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(reloaded, true);
+
+      const content = fs.readFileSync(clangdFile, 'utf8');
+      assert.ok(content.includes('Custom User Config'), 'Must preserve existing comments');
+      assert.ok(content.includes('modernize*'), 'Must preserve existing Diagnostics section');
+      assert.ok(content.includes('Background: Build'), 'Must preserve existing Index section');
+      assert.ok(content.includes('USER_FLAG=1'), 'Must preserve existing user flags');
+      assert.ok(content.includes('-std=c++23'), 'Must append new standard flag');
+      assert.ok(content.includes('extra/include'), 'Must append new include flag');
+      assert.ok(content.includes('APPEND_FLAG=1'), 'Must append new define flag');
+
+      panel.dispose();
+    } finally {
+      mockVscode.workspace.workspaceFolders = [];
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });

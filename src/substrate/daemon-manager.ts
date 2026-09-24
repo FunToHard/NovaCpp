@@ -137,13 +137,16 @@ export class DaemonManager implements vscode.Disposable {
     const detectExternalSdks = config.get<boolean>('discovery.detectExternalSdks', true);
     const fallbackFlags = ['-std=c++20', '-xc++'];
     if (detectExternalSdks) {
-      const sdkIncludes = ExternalSdkDetector.getAllIncludePaths();
-      for (const inc of sdkIncludes) {
-        fallbackFlags.push(`-I${inc.replace(/\\/g, '/')}`);
-      }
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (workspaceFolders && workspaceFolders.length > 0) {
         for (const folder of workspaceFolders) {
+          const sdkIncludes = ExternalSdkDetector.getWorkspaceIncludePaths(folder.uri.fsPath);
+          for (const inc of sdkIncludes) {
+            const flag = `-I${inc.replace(/\\/g, '/')}`;
+            if (!fallbackFlags.includes(flag)) {
+              fallbackFlags.push(flag);
+            }
+          }
           ExternalSdkDetector.syncWorkspaceClangdConfig(folder.uri.fsPath);
         }
       }

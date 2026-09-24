@@ -13,6 +13,7 @@ export interface ExternalSdkInfo {
 export interface ExternalSdkDetectorOptions {
   env?: Record<string, string | undefined>;
   allowFsScan?: boolean;
+  requireWorkspaceMatch?: boolean;
 }
 
 /**
@@ -547,16 +548,173 @@ export class ExternalSdkDetector {
   }
 
   /**
+   * Checks whether the workspace actually references or uses the specified external SDK.
+   * Scans source files and build configurations non-recursively into ignored directories.
+   */
+  public static isSdkUsedInWorkspace(workspaceRoot: string, sdkName: string): boolean {
+    if (!workspaceRoot) return false;
+    try {
+      if (!fs.existsSync(workspaceRoot)) return false;
+    } catch {
+      return false;
+    }
+
+    const ignoredDirs = new Set([
+      'node_modules',
+      '.git',
+      '.vscode',
+      '.clangd',
+      'dist',
+      'build',
+      'out',
+      '.cache',
+      'bin',
+      'obj',
+      'target'
+    ]);
+
+    const sourceExts = new Set([
+      '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.hxx', '.inl', '.ipp', '.ixx', '.cu', '.cuh'
+    ]);
+
+    const buildFileNames = new Set([
+      'cmakelists.txt',
+      'makefile',
+      'vcpkg.json',
+      'conanfile.txt',
+      'meson.build'
+    ]);
+
+    const sdkPatterns: Record<string, RegExp[]> = {
+      Vulkan: [
+        /#\s*include\s*[<"]vulkan\//i,
+        /#\s*include\s*[<"]vulkan\.h[>"]/i,
+        /#\s*include\s*[<"]vk_/i,
+        /find_package\s*\(\s*Vulkan/i,
+        /Vulkan::Vulkan/i,
+        /"vulkan"/i,
+        /VULKAN_HPP/i
+      ],
+      raylib: [
+        /#\s*include\s*[<"](?:raylib|raymath|rlgl)\.h[>"]/i,
+        /find_package\s*\(\s*raylib/i,
+        /"raylib"/i
+      ],
+      CUDA: [
+        /#\s*include\s*[<"]cuda/i,
+        /#\s*include\s*[<"]cuda_runtime\.h[>"]/i,
+        /find_package\s*\(\s*(?:CUDA|CUDAToolkit)/i,
+        /enable_language\s*\(\s*CUDA/i
+      ],
+      Boost: [
+        /#\s*include\s*[<"]boost\//i,
+        /find_package\s*\(\s*Boost/i,
+        /"boost"/i
+      ],
+      SDL: [
+        /#\s*include\s*[<"](?:SDL2\/|SDL3\/|SDL\.h)/i,
+        /find_package\s*\(\s*SDL[23]?/i,
+        /"sdl[23]?"/i
+      ]
+    };
+
+    const patterns = sdkPatterns[sdkName];
+    if (!patterns) return false;
+
+    const queue = [workspaceRoot];
+    const maxFiles = 250;
+    let filesChecked = 0;
+
+    while (queue.length > 0 && filesChecked < maxFiles) {
+      const currentDir = queue.shift()!;
+      let entries: fs.Dirent[] = [];
+      try {
+        entries = fs.readdirSync(currentDir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          if (!ignoredDirs.has(entry.name.toLowerCase())) {
+            queue.push(path.join(currentDir, entry.name));
+          }
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          const lowerName = entry.name.toLowerCase();
+
+          if (sdkName === 'CUDA' && (ext === '.cu' || ext === '.cuh')) {
+            return true;
+          }
+
+          if (sourceExts.has(ext) || buildFileNames.has(lowerName) || lowerName.endsWith('.vcxproj')) {
+            filesChecked++;
+            try {
+              const filePath = path.join(currentDir, entry.name);
+              const stat = fs.statSync(filePath);
+              const readSize = Math.min(stat.size, 32768);
+              const buffer = Buffer.alloc(readSize);
+              const fd = fs.openSync(filePath, 'r');
+              fs.readSync(fd, buffer, 0, readSize, 0);
+              fs.closeSync(fd);
+              const text = buffer.toString('utf8');
+
+              for (const pattern of patterns) {
+                if (pattern.test(text)) {
+                  return true;
+                }
+              }
+            } catch {
+              // Ignore read errors
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Discovers include paths for external SDKs that are actually referenced/used in the given workspace.
+   */
+  public static getWorkspaceIncludePaths(
+    workspaceRoot: string,
+    options: ExternalSdkDetectorOptions = {}
+  ): string[] {
+    const sdks = ExternalSdkDetector.detectAll(options);
+    const seen = new Set<string>();
+    const includePaths: string[] = [];
+
+    for (const sdk of sdks) {
+      if (ExternalSdkDetector.isSdkUsedInWorkspace(workspaceRoot, sdk.name)) {
+        for (const inc of sdk.includePaths) {
+          const normalized = inc.replace(/\\/g, '/');
+          if (!seen.has(normalized)) {
+            seen.add(normalized);
+            includePaths.push(normalized);
+          }
+        }
+      }
+    }
+
+    return includePaths;
+  }
+
+  /**
    * Synchronizes discovered external SDK include paths into the workspace .clangd YAML configuration.
-   * This guarantees clangd injects the include paths into EVERY file in the workspace,
-   * even when an existing compile_commands.json or CMake build database is active.
+   * Only synchronizes SDKs that are actually used in the workspace, avoiding polluting non-Vulkan/SDK projects.
+   * If .clangd exists, appends flags non-destructively without overriding existing user configuration.
    */
   public static syncWorkspaceClangdConfig(
     workspaceRoot: string,
     options: ExternalSdkDetectorOptions = {}
   ): boolean {
     try {
-      const includes = ExternalSdkDetector.getAllIncludePaths(options);
+      const includes = options.requireWorkspaceMatch === false
+        ? ExternalSdkDetector.getAllIncludePaths(options)
+        : ExternalSdkDetector.getWorkspaceIncludePaths(workspaceRoot, options);
+
       if (includes.length === 0) return false;
 
       const clangdPath = path.join(workspaceRoot, '.clangd');
@@ -578,17 +736,20 @@ export class ExternalSdkDetector {
       const missingFlags = addFlags.filter((f) => !existing.includes(f));
       if (missingFlags.length === 0) return false;
 
-      if (/CompileFlags:\s*\n\s*Add:/i.test(existing)) {
+      if (/CompileFlags:\s*\r?\n\s*Add:/i.test(existing)) {
         const replacement = missingFlags.map((f) => `    - "${f}"`).join('\n');
         const updated = existing.replace(
-          /(CompileFlags:\s*\n\s*Add:)/i,
+          /(CompileFlags:\s*\r?\n\s*Add:)/i,
           `$1\n${replacement}`
         );
         fs.writeFileSync(clangdPath, updated, 'utf8');
         return true;
-      } else if (/CompileFlags:/i.test(existing)) {
-        const replacement = `CompileFlags:\n  Add:\n` + missingFlags.map((f) => `    - "${f}"`).join('\n');
-        const updated = existing.replace(/CompileFlags:/i, replacement);
+      } else if (/^CompileFlags:/im.test(existing)) {
+        const flagsBlock = `  Add:\n` + missingFlags.map((f) => `    - "${f}"`).join('\n');
+        const updated = existing.replace(
+          /(^CompileFlags:)/im,
+          `$1\n${flagsBlock}`
+        );
         fs.writeFileSync(clangdPath, updated, 'utf8');
         return true;
       } else {
@@ -600,7 +761,7 @@ export class ExternalSdkDetector {
           ...missingFlags.map((f) => `    - "${f}"`),
           ''
         ].join('\n');
-        fs.writeFileSync(clangdPath, existing + toAppend, 'utf8');
+        fs.writeFileSync(clangdPath, existing.trimEnd() + '\n' + toAppend, 'utf8');
         return true;
       }
     } catch {
