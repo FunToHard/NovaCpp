@@ -13,6 +13,7 @@ import { ClangdInstaller } from './installer';
 import { createClangdMiddleware, EditorEventDebouncer } from './protocol-filter';
 import { StlRankingTable } from '../telemetry/ranking-table';
 import { ExternalSdkDetector } from '../prober/external-sdk-detector';
+import { CMakeParser } from '../cmake/cmake-parser';
 
 export const defaultClangdArguments: string[] = [
   '--background-index',
@@ -136,10 +137,20 @@ export class DaemonManager implements vscode.Disposable {
 
     const detectExternalSdks = config.get<boolean>('discovery.detectExternalSdks', true);
     const fallbackFlags = ['-std=c++20', '-xc++'];
-    if (detectExternalSdks) {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (workspaceFolders && workspaceFolders.length > 0) {
-        for (const folder of workspaceFolders) {
+
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      for (const folder of workspaceFolders) {
+        // Parse and include CMake include directories
+        const cmakeIncludes = CMakeParser.getIncludePaths(folder.uri.fsPath);
+        for (const inc of cmakeIncludes) {
+          const flag = `-I${inc.replace(/\\/g, '/')}`;
+          if (!fallbackFlags.includes(flag)) {
+            fallbackFlags.push(flag);
+          }
+        }
+
+        if (detectExternalSdks) {
           const sdkIncludes = ExternalSdkDetector.getWorkspaceIncludePaths(folder.uri.fsPath);
           for (const inc of sdkIncludes) {
             const flag = `-I${inc.replace(/\\/g, '/')}`;

@@ -1,19 +1,20 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { CMakeBuildType, CMakePreset, CMakeProjectInfo } from './cmake-models';
+import { CMakeProjectInfo } from './cmake-models';
 import { CMakeDetector } from './cmake-detector';
 import { CMakeParser } from './cmake-parser';
+import { CompilerDetector } from '../prober/compiler-detector';
+import { SystemIncludeExtractor } from '../prober/system-includes';
 
 export class CMakeManager implements vscode.Disposable {
   private statusBarItem: vscode.StatusBarItem;
   private disposables: vscode.Disposable[] = [];
   private activeProject: CMakeProjectInfo | null = null;
-  private activeBuildType: CMakeBuildType = 'Debug';
-  private activePreset: CMakePreset | null = null;
-  private isConfiguring: boolean = false;
 
   constructor(
+    private readonly detector: CompilerDetector,
+    private readonly extractor: SystemIncludeExtractor,
     private readonly onReloadServer?: () => Promise<void>
   ) {
     this.statusBarItem = vscode.window.createStatusBarItem(
@@ -28,16 +29,17 @@ export class CMakeManager implements vscode.Disposable {
     return this.activeProject;
   }
 
-  public getActiveBuildType(): CMakeBuildType {
-    return this.activeBuildType;
+  public getIncludeDirectories(): string[] {
+    return this.activeProject?.includeDirectories ?? [];
   }
 
-  public getActivePreset(): CMakePreset | null {
-    return this.activePreset;
+  public getCompileDefinitions(): string[] {
+    return this.activeProject?.compileDefinitions ?? [];
   }
 
   /**
-   * Initializes CMake subsystem: detects CMakeLists.txt and seamlessly connects compilation databases.
+   * Initializes the CMake subsystem by statically parsing the workspace CMakeLists.txt
+   * and including discovered include paths and definitions.
    */
   public async initialize(): Promise<void> {
     const folders = vscode.workspace.workspaceFolders;
@@ -52,425 +54,304 @@ export class CMakeManager implements vscode.Disposable {
       return;
     }
 
-    const config = vscode.workspace.getConfiguration('novacpp.cmake');
-    this.activeBuildType = (config.get<string>('buildType') as CMakeBuildType) || 'Debug';
-    const buildDirectorySetting = config.get<string>('buildDirectory', 'build');
+    await this.refresh();
+  }
 
-    const cmakeLists = CMakeDetector.findCMakeLists(rootPath);
-    if (!cmakeLists) {
+  /**
+   * Statically re-parses CMakeLists.txt across the workspace, updates active project info,
+   * syncs include paths into IntelliSense, and notifies the language server.
+   */
+  public async refresh(): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
       this.statusBarItem.hide();
       return;
     }
 
-    this.activeProject = {
-      workspaceRoot: rootPath,
-      sourceDir: rootPath,
-      buildDir: path.isAbsolute(buildDirectorySetting)
-        ? buildDirectorySetting
-        : path.join(rootPath, buildDirectorySetting),
-      cmakeListsPath: cmakeLists,
-      buildType: this.activeBuildType
+    const rootPath = folders[0].uri.fsPath;
+    const project = CMakeParser.parseWorkspace(rootPath);
+    if (!project) {
+      this.activeProject = null;
+      this.statusBarItem.hide();
+      return;
+    }
+
+    this.activeProject = project;
+    this.updateStatusBar();
+
+    // Automatically synchronize discovered CMake includes into workspace compile_commands.json
+    await this.synthesizeCompilationDatabase();
+
+    if (this.onReloadServer) {
+      await this.onReloadServer();
+    }
+  }
+
+  /**
+   * Synthesizes compile_commands.json directly from parsed CMake targets, sources, and include directories
+   * without requiring any external cmake execution.
+   */
+  public async synthesizeCompilationDatabase(outputFilePath?: string): Promise<string | null> {
+    if (!this.activeProject) return null;
+
+    const workspaceRoot = this.activeProject.workspaceRoot;
+    const compiler = await this.detector.getPreferredCompiler();
+    const systemIncludes = compiler ? await this.extractor.extractSystemIncludes(compiler) : [];
+    const compilerBin = compiler?.path || 'clang++';
+    const isMsvc = compiler?.type === 'msvc';
+
+    const standard = this.activeProject.cppStandard || 'c++20';
+    const targetFile = outputFilePath || path.join(workspaceRoot, 'compile_commands.json');
+
+    const globalIncludes = this.activeProject.includeDirectories;
+    const globalDefs = this.activeProject.compileDefinitions;
+
+    const entries: {
+      directory: string;
+      command?: string;
+      arguments?: string[];
+      file: string;
+    }[] = [];
+
+    const seenFiles = new Set<string>();
+
+    for (const target of this.activeProject.targets) {
+      const allIncludes = Array.from(
+        new Set([...target.includeDirectories, ...globalIncludes, ...systemIncludes])
+      );
+      const allDefs = Array.from(new Set([...target.compileDefinitions, ...globalDefs]));
+
+      for (const src of target.sourceFiles) {
+        const norm = src.replace(/\\/g, '/');
+        if (seenFiles.has(norm.toLowerCase())) continue;
+        seenFiles.add(norm.toLowerCase());
+
+        const isHeader = /\.(h|hpp|hxx|inl|ipp)$/i.test(src);
+        const args: string[] = [compilerBin];
+
+        if (isMsvc) {
+          args.push('/nologo', `/std:${standard}`, '/EHsc', '/TP');
+          for (const def of allDefs) {
+            args.push(`/D${def}`);
+          }
+          for (const inc of allIncludes) {
+            args.push(`/I${inc.replace(/\\/g, '/')}`);
+          }
+          args.push('/c', norm);
+        } else {
+          args.push(isHeader ? '-xc++-header' : '-xc++', `-std=${standard}`, '-Wall');
+          for (const def of allDefs) {
+            args.push(`-D${def}`);
+          }
+          for (const inc of allIncludes) {
+            args.push(`-I${inc.replace(/\\/g, '/')}`);
+          }
+          args.push('-c', norm);
+        }
+
+        entries.push({
+          directory: workspaceRoot.replace(/\\/g, '/'),
+          arguments: args,
+          file: norm
+        });
+      }
+    }
+
+    // If targets had no explicit source files (e.g., header-only library or globbed files),
+    // scan for C/C++ files in workspace to populate compilation database
+    if (entries.length === 0) {
+      const sourceFiles = this.discoverWorkspaceCppFiles(workspaceRoot);
+      const allIncludes = Array.from(new Set([...globalIncludes, ...systemIncludes]));
+
+      for (const file of sourceFiles) {
+        const norm = file.replace(/\\/g, '/');
+        const isHeader = /\.(h|hpp|hxx|inl|ipp)$/i.test(file);
+        const args: string[] = [compilerBin];
+
+        if (isMsvc) {
+          args.push('/nologo', `/std:${standard}`, '/EHsc', '/TP');
+          for (const def of globalDefs) {
+            args.push(`/D${def}`);
+          }
+          for (const inc of allIncludes) {
+            args.push(`/I${inc.replace(/\\/g, '/')}`);
+          }
+          args.push('/c', norm);
+        } else {
+          args.push(isHeader ? '-xc++-header' : '-xc++', `-std=${standard}`, '-Wall');
+          for (const def of globalDefs) {
+            args.push(`-D${def}`);
+          }
+          for (const inc of allIncludes) {
+            args.push(`-I${inc.replace(/\\/g, '/')}`);
+          }
+          args.push('-c', norm);
+        }
+
+        entries.push({
+          directory: workspaceRoot.replace(/\\/g, '/'),
+          arguments: args,
+          file: norm
+        });
+      }
+    }
+
+    if (entries.length > 0) {
+      try {
+        fs.writeFileSync(targetFile, JSON.stringify(entries, null, 2), 'utf8');
+        console.log(`NovaCpp: Statically generated compilation database with ${entries.length} files from CMakeLists.txt`);
+        return targetFile;
+      } catch (err) {
+        console.warn('NovaCpp: Failed to write CMake compile_commands.json:', err);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Helper to discover C/C++ source and header files in the workspace.
+   */
+  private discoverWorkspaceCppFiles(workspaceRoot: string): string[] {
+    const files: string[] = [];
+    const ignored = new Set(['node_modules', '.git', '.vscode', '.clangd', 'dist', 'build', 'out', '.cache', 'bin', 'obj']);
+    const exts = new Set(['.cpp', '.cxx', '.cc', '.c', '.h', '.hpp', '.hxx', '.cu']);
+
+    const scan = (dir: string, depth: number) => {
+      if (depth > 6 || files.length >= 200) return;
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const e of entries) {
+          if (e.isDirectory()) {
+            if (!ignored.has(e.name.toLowerCase())) {
+              scan(path.join(dir, e.name), depth + 1);
+            }
+          } else if (e.isFile()) {
+            const ext = path.extname(e.name).toLowerCase();
+            if (exts.has(ext)) {
+              files.push(path.join(dir, e.name));
+            }
+          }
+        }
+      } catch {
+        // Ignore read errors
+      }
     };
 
-    this.updateStatusBar();
-
-    // Seamlessly synchronize compilation database with Clangd
-    const synced = await this.syncCompilationDatabase();
-
-    // If no compilation database exists yet, check if autoConfigure is enabled
-    if (!synced && config.get<boolean>('autoConfigure', true)) {
-      // Fallback: immediate include directory parsing from CMakeLists.txt
-      const parsed = CMakeParser.parse(cmakeLists, rootPath);
-      if (parsed.includeDirectories.length > 0) {
-        console.log(`NovaCpp: Statically discovered ${parsed.includeDirectories.length} CMake include paths.`);
-      }
-
-      // Auto-configure CMake in background to generate compile_commands.json
-      void this.configure();
-    }
+    scan(workspaceRoot, 0);
+    return files;
   }
 
   /**
-   * Synchronizes discovered compile_commands.json into workspace root and .clangd
-   * so Clangd immediately recognizes all include paths and compiler definitions.
-   */
-  public async syncCompilationDatabase(customBuildDir?: string): Promise<boolean> {
-    if (!this.activeProject) return false;
-
-    const workspaceRoot = this.activeProject.workspaceRoot;
-    const compDb = CMakeDetector.findCompilationDatabase(
-      workspaceRoot,
-      customBuildDir || this.activeProject.buildDir
-    );
-
-    if (!compDb) {
-      return false;
-    }
-
-    this.activeProject.compilationDatabasePath = compDb;
-
-    try {
-      const rootCompDb = path.join(workspaceRoot, 'compile_commands.json');
-      const compDbDir = path.dirname(compDb);
-
-      // If compile_commands.json is located in a build directory, mirror/link it to root
-      if (path.normalize(compDb) !== path.normalize(rootCompDb)) {
-        try {
-          fs.copyFileSync(compDb, rootCompDb);
-        } catch {
-          // If copy fails, fallback to updating .clangd
-        }
-      }
-
-      // Configure .clangd CompilationDatabase directive non-destructively
-      this.updateClangdCompilationDatabase(workspaceRoot, compDbDir);
-
-      this.updateStatusBar();
-
-      if (this.onReloadServer) {
-        await this.onReloadServer();
-      }
-
-      console.log(`NovaCpp: Seamlessly synchronized CMake compilation database from ${compDb}`);
-      return true;
-    } catch (err) {
-      console.warn('NovaCpp: Error synchronizing CMake compilation database:', err);
-      return false;
-    }
-  }
-
-  /**
-   * Updates .clangd CompilationDatabase directive non-destructively.
-   */
-  private updateClangdCompilationDatabase(workspaceRoot: string, compilationDbDir: string): void {
-    try {
-      const clangdPath = path.join(workspaceRoot, '.clangd');
-      const normalizedDir = compilationDbDir.replace(/\\/g, '/');
-
-      if (!fs.existsSync(clangdPath)) {
-        const content = [
-          '# Generated by NovaCpp - CMake Integration',
-          'CompileFlags:',
-          `  CompilationDatabase: "${normalizedDir}"`,
-          ''
-        ].join('\n');
-        fs.writeFileSync(clangdPath, content, 'utf8');
-        return;
-      }
-
-      const existing = fs.readFileSync(clangdPath, 'utf8');
-      if (existing.includes(`CompilationDatabase: "${normalizedDir}"`)) {
-        return; // Already configured
-      }
-
-      // Replace or insert CompilationDatabase
-      if (/CompilationDatabase:\s*".*?"/i.test(existing)) {
-        const updated = existing.replace(
-          /CompilationDatabase:\s*".*?"/i,
-          `CompilationDatabase: "${normalizedDir}"`
-        );
-        fs.writeFileSync(clangdPath, updated, 'utf8');
-      } else if (/^CompileFlags:/im.test(existing)) {
-        const updated = existing.replace(
-          /(^CompileFlags:)/im,
-          `$1\n  CompilationDatabase: "${normalizedDir}"`
-        );
-        fs.writeFileSync(clangdPath, updated, 'utf8');
-      } else {
-        const toAppend = [
-          '',
-          '# CMake Compilation Database',
-          'CompileFlags:',
-          `  CompilationDatabase: "${normalizedDir}"`,
-          ''
-        ].join('\n');
-        fs.writeFileSync(clangdPath, existing.trimEnd() + '\n' + toAppend, 'utf8');
-      }
-    } catch {
-      // Safe ignore
-    }
-  }
-
-  /**
-   * Configures the CMake project with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON.
-   */
-  public async configure(presetName?: string, additionalArgs: string[] = []): Promise<void> {
-    if (!this.activeProject) return;
-    if (this.isConfiguring) {
-      vscode.window.showInformationMessage('CMake configure is already running.');
-      return;
-    }
-
-    const config = vscode.workspace.getConfiguration('novacpp.cmake');
-    const customCmake = config.get<string>('cmakePath');
-    const cmakeBin = await CMakeDetector.findCMake(customCmake);
-
-    if (!cmakeBin) {
-      vscode.window.showErrorMessage(
-        'NovaCpp: CMake binary could not be found. Please install CMake or configure "novacpp.cmake.cmakePath".'
-      );
-      return;
-    }
-
-    this.isConfiguring = true;
-    this.updateStatusBar('$(sync~spin) CMake: Configuring...');
-
-    const workspaceRoot = this.activeProject.workspaceRoot;
-    const buildDir = this.activeProject.buildDir;
-    const buildType = this.activeProject.buildType;
-
-    const args: string[] = [];
-    if (presetName || this.activePreset) {
-      const preset = presetName || this.activePreset!.name;
-      args.push('--preset', preset);
-    } else {
-      args.push(
-        '-B',
-        buildDir,
-        '-S',
-        workspaceRoot,
-        '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON',
-        `-DCMAKE_BUILD_TYPE=${buildType}`
-      );
-    }
-
-    const userArgs = config.get<string[]>('additionalArgs') || [];
-    args.push(...userArgs, ...additionalArgs);
-
-    try {
-      const terminal = vscode.window.createTerminal({
-        name: 'CMake Configure',
-        cwd: workspaceRoot
-      });
-      terminal.show(true);
-
-      const commandLine = `"${cmakeBin}" ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`;
-      terminal.sendText(commandLine);
-
-      // Setup watcher / delay to sync compilation database once written
-      setTimeout(async () => {
-        await this.syncCompilationDatabase();
-        this.isConfiguring = false;
-        this.updateStatusBar();
-      }, 3500);
-    } catch (err) {
-      this.isConfiguring = false;
-      this.updateStatusBar();
-      vscode.window.showErrorMessage(`NovaCpp: CMake configuration failed: ${err}`);
-    }
-  }
-
-  /**
-   * Builds the CMake target or whole project.
-   */
-  public async build(target?: string): Promise<void> {
-    if (!this.activeProject) return;
-
-    const config = vscode.workspace.getConfiguration('novacpp.cmake');
-    const cmakeBin = await CMakeDetector.findCMake(config.get<string>('cmakePath'));
-    if (!cmakeBin) {
-      vscode.window.showErrorMessage('NovaCpp: CMake binary not found.');
-      return;
-    }
-
-    const buildDir = this.activeProject.buildDir;
-    const buildType = this.activeProject.buildType;
-    const args: string[] = ['--build', buildDir, '--config', buildType];
-
-    if (target && target.trim().length > 0) {
-      args.push('--target', target.trim());
-    }
-
-    const terminal = vscode.window.createTerminal({
-      name: 'CMake Build',
-      cwd: this.activeProject.workspaceRoot
-    });
-    terminal.show(true);
-    terminal.sendText(`"${cmakeBin}" ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);
-  }
-
-  /**
-   * Cleans the CMake build outputs.
-   */
-  public async clean(): Promise<void> {
-    if (!this.activeProject) return;
-
-    const config = vscode.workspace.getConfiguration('novacpp.cmake');
-    const cmakeBin = await CMakeDetector.findCMake(config.get<string>('cmakePath'));
-    if (!cmakeBin) {
-      vscode.window.showErrorMessage('NovaCpp: CMake binary not found.');
-      return;
-    }
-
-    const buildDir = this.activeProject.buildDir;
-    const terminal = vscode.window.createTerminal({
-      name: 'CMake Clean',
-      cwd: this.activeProject.workspaceRoot
-    });
-    terminal.show(true);
-    terminal.sendText(`"${cmakeBin}" --build "${buildDir}" --target clean`);
-  }
-
-  /**
-   * Changes the active build type (Debug, Release, RelWithDebInfo, MinSizeRel).
-   */
-  public async setBuildType(type: CMakeBuildType): Promise<void> {
-    this.activeBuildType = type;
-    if (this.activeProject) {
-      this.activeProject.buildType = type;
-    }
-
-    const config = vscode.workspace.getConfiguration('novacpp.cmake');
-    await config.update('buildType', type, vscode.ConfigurationTarget.Workspace);
-
-    this.updateStatusBar();
-    vscode.window.showInformationMessage(`NovaCpp: Active CMake build type set to ${type}`);
-    await this.syncCompilationDatabase();
-  }
-
-  /**
-   * Displays QuickPick for selecting configure presets.
-   */
-  public async selectPreset(): Promise<void> {
-    if (!this.activeProject) return;
-
-    const presets = CMakeDetector.readPresets(this.activeProject.workspaceRoot);
-    if (presets.length === 0) {
-      vscode.window.showInformationMessage('No configure presets found in CMakePresets.json');
-      return;
-    }
-
-    const items = presets.map((p) => ({
-      label: p.displayName || p.name,
-      description: p.description || p.generator || '',
-      detail: p.binaryDir || '',
-      preset: p
-    }));
-
-    const picked = await vscode.window.showQuickPick(items, {
-      placeHolder: 'Select a CMake Configure Preset'
-    });
-
-    if (picked) {
-      this.activePreset = picked.preset;
-      this.updateStatusBar();
-      await this.configure(picked.preset.name);
-    }
-  }
-
-  /**
-   * Displays the comprehensive CMake interactive actions menu.
+   * Displays the CMake interactive menu allowing inspection of discovered include directories and targets.
    */
   public async openMenu(): Promise<void> {
     if (!this.activeProject) {
-      vscode.window.showInformationMessage('No active CMake project in workspace.');
+      vscode.window.showInformationMessage('No CMakeLists.txt found in the active workspace.');
       return;
     }
 
-    const dbStatus = this.activeProject.compilationDatabasePath
-      ? `$(check) Connected (${path.basename(path.dirname(this.activeProject.compilationDatabasePath))})`
-      : '$(x) Missing';
+    const incCount = this.activeProject.includeDirectories.length;
+    const targetCount = this.activeProject.targets.length;
 
     const items: (vscode.QuickPickItem & { action: string })[] = [
       {
-        label: '$(play) Build Target',
-        description: `Build active configuration [${this.activeBuildType}]`,
-        action: 'build'
+        label: `$(folder) View Discovered Include Directories (${incCount})`,
+        description: 'Inspect include directories extracted from CMakeLists.txt',
+        action: 'showIncludes'
       },
       {
-        label: '$(sync) Configure Project',
-        description: 'Run cmake configure and export compile_commands.json',
-        action: 'configure'
+        label: `$(symbol-class) View Discovered Targets (${targetCount})`,
+        description: 'Inspect executable and library targets declared in CMakeLists.txt',
+        action: 'showTargets'
       },
       {
-        label: '$(trash) Clean Build',
-        description: 'Clean build outputs',
-        action: 'clean'
+        label: '$(refresh) Re-parse CMakeLists.txt',
+        description: 'Re-scan CMakeLists.txt and refresh IntelliSense includes',
+        action: 'rescan'
       },
       {
-        label: '$(gear) Select Build Type',
-        description: `Current: ${this.activeBuildType}`,
-        action: 'setBuildType'
-      },
-      {
-        label: '$(list-selection) Select Configure Preset',
-        description: this.activePreset ? `Current: ${this.activePreset.name}` : 'Select from CMakePresets.json',
-        action: 'selectPreset'
-      },
-      {
-        label: '$(database) Sync Compilation Database',
-        description: `IntelliSense Database: ${dbStatus}`,
-        action: 'syncDb'
+        label: '$(database) Generate compile_commands.json from CMakeLists.txt',
+        description: 'Synthesize compilation database directly from parsed CMake project',
+        action: 'generateDb'
       }
     ];
 
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: `NovaCpp CMake Menu — ${this.activeProject.workspaceRoot}`
+      placeHolder: `NovaCpp CMake Intelligence — ${path.basename(this.activeProject.workspaceRoot)}`
     });
 
     if (!selected) return;
 
     switch (selected.action) {
-      case 'build':
-        await this.build();
-        break;
-      case 'configure':
-        await this.configure();
-        break;
-      case 'clean':
-        await this.clean();
-        break;
-      case 'setBuildType': {
-        const types: CMakeBuildType[] = ['Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'];
-        const pickedType = await vscode.window.showQuickPick(types, {
-          placeHolder: 'Select CMake Build Type'
-        });
-        if (pickedType) {
-          await this.setBuildType(pickedType as CMakeBuildType);
+      case 'showIncludes': {
+        const incItems = this.activeProject.includeDirectories.map((inc) => ({
+          label: `$(file-directory) ${path.basename(inc)}`,
+          description: inc
+        }));
+        if (incItems.length === 0) {
+          vscode.window.showInformationMessage('No include directories found in CMakeLists.txt.');
+        } else {
+          await vscode.window.showQuickPick(incItems, {
+            placeHolder: `Discovered Include Directories (${incItems.length})`
+          });
         }
         break;
       }
-      case 'selectPreset':
-        await this.selectPreset();
-        break;
-      case 'syncDb': {
-        const ok = await this.syncCompilationDatabase();
-        if (ok) {
-          vscode.window.showInformationMessage('NovaCpp: Successfully synchronized CMake compilation database.');
+
+      case 'showTargets': {
+        const targetItems = this.activeProject.targets.map((t) => ({
+          label: `$(symbol-property) ${t.name} [${t.type}]`,
+          description: `${t.sourceFiles.length} file(s), ${t.includeDirectories.length} include path(s)`,
+          detail: t.sourceFiles.map((s) => path.basename(s)).join(', ')
+        }));
+        if (targetItems.length === 0) {
+          vscode.window.showInformationMessage('No targets found in CMakeLists.txt.');
         } else {
-          vscode.window.showWarningMessage('NovaCpp: No compile_commands.json found. Run Configure first.');
+          await vscode.window.showQuickPick(targetItems, {
+            placeHolder: `Discovered CMake Targets (${targetItems.length})`
+          });
+        }
+        break;
+      }
+
+      case 'rescan': {
+        await this.refresh();
+        vscode.window.showInformationMessage(
+          `NovaCpp: Successfully re-parsed CMakeLists.txt. Discovered ${this.activeProject.includeDirectories.length} include directory(ies).`
+        );
+        break;
+      }
+
+      case 'generateDb': {
+        const generated = await this.synthesizeCompilationDatabase();
+        if (generated) {
+          vscode.window.showInformationMessage(
+            `NovaCpp: Generated compile_commands.json from CMakeLists.txt at ${generated}`
+          );
+        } else {
+          vscode.window.showWarningMessage('NovaCpp: Could not generate compile_commands.json.');
         }
         break;
       }
     }
   }
 
-  private updateStatusBar(customText?: string): void {
-    if (customText) {
-      this.statusBarItem.text = customText;
-      this.statusBarItem.show();
-      return;
-    }
-
+  private updateStatusBar(): void {
     if (!this.activeProject) {
       this.statusBarItem.hide();
       return;
     }
 
-    const label = this.activePreset
-      ? this.activePreset.name
-      : this.activeBuildType;
-
-    const hasDb = !!this.activeProject.compilationDatabasePath;
-    const dbIcon = hasDb ? '$(check)' : '$(alert)';
-
-    this.statusBarItem.text = `$(tools) CMake: [${label}]`;
+    const incCount = this.activeProject.includeDirectories.length;
+    this.statusBarItem.text = `$(tools) CMake: [${incCount} include${incCount === 1 ? '' : 's'}]`;
     this.statusBarItem.tooltip = [
-      `NovaCpp CMake Integration:`,
-      `Workspace: ${this.activeProject.workspaceRoot}`,
-      `Build Type: ${this.activeBuildType}`,
-      `Build Dir: ${this.activeProject.buildDir}`,
-      `Compilation DB: ${hasDb ? this.activeProject.compilationDatabasePath : 'Not found (Click to Configure)'}`
+      'NovaCpp CMake Intelligence (Direct Static Parser):',
+      `CMakeLists: ${this.activeProject.cmakeListsPath}`,
+      `Discovered Includes: ${incCount}`,
+      ...this.activeProject.includeDirectories.map((d) => `  - ${d}`),
+      `Standard: ${this.activeProject.cppStandard || 'default'}`,
+      'Click to inspect includes and targets'
     ].join('\n');
     this.statusBarItem.show();
   }

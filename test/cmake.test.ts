@@ -3,19 +3,19 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import * as vscode from 'vscode';
 import { mockVscode } from './vscode-mock';
 import { CMakeParser } from '../src/cmake/cmake-parser';
 import { CMakeDetector } from '../src/cmake/cmake-detector';
 import { CMakeManager } from '../src/cmake/cmake-manager';
-import { CMakeTaskProvider } from '../src/cmake/cmake-task-provider';
-import { CMakeTaskDefinition } from '../src/cmake/cmake-models';
+import { FlagSynthesizer } from '../src/prober/flag-synthesizer';
+import { CompilerDetector } from '../src/prober/compiler-detector';
+import { SystemIncludeExtractor } from '../src/prober/system-includes';
 
-describe('Full CMake Subsystem & IntelliSense Integration', () => {
+describe('CMake Static Include Extraction & IntelliSense Integration', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-cmake-test-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-cmake-static-'));
   });
 
   afterEach(() => {
@@ -27,42 +27,81 @@ describe('Full CMake Subsystem & IntelliSense Integration', () => {
     mockVscode.workspace.workspaceFolders = [];
   });
 
-  describe('CMakeParser (Static Include Directory & Define Extraction)', () => {
+  describe('CMakeParser Tokenization & Command Extraction', () => {
+    it('should tokenize multi-line commands, quoted arguments, and strip comments', () => {
+      const content = `
+        # Top-level comment
+        cmake_minimum_required(VERSION 3.20)
+        project("My Complex App")
+
+        # Multi-line include_directories
+        include_directories(
+          include
+          "path with spaces/inc" # comment in args
+          \${CMAKE_CURRENT_SOURCE_DIR}/ext
+        )
+      `;
+
+      const commands = CMakeParser.tokenizeCommands(content);
+      assert.strictEqual(commands.length, 3);
+      assert.strictEqual(commands[0].name, 'cmake_minimum_required');
+      assert.deepStrictEqual(commands[0].args, ['VERSION', '3.20']);
+
+      assert.strictEqual(commands[1].name, 'project');
+      assert.deepStrictEqual(commands[1].args, ['My Complex App']);
+
+      assert.strictEqual(commands[2].name, 'include_directories');
+      assert.strictEqual(commands[2].args[0], 'include');
+      assert.strictEqual(commands[2].args[1], 'path with spaces/inc');
+      assert.strictEqual(commands[2].args[2], '${CMAKE_CURRENT_SOURCE_DIR}/ext');
+    });
+  });
+
+  describe('CMakeParser Include Directories & Target Extraction', () => {
     it('should parse include_directories, target_include_directories, and compile definitions', () => {
       const cmakeLists = path.join(tempDir, 'CMakeLists.txt');
-      const content = [
-        'cmake_minimum_required(VERSION 3.20)',
-        'project(SampleApp CXX)',
-        '',
-        'set(CMAKE_CXX_STANDARD 23)',
-        '',
-        '# Global includes',
-        'include_directories(SYSTEM include "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")',
-        '',
-        'add_definitions(-DAPP_DEBUG=1 -DVERSION_STR="1.0.0")',
-        '',
-        'add_executable(SampleApp main.cpp)',
-        'target_include_directories(SampleApp PRIVATE src/core PUBLIC include/public)',
-        'target_compile_definitions(SampleApp PRIVATE ENABLE_LOGGING=1)',
-        '',
-        'add_library(MathLib STATIC math.cpp)',
-        'target_include_directories(MathLib INTERFACE math/include)'
-      ].join('\n');
+      const content = `
+        cmake_minimum_required(VERSION 3.20)
+        project(SampleApp CXX)
+
+        set(CMAKE_CXX_STANDARD 20)
+        set(CUSTOM_INC_DIR \${CMAKE_CURRENT_SOURCE_DIR}/custom/include)
+
+        include_directories(
+          SYSTEM include
+          \${CUSTOM_INC_DIR}
+        )
+
+        add_definitions(-DAPP_DEBUG=1 -DVERSION_STR="1.0.0")
+
+        add_executable(SampleApp main.cpp src/core.cpp)
+        target_include_directories(SampleApp
+          PRIVATE
+            src/core
+          PUBLIC
+            include/public
+        )
+        target_compile_definitions(SampleApp PRIVATE ENABLE_LOGGING=1)
+
+        add_library(MathLib STATIC math.cpp)
+        target_include_directories(MathLib INTERFACE math/include)
+      `;
 
       fs.writeFileSync(cmakeLists, content, 'utf8');
 
-      const parsed = CMakeParser.parse(cmakeLists, tempDir);
+      const parsed = CMakeParser.parseWorkspace(tempDir);
+      assert.ok(parsed);
+      assert.strictEqual(parsed.cppStandard, 'c++20');
+      assert.strictEqual(parsed.targets.length, 2);
 
-      assert.strictEqual(parsed.cppStandard, 'c++23');
-      assert.deepStrictEqual(parsed.targets, ['SampleApp', 'MathLib']);
+      const norm = (p: string) => path.join(tempDir, p).replace(/\\/g, '/');
 
-      // Includes check
       const expectedIncludes = [
-        path.join(tempDir, 'include').replace(/\\/g, '/'),
-        path.join(tempDir, 'ext/include').replace(/\\/g, '/'),
-        path.join(tempDir, 'src/core').replace(/\\/g, '/'),
-        path.join(tempDir, 'include/public').replace(/\\/g, '/'),
-        path.join(tempDir, 'math/include').replace(/\\/g, '/')
+        norm('include'),
+        norm('custom/include'),
+        norm('src/core'),
+        norm('include/public'),
+        norm('math/include')
       ];
 
       for (const inc of expectedIncludes) {
@@ -72,85 +111,136 @@ describe('Full CMake Subsystem & IntelliSense Integration', () => {
         );
       }
 
-      // Definitions check
       assert.ok(parsed.compileDefinitions.includes('APP_DEBUG=1'));
       assert.ok(parsed.compileDefinitions.includes('VERSION_STR="1.0.0"'));
       assert.ok(parsed.compileDefinitions.includes('ENABLE_LOGGING=1'));
     });
 
-    it('should return empty result safely when file does not exist', () => {
-      const parsed = CMakeParser.parse(path.join(tempDir, 'NonExistent.txt'), tempDir);
-      assert.strictEqual(parsed.includeDirectories.length, 0);
-      assert.strictEqual(parsed.compileDefinitions.length, 0);
-      assert.strictEqual(parsed.targets.length, 0);
+    it('should recursively parse subdirectories via add_subdirectory', () => {
+      const rootCMake = path.join(tempDir, 'CMakeLists.txt');
+      fs.writeFileSync(
+        rootCMake,
+        `
+        project(MultiFolder)
+        include_directories(common/include)
+        add_subdirectory(engine)
+        add_subdirectory(ui)
+        `,
+        'utf8'
+      );
+
+      // Create engine subdirectory
+      const engineDir = path.join(tempDir, 'engine');
+      fs.mkdirSync(engineDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(engineDir, 'CMakeLists.txt'),
+        `
+        add_library(EngineCore core.cpp)
+        target_include_directories(EngineCore PUBLIC \${CMAKE_CURRENT_SOURCE_DIR}/include)
+        `,
+        'utf8'
+      );
+
+      // Create ui subdirectory
+      const uiDir = path.join(tempDir, 'ui');
+      fs.mkdirSync(uiDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(uiDir, 'CMakeLists.txt'),
+        `
+        add_library(UI widget.cpp)
+        target_include_directories(UI PRIVATE \${CMAKE_CURRENT_SOURCE_DIR}/views)
+        `,
+        'utf8'
+      );
+
+      const parsed = CMakeParser.parseWorkspace(tempDir);
+      assert.ok(parsed);
+
+      const norm = (p: string) => path.join(tempDir, p).replace(/\\/g, '/');
+      assert.ok(parsed.includeDirectories.includes(norm('common/include')));
+      assert.ok(parsed.includeDirectories.includes(norm('engine/include')));
+      assert.ok(parsed.includeDirectories.includes(norm('ui/views')));
+
+      assert.strictEqual(parsed.targets.length, 2);
+      assert.ok(parsed.targets.some((t) => t.name === 'EngineCore'));
+      assert.ok(parsed.targets.some((t) => t.name === 'UI'));
+    });
+
+    it('should parse included .cmake files', () => {
+      const rootCMake = path.join(tempDir, 'CMakeLists.txt');
+      fs.writeFileSync(
+        rootCMake,
+        `
+        project(App)
+        include(cmake/Dependencies.cmake)
+        `,
+        'utf8'
+      );
+
+      const cmakeDir = path.join(tempDir, 'cmake');
+      fs.mkdirSync(cmakeDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(cmakeDir, 'Dependencies.cmake'),
+        `
+        include_directories(deps/glm deps/stb)
+        add_definitions(-DUSE_GLM=1)
+        `,
+        'utf8'
+      );
+
+      const parsed = CMakeParser.parseWorkspace(tempDir);
+      assert.ok(parsed);
+
+      const norm = (p: string) => path.join(tempDir, p).replace(/\\/g, '/');
+      assert.ok(parsed.includeDirectories.includes(norm('deps/glm')));
+      assert.ok(parsed.includeDirectories.includes(norm('deps/stb')));
+      assert.ok(parsed.compileDefinitions.includes('USE_GLM=1'));
     });
   });
 
-  describe('CMakeDetector', () => {
-    it('should identify CMake workspace and locate CMakeLists.txt', () => {
-      assert.strictEqual(CMakeDetector.isCMakeWorkspace(tempDir), false);
-
+  describe('FlagSynthesizer with CMake Include Extraction', () => {
+    it('should automatically append CMake include paths and definitions into synthesized flags', async () => {
       const cmakeLists = path.join(tempDir, 'CMakeLists.txt');
-      fs.writeFileSync(cmakeLists, 'cmake_minimum_required(VERSION 3.20)\n', 'utf8');
+      fs.writeFileSync(
+        cmakeLists,
+        `
+        project(TestApp)
+        include_directories(include third_party/catch2)
+        add_definitions(-DCMAKE_APP_TEST=1)
+        `,
+        'utf8'
+      );
 
-      assert.strictEqual(CMakeDetector.isCMakeWorkspace(tempDir), true);
-      assert.strictEqual(CMakeDetector.findCMakeLists(tempDir), cmakeLists);
-    });
+      const synthesizer = new FlagSynthesizer(
+        { detectCompilers: async () => [] } as any,
+        { extractSystemIncludes: async () => ['C:/MSVC/include'] } as any
+      );
 
-    it('should discover compilation databases across nested build directories and presets', () => {
-      // 1. Root database
-      const rootDb = path.join(tempDir, 'compile_commands.json');
-      fs.writeFileSync(rootDb, '[{"directory": "."}]', 'utf8');
+      const compiler = {
+        name: 'GCC',
+        type: 'gcc' as const,
+        path: '/usr/bin/g++',
+        version: '13.2',
+        target: 'x86_64-linux-gnu',
+        isDefault: true
+      };
 
-      // 2. Nested out/build/x64-Debug database (newer mtime)
-      const outBuild = path.join(tempDir, 'out', 'build', 'x64-Debug');
-      fs.mkdirSync(outBuild, { recursive: true });
-      const outDb = path.join(outBuild, 'compile_commands.json');
-      fs.writeFileSync(outDb, '[{"directory": "out"}]', 'utf8');
-
-      // Update mtime to be newer
-      const futureTime = (Date.now() + 10000) / 1000;
-      fs.utimesSync(outDb, futureTime, futureTime);
-
-      const dbs = CMakeDetector.findCompilationDatabases(tempDir);
-      assert.ok(dbs.length >= 2);
-      // Newest should be first
-      assert.strictEqual(path.normalize(dbs[0]), path.normalize(outDb));
-    });
-
-    it('should parse CMakePresets.json and extract configure presets', () => {
-      const presetsFile = path.join(tempDir, 'CMakePresets.json');
-      const content = JSON.stringify({
-        version: 3,
-        configurePresets: [
-          {
-            name: 'windows-default',
-            displayName: 'Windows MSVC x64',
-            description: 'Target Windows x64 with MSVC',
-            binaryDir: '${sourceDir}/build/win-x64',
-            generator: 'Ninja Multi-Config'
-          },
-          {
-            name: 'linux-clang',
-            displayName: 'Linux Clang Debug',
-            binaryDir: '${sourceDir}/build/linux',
-            generator: 'Ninja'
-          }
-        ]
+      const flags = await synthesizer.generateFlags(compiler, {
+        standard: 'c++20',
+        workspaceRoot: tempDir,
+        detectExternalSdks: false
       });
 
-      fs.writeFileSync(presetsFile, content, 'utf8');
+      const norm = (p: string) => path.join(tempDir, p).replace(/\\/g, '/');
 
-      const presets = CMakeDetector.readPresets(tempDir);
-      assert.strictEqual(presets.length, 2);
-      assert.strictEqual(presets[0].name, 'windows-default');
-      assert.strictEqual(presets[0].displayName, 'Windows MSVC x64');
-      assert.strictEqual(presets[1].name, 'linux-clang');
+      assert.ok(flags.includes(`-I${norm('include')}`));
+      assert.ok(flags.includes(`-I${norm('third_party/catch2')}`));
+      assert.ok(flags.includes('-DCMAKE_APP_TEST=1'));
     });
   });
 
-  describe('CMakeManager: Seamless Include Paths & Database Sync', () => {
-    it('should initialize and seamlessly mirror build compile_commands.json to workspace root', async () => {
+  describe('CMakeManager: Static Database Synthesis & Menu', () => {
+    it('should synthesize compile_commands.json from parsed CMakeLists.txt without running cmake CLI', async () => {
       mockVscode.workspace.workspaceFolders = [
         {
           uri: mockVscode.Uri.file(tempDir),
@@ -159,145 +249,59 @@ describe('Full CMake Subsystem & IntelliSense Integration', () => {
         }
       ];
 
-      // Setup CMake project with build directory
       const cmakeLists = path.join(tempDir, 'CMakeLists.txt');
-      fs.writeFileSync(cmakeLists, 'project(TestApp)\n', 'utf8');
+      fs.writeFileSync(
+        cmakeLists,
+        `
+        project(SampleProject)
+        include_directories(include)
+        add_executable(MyBinary main.cpp src/util.cpp)
+        target_include_directories(MyBinary PRIVATE internal)
+        `,
+        'utf8'
+      );
 
-      const buildDir = path.join(tempDir, 'build');
-      fs.mkdirSync(buildDir, { recursive: true });
-      const buildCompDb = path.join(buildDir, 'compile_commands.json');
-      const dummyCommands = JSON.stringify([
-        {
-          directory: tempDir.replace(/\\/g, '/'),
-          command: 'clang++ -Icustom/include -c main.cpp',
-          file: 'main.cpp'
-        }
-      ]);
-      fs.writeFileSync(buildCompDb, dummyCommands, 'utf8');
+      const detector = new CompilerDetector();
+      const extractor = new SystemIncludeExtractor();
 
-      let serverReloaded = false;
-      const manager = new CMakeManager(async () => {
-        serverReloaded = true;
+      let reloaded = false;
+      const manager = new CMakeManager(detector, extractor, async () => {
+        reloaded = true;
       });
 
       await manager.initialize();
 
-      assert.strictEqual(serverReloaded, true, 'Language server should reload upon connecting compilation DB');
+      assert.strictEqual(reloaded, true, 'Language server should reload when compilation database is generated');
 
-      // Verify compile_commands.json mirrored to root
-      const rootDb = path.join(tempDir, 'compile_commands.json');
-      assert.ok(fs.existsSync(rootDb), 'compile_commands.json must be synced to workspace root');
-      const rootContent = fs.readFileSync(rootDb, 'utf8');
-      assert.ok(rootContent.includes('custom/include'));
+      const compDbPath = path.join(tempDir, 'compile_commands.json');
+      assert.ok(fs.existsSync(compDbPath), 'compile_commands.json must be generated directly from CMakeLists.txt');
 
-      // Verify .clangd has CompilationDatabase directive non-destructively
-      const clangdFile = path.join(tempDir, '.clangd');
-      assert.ok(fs.existsSync(clangdFile));
-      const clangdContent = fs.readFileSync(clangdFile, 'utf8');
-      assert.ok(clangdContent.includes('CompilationDatabase:'));
+      const content = fs.readFileSync(compDbPath, 'utf8');
+      const entries = JSON.parse(content);
+      assert.ok(Array.isArray(entries));
+      assert.strictEqual(entries.length, 2);
 
-      manager.dispose();
-    });
+      const files = entries.map((e: any) => e.file);
+      assert.ok(files.some((f: string) => f.includes('main.cpp')));
+      assert.ok(files.some((f: string) => f.includes('util.cpp')));
 
-    it('should preserve existing user configuration in .clangd when adding CompilationDatabase', async () => {
-      mockVscode.workspace.workspaceFolders = [
-        {
-          uri: mockVscode.Uri.file(tempDir),
-          name: 'cmake-test-user-cfg',
-          index: 0
-        }
-      ];
-
-      const cmakeLists = path.join(tempDir, 'CMakeLists.txt');
-      fs.writeFileSync(cmakeLists, 'project(TestApp)\n', 'utf8');
-
-      // User already has custom .clangd configuration
-      const clangdFile = path.join(tempDir, '.clangd');
-      fs.writeFileSync(
-        clangdFile,
-        'Diagnostics:\n  ClangTidy:\n    Add: [performance*]\nCompileFlags:\n  Add: ["-DUSER_DEF=1"]\n',
-        'utf8'
-      );
-
-      const buildDir = path.join(tempDir, 'build');
-      fs.mkdirSync(buildDir, { recursive: true });
-      fs.writeFileSync(path.join(buildDir, 'compile_commands.json'), '[]', 'utf8');
-
-      const manager = new CMakeManager(async () => {});
-      await manager.initialize();
-
-      const updatedClangd = fs.readFileSync(clangdFile, 'utf8');
-      assert.ok(updatedClangd.includes('performance*'), 'Must preserve user Diagnostics');
-      assert.ok(updatedClangd.includes('USER_DEF=1'), 'Must preserve user flags');
-      assert.ok(updatedClangd.includes('CompilationDatabase:'), 'Must append CompilationDatabase');
+      // Check that include flags are present in arguments
+      const args = entries[0].arguments;
+      assert.ok(args.some((a: string) => a.includes('include')));
 
       manager.dispose();
     });
   });
 
-  describe('CMakeTaskProvider', () => {
-    it('should generate configure, build, clean, and rebuild tasks', async () => {
-      mockVscode.workspace.workspaceFolders = [
-        {
-          uri: mockVscode.Uri.file(tempDir),
-          name: 'cmake-task-test',
-          index: 0
-        }
-      ];
+  describe('CMakeDetector', () => {
+    it('should correctly detect CMake workspace from CMakeLists.txt presence', () => {
+      assert.strictEqual(CMakeDetector.isCMakeWorkspace(tempDir), false);
 
       const cmakeLists = path.join(tempDir, 'CMakeLists.txt');
-      fs.writeFileSync(cmakeLists, 'project(App)\n', 'utf8');
+      fs.writeFileSync(cmakeLists, 'project(Test)\n', 'utf8');
 
-      const manager = new CMakeManager();
-      await manager.initialize();
-
-      const provider = new CMakeTaskProvider(manager);
-      const tasks = await provider.provideTasks();
-
-      assert.strictEqual(tasks.length, 4);
-
-      // 1. Configure Task
-      const configTask = tasks.find((t) => (t.definition as CMakeTaskDefinition).task === 'configure');
-      assert.ok(configTask);
-      assert.strictEqual(configTask.source, 'CMake');
-      const configExec = configTask.execution as vscode.ProcessExecution;
-      assert.ok(configExec.args.includes('-DCMAKE_EXPORT_COMPILE_COMMANDS=ON'));
-
-      // 2. Build Task
-      const buildTask = tasks.find((t) => (t.definition as CMakeTaskDefinition).task === 'build');
-      assert.ok(buildTask);
-      const buildExec = buildTask.execution as vscode.ProcessExecution;
-      assert.ok(buildExec.args.includes('--build'));
-
-      // 3. Clean Task
-      const cleanTask = tasks.find((t) => (t.definition as CMakeTaskDefinition).task === 'clean');
-      assert.ok(cleanTask);
-      const cleanExec = cleanTask.execution as vscode.ProcessExecution;
-      assert.ok(cleanExec.args.includes('clean'));
-
-      // 4. Rebuild Task
-      const rebuildTask = tasks.find((t) => (t.definition as CMakeTaskDefinition).task === 'rebuild');
-      assert.ok(rebuildTask);
-      const rebuildExec = rebuildTask.execution as vscode.ProcessExecution;
-      assert.ok(rebuildExec.args.includes('--clean-first'));
-
-      manager.dispose();
-    });
-
-    it('should resolve defined task dynamically', async () => {
-      const manager = new CMakeManager();
-      const provider = new CMakeTaskProvider(manager);
-
-      const resolved = await provider.resolveTask({
-        definition: { type: 'cmake', task: 'build', target: 'MyCustomTarget' } as CMakeTaskDefinition,
-        name: 'CMake: Build',
-        scope: vscode.TaskScope.Workspace
-      } as any);
-
-      assert.ok(resolved);
-      const exec = resolved.execution as vscode.ProcessExecution;
-      assert.ok(exec.args.includes('--build'));
-      assert.ok(exec.args.includes('MyCustomTarget'));
+      assert.strictEqual(CMakeDetector.isCMakeWorkspace(tempDir), true);
+      assert.strictEqual(CMakeDetector.findCMakeLists(tempDir), cmakeLists);
     });
   });
 });

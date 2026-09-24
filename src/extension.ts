@@ -40,7 +40,6 @@ import { MacroEvaluatorManager } from './intelligence/macro-evaluator';
 import { DisassemblyContentProvider } from './compiler/disassembly-view';
 import { HierarchyGraphManager } from './hierarchy/hierarchy-graph';
 import { CMakeManager } from './cmake/cmake-manager';
-import { CMakeTaskProvider } from './cmake/cmake-task-provider';
 
 let daemonManager: DaemonManager | null = null;
 let installer: ClangdInstaller | null = null;
@@ -58,7 +57,6 @@ let solutionManager: SolutionManager | null = null;
 let solutionTaskProvider: SolutionTaskProvider | null = null;
 let profileManager: ProfileManager | null = null;
 let cmakeManager: CMakeManager | null = null;
-let cmakeTaskProvider: CMakeTaskProvider | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('Activating NovaCpp extension...');
@@ -87,17 +85,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
   context.subscriptions.push(profileManager);
 
-  // Initialize CMake Subsystem & Task Provider
-  cmakeManager = new CMakeManager(async () => {
+  // Initialize CMake Static Subsystem
+  cmakeManager = new CMakeManager(detector, extractor, async () => {
     await daemonManager?.restart();
   });
   await cmakeManager.initialize();
-
-  cmakeTaskProvider = new CMakeTaskProvider(cmakeManager);
-  context.subscriptions.push(
-    cmakeManager,
-    vscode.tasks.registerTaskProvider(CMakeTaskProvider.taskType, cmakeTaskProvider)
-  );
+  context.subscriptions.push(cmakeManager);
 
   // Watch for compilation databases, CMakeLists, and seamless auto-reload
   cmakeWatcher = new CMakeWatcher(
@@ -105,8 +98,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await daemonManager?.restart();
     },
     async (uri) => {
-      if (uri.fsPath.endsWith('CMakeLists.txt') || uri.fsPath.endsWith('compile_commands.json')) {
-        await cmakeManager?.syncCompilationDatabase();
+      if (uri.fsPath.endsWith('CMakeLists.txt') || uri.fsPath.endsWith('.cmake')) {
+        await cmakeManager?.refresh();
       }
     }
   );
@@ -469,36 +462,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('novacpp.pickProcess', async () => {
       return await ProcessPicker.pickProcess();
     }),
-    vscode.commands.registerCommand('novacpp.cmake.configure', async () => {
-      await cmakeManager?.configure();
-    }),
-    vscode.commands.registerCommand('novacpp.cmake.build', async () => {
-      await cmakeManager?.build();
-    }),
-    vscode.commands.registerCommand('novacpp.cmake.clean', async () => {
-      await cmakeManager?.clean();
-    }),
-    vscode.commands.registerCommand('novacpp.cmake.setBuildType', async () => {
-      const types = ['Debug', 'Release', 'RelWithDebInfo', 'MinSizeRel'];
-      const picked = await vscode.window.showQuickPick(types, {
-        placeHolder: 'Select CMake Build Type'
-      });
-      if (picked) {
-        await cmakeManager?.setBuildType(picked as any);
-      }
-    }),
-    vscode.commands.registerCommand('novacpp.cmake.selectPreset', async () => {
-      await cmakeManager?.selectPreset();
-    }),
     vscode.commands.registerCommand('novacpp.cmake.menu', async () => {
       await cmakeManager?.openMenu();
     }),
-    vscode.commands.registerCommand('novacpp.cmake.syncCompilationDatabase', async () => {
-      const ok = await cmakeManager?.syncCompilationDatabase();
-      if (ok) {
-        vscode.window.showInformationMessage('NovaCpp: Successfully synchronized CMake compilation database.');
+    vscode.commands.registerCommand('novacpp.cmake.rescan', async () => {
+      await cmakeManager?.refresh();
+      vscode.window.showInformationMessage('NovaCpp: Re-scanned CMakeLists.txt and updated include paths.');
+    }),
+    vscode.commands.registerCommand('novacpp.cmake.generateCompilationDatabase', async () => {
+      const target = await cmakeManager?.synthesizeCompilationDatabase();
+      if (target) {
+        vscode.window.showInformationMessage(`NovaCpp: Generated compile_commands.json from CMakeLists.txt at ${target}`);
       } else {
-        vscode.window.showWarningMessage('NovaCpp: No compile_commands.json found. Run Configure first.');
+        vscode.window.showWarningMessage('NovaCpp: Could not generate compile_commands.json.');
       }
     })
   );

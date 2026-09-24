@@ -4,6 +4,7 @@ import { CompilerDetector, CompilerInfo } from './compiler-detector';
 import { SystemIncludeExtractor } from './system-includes';
 import { VcpkgAdvisor } from '../ecosystem/vcpkg-advisor';
 import { ExternalSdkDetector } from './external-sdk-detector';
+import { CMakeParser } from '../cmake/cmake-parser';
 
 export interface SynthesisOptions {
   standard?: string;
@@ -89,6 +90,23 @@ export class FlagSynthesizer {
       const nodeIncludes = VcpkgAdvisor.findNodeAddonIncludePaths(options.workspaceRoot);
       for (const inc of nodeIncludes) {
         flags.push(`-I${inc.replace(/\\/g, '/')}`);
+      }
+
+      // Parse CMake include directories & definitions if CMakeLists.txt exists
+      const cmakeInfo = CMakeParser.parseWorkspace(options.workspaceRoot);
+      if (cmakeInfo) {
+        for (const inc of cmakeInfo.includeDirectories) {
+          const flag = `-I${inc.replace(/\\/g, '/')}`;
+          if (!flags.includes(flag)) {
+            flags.push(flag);
+          }
+        }
+        for (const def of cmakeInfo.compileDefinitions) {
+          const flag = `-D${def}`;
+          if (!flags.includes(flag)) {
+            flags.push(flag);
+          }
+        }
       }
     }
 

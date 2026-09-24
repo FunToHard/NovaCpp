@@ -32,11 +32,9 @@
     "onDebugResolve:novacpp-debug",
     "onTaskType:novacpp",
     "onTaskType:msbuild",
-    "onTaskType:cmake",
     "workspaceContains:**/*.sln",
     "workspaceContains:**/*.slnx",
-    "workspaceContains:**/CMakeLists.txt",
-    "workspaceContains:**/CMakePresets.json"
+    "workspaceContains:**/CMakeLists.txt"
   ],
   "main": "./dist/extension.js",
   "capabilities": {
@@ -139,37 +137,17 @@
       },
       {
         "command": "novacpp.cmake.menu",
-        "title": "NovaCpp: CMake Actions Menu",
+        "title": "NovaCpp: CMake Intelligence Menu",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.cmake.configure",
-        "title": "NovaCpp: CMake Configure Project",
+        "command": "novacpp.cmake.rescan",
+        "title": "NovaCpp: Re-scan CMakeLists.txt Includes",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.cmake.build",
-        "title": "NovaCpp: CMake Build Target",
-        "category": "C/C++"
-      },
-      {
-        "command": "novacpp.cmake.clean",
-        "title": "NovaCpp: CMake Clean",
-        "category": "C/C++"
-      },
-      {
-        "command": "novacpp.cmake.setBuildType",
-        "title": "NovaCpp: CMake Select Build Type",
-        "category": "C/C++"
-      },
-      {
-        "command": "novacpp.cmake.selectPreset",
-        "title": "NovaCpp: CMake Select Configure Preset",
-        "category": "C/C++"
-      },
-      {
-        "command": "novacpp.cmake.syncCompilationDatabase",
-        "title": "NovaCpp: CMake Synchronize Compilation Database",
+        "command": "novacpp.cmake.generateCompilationDatabase",
+        "title": "NovaCpp: Generate compile_commands.json from CMakeLists.txt",
         "category": "C/C++"
       },
       {
@@ -473,39 +451,10 @@
           "default": "https://telemetry.novacpp.dev/v1/telemetry/stl-usage",
           "description": "Ingestion endpoint URL for anonymous STL usage telemetry batches."
         },
-        "novacpp.cmake.cmakePath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to the cmake executable. If empty, NovaCpp searches PATH and standard installation directories."
-        },
-        "novacpp.cmake.buildDirectory": {
-          "type": "string",
-          "default": "build",
-          "description": "CMake build output directory relative to workspace root."
-        },
-        "novacpp.cmake.buildType": {
-          "type": "string",
-          "enum": [
-            "Debug",
-            "Release",
-            "RelWithDebInfo",
-            "MinSizeRel"
-          ],
-          "default": "Debug",
-          "description": "Active CMake build configuration type."
-        },
-        "novacpp.cmake.autoConfigure": {
+        "novacpp.cmake.autoScan": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically configure CMake projects to export compile_commands.json for seamless IntelliSense."
-        },
-        "novacpp.cmake.additionalArgs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Additional command line arguments to pass to cmake configure."
+          "description": "Automatically parse CMakeLists.txt and include discovered directories into IntelliSense."
         }
       }
     },
@@ -624,34 +573,6 @@
           "target": {
             "type": "string",
             "description": "MSBuild target (Build, Rebuild, Clean)"
-          }
-        }
-      },
-      {
-        "type": "cmake",
-        "required": [
-          "task"
-        ],
-        "properties": {
-          "task": {
-            "type": "string",
-            "description": "CMake task action (configure, build, clean, rebuild)"
-          },
-          "target": {
-            "type": "string",
-            "description": "Optional CMake build target"
-          },
-          "buildDirectory": {
-            "type": "string",
-            "description": "CMake build output directory"
-          },
-          "buildType": {
-            "type": "string",
-            "description": "CMake build configuration type (Debug, Release, RelWithDebInfo, MinSizeRel)"
-          },
-          "preset": {
-            "type": "string",
-            "description": "Optional configure preset name"
           }
         }
       }
