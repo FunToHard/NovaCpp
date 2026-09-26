@@ -209,8 +209,9 @@ export function parseSlnx(content: string, filePath: string): SolutionModel {
 /**
  * Parses MSBuild C++ project files (.vcxproj).
  */
-export function parseVcxproj(content: string, filePath: string): VcxProjectModel {
+export function parseVcxproj(content: string, filePath: string, solutionDir?: string): VcxProjectModel {
   const projectDir = path.dirname(filePath);
+  const effectiveSolutionDir = solutionDir ?? path.dirname(projectDir);
   const projectName = path.basename(filePath, path.extname(filePath));
 
   // Strip XML comments
@@ -229,7 +230,12 @@ export function parseVcxproj(content: string, filePath: string): VcxProjectModel
   const targetName = targetNameMatch ? targetNameMatch[1].trim() : projectName;
 
   const outDirMatch = cleanContent.match(/<OutDir>([^<]+)<\/OutDir>/i);
-  const outDir = outDirMatch ? outDirMatch[1].trim() : undefined;
+  const rawOutDir = outDirMatch ? outDirMatch[1].trim() : undefined;
+  const outDir = rawOutDir
+    ? rawOutDir
+        .replace(/\$\(ProjectDir\)/gi, projectDir + path.sep)
+        .replace(/\$\(SolutionDir\)/gi, effectiveSolutionDir + path.sep)
+    : undefined;
 
   // Extract ProjectConfigurations
   const configurations: SolutionConfiguration[] = [];
@@ -314,7 +320,7 @@ export function parseVcxproj(content: string, filePath: string): VcxProjectModel
         // Expand MSBuild macros
         trimmed = trimmed
           .replace(/\$\(ProjectDir\)/gi, projectDir + path.sep)
-          .replace(/\$\(SolutionDir\)/gi, path.dirname(projectDir) + path.sep);
+          .replace(/\$\(SolutionDir\)/gi, effectiveSolutionDir + path.sep);
         const normalized = trimmed.replace(/\\/g, '/');
         const absPath = path.isAbsolute(normalized)
           ? normalized
@@ -464,11 +470,11 @@ export async function parseSolutionFile(filePath: string): Promise<SolutionModel
 /**
  * Loads and parses a .vcxproj project file from disk.
  */
-export async function loadVcxProject(filePath: string): Promise<VcxProjectModel | null> {
+export async function loadVcxProject(filePath: string, solutionDir?: string): Promise<VcxProjectModel | null> {
   try {
     if (!fs.existsSync(filePath)) return null;
     const content = await readFileWithEncoding(filePath);
-    return parseVcxproj(content, filePath);
+    return parseVcxproj(content, filePath, solutionDir);
   } catch (err) {
     console.warn(`NovaCpp: Failed to parse vcxproj at ${filePath}:`, err);
     return null;

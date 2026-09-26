@@ -203,5 +203,28 @@ EndGlobal
       assert.ok(releaseOpts);
       assert.ok(releaseOpts.preprocessorDefinitions.includes('NDEBUG'));
     });
+
+    it('should expand $(SolutionDir) to specified solutionDir in nested project structure', () => {
+      const vcxWithSolDir = `<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)common\\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>`;
+
+      const projectPath = process.platform === 'win32'
+        ? 'F:/Repo/src/Nested/Project/MyProject.vcxproj'
+        : '/repo/src/nested/project/MyProject.vcxproj';
+      const solutionDir = process.platform === 'win32' ? 'F:/Repo' : '/repo';
+
+      const parsed = parseVcxproj(vcxWithSolDir, projectPath, solutionDir);
+      const incs = parsed.defaultCompileOptions.includeDirectories.map((d) => d.replace(/\\/g, '/').toLowerCase());
+      const expectedInc = process.platform === 'win32'
+        ? 'f:/repo/common/include'
+        : '/repo/common/include';
+      assert.ok(incs.includes(expectedInc), `Expected ${expectedInc} to be in ${JSON.stringify(incs)}`);
+    });
   });
 });

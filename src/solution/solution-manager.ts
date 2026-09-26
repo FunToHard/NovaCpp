@@ -145,9 +145,10 @@ export class SolutionManager implements vscode.Disposable {
     }
 
     // Load all projects in the solution
+    const solutionDir = path.dirname(this.activeSolution.filePath);
     const projectModels: VcxProjectModel[] = [];
     for (const proj of this.activeSolution.projects) {
-      const model = await loadVcxProject(proj.fullPath);
+      const model = await loadVcxProject(proj.fullPath, solutionDir);
       if (model) {
         projectModels.push(model);
       }
