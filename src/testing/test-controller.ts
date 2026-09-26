@@ -13,88 +13,166 @@ export interface CppTestCase {
   filterArg: string;
 }
 
-/**
- * Extracts unit test definitions from C++ source files (GoogleTest, Catch2, doctest, Boost.Test).
- */
-export function extractTestsFromSource(content: string, _uri?: vscode.Uri): CppTestCase[] {
-  const tests: CppTestCase[] = [];
-  const lines = content.split(/\r?\n/);
+function maskComments(source: string): string {
+  const chars = source.split('');
+  let inString: string | null = null;
+  let inLineComment = false;
+  let inBlockComment = false;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-    if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const next = chars[i + 1];
 
-    // 1. GoogleTest: TEST(Suite, Name), TEST_F(Fixture, Name), TEST_P(ParamFixture, Name)
-    const gtestMatch = line.match(/\b(TEST|TEST_F|TEST_P)\s*\(\s*([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)\s*\)/);
-    if (gtestMatch) {
-      const suite = gtestMatch[2];
-      const name = gtestMatch[3];
-      const col = line.indexOf(gtestMatch[0]);
-      tests.push({
-        id: `${suite}.${name}`,
-        label: `${suite}.${name}`,
-        suite,
-        framework: 'gtest',
-        line: i,
-        column: Math.max(0, col),
-        filterArg: `--gtest_filter=${suite}.${name}`
-      });
+    if (inLineComment) {
+      if (ch === '\n') {
+        inLineComment = false;
+      } else if (ch !== '\r') {
+        chars[i] = ' ';
+      }
       continue;
     }
 
-    // 2. Catch2: TEST_CASE("Name", "[tag]"), SCENARIO("Name", "[tag]")
-    const catchMatch = line.match(/\b(TEST_CASE|SCENARIO)\s*\(\s*"([^"]+)"(?:\s*,\s*"([^"]*)")?\s*\)/);
-    if (catchMatch) {
-      const macro = catchMatch[1];
-      const name = catchMatch[2];
-      const rawTag = catchMatch[3]?.trim();
-      const tag = rawTag ? (rawTag.startsWith('[') ? ` ${rawTag}` : ` [${rawTag}]`) : '';
-      const col = line.indexOf(catchMatch[0]);
-      tests.push({
-        id: `catch2:${name}`,
-        label: `${macro === 'SCENARIO' ? 'Scenario: ' : ''}${name}${tag}`,
-        framework: 'catch2',
-        line: i,
-        column: Math.max(0, col),
-        filterArg: `"${name}"`
-      });
+    if (inBlockComment) {
+      if (ch === '*' && next === '/') {
+        chars[i] = ' ';
+        chars[i + 1] = ' ';
+        i++;
+        inBlockComment = false;
+      } else if (ch !== '\n' && ch !== '\r') {
+        chars[i] = ' ';
+      }
       continue;
     }
 
-    // 3. Boost.Test: BOOST_AUTO_TEST_CASE(Name)
-    const boostMatch = line.match(/\bBOOST_AUTO_TEST_CASE\s*\(\s*([a-zA-Z_]\w*)\s*\)/);
-    if (boostMatch) {
-      const name = boostMatch[1];
-      const col = line.indexOf(boostMatch[0]);
-      tests.push({
-        id: `boost:${name}`,
-        label: name,
-        framework: 'boost',
-        line: i,
-        column: Math.max(0, col),
-        filterArg: `--run_test=${name}`
-      });
+    if (inString) {
+      if (ch === '\\') {
+        i++; // skip escaped char
+      } else if (ch === inString) {
+        inString = null;
+      }
       continue;
     }
 
-    // 4. doctest: DOCTEST_TEST_CASE("Name")
-    const doctestMatch = line.match(/\bDOCTEST_TEST_CASE\s*\(\s*"([^"]+)"\s*\)/);
-    if (doctestMatch) {
-      const name = doctestMatch[1];
-      const col = line.indexOf(doctestMatch[0]);
-      tests.push({
-        id: `doctest:${name}`,
-        label: name,
-        framework: 'doctest',
-        line: i,
-        column: Math.max(0, col),
-        filterArg: `-tc="${name}"`
-      });
+    if (ch === '"' || ch === "'") {
+      inString = ch;
       continue;
+    }
+
+    if (ch === '/' && next === '/') {
+      inLineComment = true;
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      i++;
+    } else if (ch === '/' && next === '*') {
+      inBlockComment = true;
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      i++;
     }
   }
 
+  return chars.join('');
+}
+
+function offsetToPosition(offset: number, lineOffsets: number[]): { line: number; column: number } {
+  let low = 0;
+  let high = lineOffsets.length - 1;
+  let line = 0;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (lineOffsets[mid] <= offset) {
+      line = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  const column = offset - lineOffsets[line];
+  return { line, column };
+}
+
+/**
+ * Extracts unit test definitions from C++ source files (GoogleTest, Catch2, doctest, Boost.Test),
+ * handling multiline macros and multiline comments.
+ */
+export function extractTestsFromSource(content: string, _uri?: vscode.Uri): CppTestCase[] {
+  const tests: CppTestCase[] = [];
+  const lineOffsets: number[] = [0];
+  for (let i = 0; i < content.length; i++) {
+    if (content[i] === '\n') {
+      lineOffsets.push(i + 1);
+    }
+  }
+
+  const masked = maskComments(content);
+
+  // 1. GoogleTest: TEST(Suite, Name), TEST_F(Fixture, Name), TEST_P(ParamFixture, Name)
+  const gtestRegex = /\b(TEST|TEST_F|TEST_P)\s*\(\s*([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)\s*\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = gtestRegex.exec(masked)) !== null) {
+    const suite = match[2];
+    const name = match[3];
+    const pos = offsetToPosition(match.index, lineOffsets);
+    tests.push({
+      id: `${suite}.${name}`,
+      label: `${suite}.${name}`,
+      suite,
+      framework: 'gtest',
+      line: pos.line,
+      column: pos.column,
+      filterArg: `--gtest_filter=${suite}.${name}`
+    });
+  }
+
+  // 2. Catch2: TEST_CASE("Name", "[tag]"), SCENARIO("Name", "[tag]")
+  const catchRegex = /\b(TEST_CASE|SCENARIO)\s*\(\s*"([^"]+)"(?:\s*,\s*"([^"]*)")?\s*\)/g;
+  while ((match = catchRegex.exec(masked)) !== null) {
+    const macro = match[1];
+    const name = match[2];
+    const rawTag = match[3]?.trim();
+    const tag = rawTag ? (rawTag.startsWith('[') ? ` ${rawTag}` : ` [${rawTag}]`) : '';
+    const pos = offsetToPosition(match.index, lineOffsets);
+    tests.push({
+      id: `catch2:${name}`,
+      label: `${macro === 'SCENARIO' ? 'Scenario: ' : ''}${name}${tag}`,
+      framework: 'catch2',
+      line: pos.line,
+      column: pos.column,
+      filterArg: `"${name}"`
+    });
+  }
+
+  // 3. Boost.Test: BOOST_AUTO_TEST_CASE(Name)
+  const boostRegex = /\bBOOST_AUTO_TEST_CASE\s*\(\s*([a-zA-Z_]\w*)\s*\)/g;
+  while ((match = boostRegex.exec(masked)) !== null) {
+    const name = match[1];
+    const pos = offsetToPosition(match.index, lineOffsets);
+    tests.push({
+      id: `boost:${name}`,
+      label: name,
+      framework: 'boost',
+      line: pos.line,
+      column: pos.column,
+      filterArg: `--run_test=${name}`
+    });
+  }
+
+  // 4. doctest: DOCTEST_TEST_CASE("Name")
+  const doctestRegex = /\bDOCTEST_TEST_CASE\s*\(\s*"([^"]+)"\s*\)/g;
+  while ((match = doctestRegex.exec(masked)) !== null) {
+    const name = match[1];
+    const pos = offsetToPosition(match.index, lineOffsets);
+    tests.push({
+      id: `doctest:${name}`,
+      label: name,
+      framework: 'doctest',
+      line: pos.line,
+      column: pos.column,
+      filterArg: `-tc="${name}"`
+    });
+  }
+
+  tests.sort((a, b) => (a.line !== b.line ? a.line - b.line : a.column - b.column));
   return tests;
 }
 

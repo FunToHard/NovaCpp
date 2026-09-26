@@ -78,6 +78,39 @@ DOCTEST_TEST_CASE("DoctestSample") {
       assert.strictEqual(tests[1].label, 'DoctestSample');
       assert.strictEqual(tests[1].filterArg, '-tc="DoctestSample"');
     });
+
+    it('should extract multiline test macros and ignore tests in block comments', () => {
+      const code = `
+/*
+TEST(CommentedSuite, CommentedName) {
+    // inside comment
+}
+*/
+
+TEST_F(
+    FixtureSuite,
+    MultilineTestCase
+) {
+    EXPECT_TRUE(true);
+}
+
+TEST_CASE(
+    "Multiline Catch2 Test Case",
+    "[integration]"
+) {
+}
+`;
+      const tests = extractTestsFromSource(code);
+      assert.strictEqual(tests.length, 2);
+
+      assert.strictEqual(tests[0].framework, 'gtest');
+      assert.strictEqual(tests[0].suite, 'FixtureSuite');
+      assert.strictEqual(tests[0].id, 'FixtureSuite.MultilineTestCase');
+
+      assert.strictEqual(tests[1].framework, 'catch2');
+      assert.strictEqual(tests[1].label, 'Multiline Catch2 Test Case [integration]');
+      assert.strictEqual(tests[1].filterArg, '"Multiline Catch2 Test Case"');
+    });
   });
 
   describe('CppTestController', () => {
