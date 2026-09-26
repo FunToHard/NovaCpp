@@ -34,9 +34,39 @@ describe('Type & Memory Layout Inspector', () => {
       assert.strictEqual(multiInfo.size, 800);
       assert.strictEqual(multiInfo.alignment, 4);
     });
+
+    it('should support LLP64 data model for Windows MSVC (long=4, long double=8)', () => {
+      assert.strictEqual(resolveTypeInfo('long', 'LLP64').size, 4);
+      assert.strictEqual(resolveTypeInfo('long', 'LLP64').alignment, 4);
+      assert.strictEqual(resolveTypeInfo('unsigned long', 'LLP64').size, 4);
+      assert.strictEqual(resolveTypeInfo('long double', 'LLP64').size, 8);
+      assert.strictEqual(resolveTypeInfo('long double', 'LLP64').alignment, 8);
+
+      // Verify LP64 defaults
+      assert.strictEqual(resolveTypeInfo('long', 'LP64').size, 8);
+      assert.strictEqual(resolveTypeInfo('long double', 'LP64').size, 16);
+    });
   });
 
   describe('calculateStructLayout', () => {
+    it('should calculate struct layout using LLP64 data model for Windows MSVC', () => {
+      const fields = [
+        { type: 'char', name: 'a' },
+        { type: 'long', name: 'b' }
+      ];
+
+      // On LP64 (POSIX): char (1) + 7 pad + long (8) = 16 bytes
+      const lp64Layout = calculateStructLayout('StructWithLong', fields, { dataModel: 'LP64' });
+      assert.strictEqual(lp64Layout.totalSize, 16);
+      assert.strictEqual(lp64Layout.alignment, 8);
+      assert.strictEqual(lp64Layout.paddingBytes, 7);
+
+      // On LLP64 (MSVC): char (1) + 3 pad + long (4) = 8 bytes
+      const llp64Layout = calculateStructLayout('StructWithLong', fields, { dataModel: 'LLP64' });
+      assert.strictEqual(llp64Layout.totalSize, 8);
+      assert.strictEqual(llp64Layout.alignment, 4);
+      assert.strictEqual(llp64Layout.paddingBytes, 3);
+    });
     it('should correctly calculate padding for unaligned fields', () => {
       // struct BadOrder { char a; double b; int c; };
       // a: 1 byte at 0

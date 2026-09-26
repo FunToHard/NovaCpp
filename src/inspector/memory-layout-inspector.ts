@@ -22,12 +22,14 @@ export interface StructLayout {
   recommendation?: string;
 }
 
+export type DataModel = 'LP64' | 'LLP64';
+
 export interface TypeInfo {
   size: number;
   alignment: number;
 }
 
-const TYPE_SPECS_64: Record<string, TypeInfo> = {
+const TYPE_SPECS_LP64: Record<string, TypeInfo> = {
   'bool': { size: 1, alignment: 1 },
   'char': { size: 1, alignment: 1 },
   'signed char': { size: 1, alignment: 1 },
@@ -44,7 +46,7 @@ const TYPE_SPECS_64: Record<string, TypeInfo> = {
   'int32_t': { size: 4, alignment: 4 },
   'uint32_t': { size: 4, alignment: 4 },
   'float': { size: 4, alignment: 4 },
-  'long': { size: 8, alignment: 8 }, // assuming 64-bit LP64 or MSVC long long
+  'long': { size: 8, alignment: 8 },
   'unsigned long': { size: 8, alignment: 8 },
   'long long': { size: 8, alignment: 8 },
   'unsigned long long': { size: 8, alignment: 8 },
@@ -58,10 +60,18 @@ const TYPE_SPECS_64: Record<string, TypeInfo> = {
   'ptrdiff_t': { size: 8, alignment: 8 }
 };
 
+const TYPE_SPECS_LLP64: Record<string, TypeInfo> = {
+  ...TYPE_SPECS_LP64,
+  'long': { size: 4, alignment: 4 },
+  'unsigned long': { size: 4, alignment: 4 },
+  'long double': { size: 8, alignment: 8 }
+};
+
 /**
  * Resolves the byte size and alignment for a C/C++ type in a 64-bit architecture.
+ * Supports LP64 (POSIX / GCC / Clang default) and LLP64 (Windows MSVC).
  */
-export function resolveTypeInfo(typeStr: string): TypeInfo {
+export function resolveTypeInfo(typeStr: string, dataModel: DataModel = 'LP64'): TypeInfo {
   const trimmed = typeStr.trim();
 
   // Pointer types are always 8 bytes on 64-bit architectures
@@ -75,7 +85,7 @@ export function resolveTypeInfo(typeStr: string): TypeInfo {
     const elemType = multiArrayMatch[1].trim();
     const dims = [...multiArrayMatch[2].matchAll(/\[(\d+)\]/g)].map((m) => parseInt(m[1], 10));
     const totalCount = dims.reduce((acc, val) => acc * val, 1);
-    const elemInfo = resolveTypeInfo(elemType);
+    const elemInfo = resolveTypeInfo(elemType, dataModel);
     return {
       size: elemInfo.size * totalCount,
       alignment: elemInfo.alignment
@@ -84,12 +94,20 @@ export function resolveTypeInfo(typeStr: string): TypeInfo {
 
   // Normalize spaces
   const normalized = trimmed.replace(/\s+/g, ' ');
-  if (TYPE_SPECS_64[normalized]) {
-    return TYPE_SPECS_64[normalized];
+  const specs = dataModel === 'LLP64' ? TYPE_SPECS_LLP64 : TYPE_SPECS_LP64;
+  if (specs[normalized]) {
+    return specs[normalized];
   }
 
   // Fallback heuristic: word-aligned 8-byte pointer/struct
   return { size: 8, alignment: 8 };
+}
+
+export interface StructLayoutOptions {
+  isPacked?: boolean;
+  maxPackAlignment?: number;
+  skipOptimization?: boolean;
+  dataModel?: DataModel;
 }
 
 /**
@@ -98,10 +116,11 @@ export function resolveTypeInfo(typeStr: string): TypeInfo {
 export function calculateStructLayout(
   structName: string,
   rawFields: { type: string; name: string }[],
-  options: { isPacked?: boolean; maxPackAlignment?: number; skipOptimization?: boolean } = {}
+  options: StructLayoutOptions = {}
 ): StructLayout {
   const isPacked = !!options.isPacked;
   const packMax = options.maxPackAlignment ?? (isPacked ? 1 : 8);
+  const dataModel = options.dataModel ?? 'LP64';
 
   const fields: FieldLayout[] = [];
   let currentOffset = 0;
@@ -109,7 +128,7 @@ export function calculateStructLayout(
   let totalPaddingBytes = 0;
 
   for (const field of rawFields) {
-    const typeInfo = resolveTypeInfo(field.type);
+    const typeInfo = resolveTypeInfo(field.type, dataModel);
     const fieldAlignment = isPacked ? 1 : Math.min(typeInfo.alignment, packMax);
     maxStructAlignment = Math.max(maxStructAlignment, fieldAlignment);
 
@@ -168,14 +187,14 @@ export function calculateStructLayout(
 
   if (totalPaddingBytes > 0 && !isPacked && !options.skipOptimization) {
     const sortedFields = [...rawFields].sort((a, b) => {
-      const aInfo = resolveTypeInfo(a.type);
-      const bInfo = resolveTypeInfo(b.type);
+      const aInfo = resolveTypeInfo(a.type, dataModel);
+      const bInfo = resolveTypeInfo(b.type, dataModel);
       return bInfo.alignment !== aInfo.alignment
         ? bInfo.alignment - aInfo.alignment
         : bInfo.size - aInfo.size;
     });
 
-    const optLayout = calculateStructLayout(structName, sortedFields, { isPacked: false, skipOptimization: true });
+    const optLayout = calculateStructLayout(structName, sortedFields, { isPacked: false, skipOptimization: true, dataModel });
     optimizedSize = optLayout.totalSize;
 
     if (optimizedSize < totalSize) {
@@ -379,9 +398,11 @@ export class MemoryLayoutInspector implements vscode.Disposable {
       return null;
     }
 
+    const dataModel: DataModel = process.platform === 'win32' ? 'LLP64' : 'LP64';
     const layout = calculateStructLayout(parsed.name, parsed.fields, {
       isPacked: parsed.isPacked,
-      maxPackAlignment: parsed.maxPackAlignment
+      maxPackAlignment: parsed.maxPackAlignment,
+      dataModel
     });
     const diagram = generateLayoutAsciiDiagram(layout);
 
