@@ -211,6 +211,174 @@ export const CMATH_ENTRIES: Record<string, StlDocEntry> = {
     exceptionSafety: 'No-throw guarantee.',
     example: 'double v = std::exp(1.0); // ~2.71828',
     seeAlso: ['std::log', 'std::pow']
+  },
+  'std::cbrt': {
+    symbol: 'std::cbrt',
+    canonicalSignature: 'float cbrt(float arg);\ndouble cbrt(double arg);\nlong double cbrt(long double arg);',
+    summary: 'Computes the cubic root of arg.',
+    header: '<cmath>',
+    standard: 'C++11',
+    parameters: {
+      arg: 'Floating-point or integer value'
+    },
+    returns: 'Cube root of arg.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/cbrt',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'double root = std::cbrt(27.0); // 3.0',
+    seeAlso: ['std::sqrt', 'std::pow']
+  },
+  'std::atan2': {
+    symbol: 'std::atan2',
+    canonicalSignature: 'float atan2(float y, float x);\ndouble atan2(double y, double x);\nlong double atan2(long double y, long double x);',
+    summary: 'Computes the arc tangent of y/x using the signs of arguments to determine the quadrant of the return angle in radians in range [-pi, +pi].',
+    header: '<cmath>',
+    standard: 'C++98',
+    parameters: {
+      y: 'Y-coordinate value (floating-point or integer)',
+      x: 'X-coordinate value (floating-point or integer)'
+    },
+    returns: 'Principal arc tangent of y/x in radians, in range [-pi, +pi].',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/atan2',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'double angle = std::atan2(1.0, 1.0); // pi / 4 (~0.785398 rad)',
+    seeAlso: ['std::tan', 'std::sin', 'std::cos']
+  },
+  'std::fma': {
+    symbol: 'std::fma',
+    canonicalSignature: 'float fma(float x, float y, float z);\ndouble fma(double x, double y, double z);\nlong double fma(long double x, long double y, long double z);',
+    summary: 'Computes fused multiply-add (x * y + z) as a single operation with only one rounding error.',
+    header: '<cmath>',
+    standard: 'C++11',
+    parameters: {
+      x: 'First multiplier',
+      y: 'Second multiplier',
+      z: 'Addend'
+    },
+    returns: 'Result of (x * y) + z without intermediate rounding.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/fma',
+    complexity: { time: 'O(1) hardware FMA instruction when supported' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'double res = std::fma(2.0, 3.0, 4.0); // 10.0',
+    seeAlso: ['std::remainder', 'std::fmod']
+  },
+  'std::remainder': {
+    symbol: 'std::remainder',
+    canonicalSignature: 'float remainder(float x, float y);\ndouble remainder(double x, double y);\nlong double remainder(long double x, long double y);',
+    summary: 'Computes the IEEE floating-point remainder of x / y (rounded to the nearest integer quotient n, rounding ties to even).',
+    header: '<cmath>',
+    standard: 'C++11',
+    parameters: {
+      x: 'Floating-point dividend',
+      y: 'Floating-point divisor'
+    },
+    returns: 'Floating-point remainder of x/y.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/remainder',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'double rem = std::remainder(5.1, 3.0); // -0.9',
+    seeAlso: ['std::fmod']
+  },
+  'std::fmod': {
+    symbol: 'std::fmod',
+    canonicalSignature: 'float fmod(float x, float y);\ndouble fmod(double x, double y);\nlong double fmod(long double x, long double y);',
+    summary: 'Computes the floating-point remainder of the division x / y (truncated toward zero).',
+    header: '<cmath>',
+    standard: 'C++98',
+    parameters: {
+      x: 'Floating-point dividend',
+      y: 'Floating-point divisor'
+    },
+    returns: 'Remainder of x / y with same sign as x.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/fmod',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'double rem = std::fmod(5.1, 3.0); // 2.1',
+    seeAlso: ['std::remainder']
+  },
+  'std::isinf': {
+    symbol: 'std::isinf',
+    canonicalSignature: 'bool isinf(float num);\nbool isinf(double num);\nbool isinf(long double num);',
+    summary: 'Determines if the given floating-point number num is positive or negative infinity.',
+    header: '<cmath>',
+    standard: 'C++11',
+    parameters: {
+      num: 'Floating-point or integer value'
+    },
+    returns: 'true if num is positive or negative infinity, false otherwise.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/isinf',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'bool inf = std::isinf(1.0 / 0.0); // true',
+    seeAlso: ['std::isnan', 'std::isfinite']
+  },
+  'std::isnan': {
+    symbol: 'std::isnan',
+    canonicalSignature: 'bool isnan(float num);\nbool isnan(double num);\nbool isnan(long double num);',
+    summary: 'Determines if the given floating-point number num is a not-a-number (NaN) value.',
+    header: '<cmath>',
+    standard: 'C++11',
+    parameters: {
+      num: 'Floating-point or integer value'
+    },
+    returns: 'true if num is NaN, false otherwise.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/isnan',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'bool check = std::isnan(std::sqrt(-1.0)); // true',
+    seeAlso: ['std::isinf', 'std::isfinite']
+  },
+  'std::isfinite': {
+    symbol: 'std::isfinite',
+    canonicalSignature: 'bool isfinite(float num);\nbool isfinite(double num);\nbool isfinite(long double num);',
+    summary: 'Determines if the given floating-point number num has finite value (neither infinite nor NaN).',
+    header: '<cmath>',
+    standard: 'C++11',
+    parameters: {
+      num: 'Floating-point or integer value'
+    },
+    returns: 'true if num is not infinite and not NaN, false otherwise.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/isfinite',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'bool finite = std::isfinite(42.0); // true',
+    seeAlso: ['std::isinf', 'std::isnan']
+  },
+  'std::lerp': {
+    symbol: 'std::lerp',
+    canonicalSignature: 'constexpr float lerp(float a, float b, float t) noexcept;\nconstexpr double lerp(double a, double b, double t) noexcept;\nconstexpr long double lerp(long double a, long double b, long double t) noexcept;',
+    summary: 'Computes the linear interpolation between a and b for parameter t (a + t * (b - a)) with monotonicity and exact boundary guarantees.',
+    header: '<cmath>',
+    standard: 'C++20',
+    parameters: {
+      a: 'Start of interpolation range',
+      b: 'End of interpolation range',
+      t: 'Interpolation factor'
+    },
+    returns: 'Linearly interpolated value.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/lerp',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'double mid = std::lerp(10.0, 20.0, 0.5); // 15.0',
+    seeAlso: ['std::midpoint']
+  },
+  'std::midpoint': {
+    symbol: 'std::midpoint',
+    canonicalSignature: 'template <typename T>\nconstexpr T midpoint(T a, T b) noexcept;',
+    summary: 'Computes the midpoint (halfway point) of two integers, floating-point numbers, or pointers without intermediate overflow.',
+    header: '<cmath>',
+    standard: 'C++20',
+    parameters: {
+      a: 'First value or pointer',
+      b: 'Second value or pointer'
+    },
+    returns: 'Halfway point between a and b.',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/midpoint',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'int mid = std::midpoint(10, 20); // 15',
+    seeAlso: ['std::lerp']
   }
 };
 

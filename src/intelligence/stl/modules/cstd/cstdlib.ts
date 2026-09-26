@@ -176,6 +176,131 @@ export const CSTDLIB_ENTRIES: Record<string, StlDocEntry> = {
     exceptionSafety: 'No-throw guarantee.',
     example: 'const char* home = std::getenv("HOME");',
     seeAlso: ['std::system']
+  },
+  'std::strtoll': {
+    symbol: 'std::strtoll',
+    canonicalSignature: 'long long strtoll(const char* str, char** str_end, int base);',
+    summary: 'Interprets a signed integer value in the byte string pointed to by str with explicit base (2 to 36).',
+    header: '<cstdlib>',
+    standard: 'C++11',
+    parameters: {
+      str: 'Null-terminated string to parse',
+      str_end: 'Pointer to pointer to store address of first unparsed character',
+      base: 'Radix base of integer (0 for auto-detection)'
+    },
+    returns: 'Parsed long long integer value.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strtoll',
+    complexity: { time: 'O(N) where N is number of parsed characters' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'char* end;\nlong long val = std::strtoll("9223372036854775800", &end, 10);',
+    seeAlso: ['std::strtol', 'std::strtoull', 'std::strtod']
+  },
+  'std::strtoull': {
+    symbol: 'std::strtoull',
+    canonicalSignature: 'unsigned long long strtoull(const char* str, char** str_end, int base);',
+    summary: 'Interprets an unsigned integer value in the byte string pointed to by str with explicit base (2 to 36).',
+    header: '<cstdlib>',
+    standard: 'C++11',
+    parameters: {
+      str: 'Null-terminated string to parse',
+      str_end: 'Pointer to pointer to store address of first unparsed character',
+      base: 'Radix base of integer (0 for auto-detection)'
+    },
+    returns: 'Parsed unsigned long long integer value.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strtoul',
+    complexity: { time: 'O(N)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'char* end;\nunsigned long long val = std::strtoull("0xDEADBEEFCAFE", &end, 16);',
+    seeAlso: ['std::strtoll', 'std::strtoul']
+  },
+  'std::strtod': {
+    symbol: 'std::strtod',
+    canonicalSignature: 'double strtod(const char* str, char** str_end);',
+    summary: 'Interprets a floating-point value in the byte string pointed to by str. Discards leading whitespace.',
+    header: '<cstdlib>',
+    standard: 'C++98',
+    parameters: {
+      str: 'Null-terminated byte string to parse',
+      str_end: 'Pointer to pointer to store address of first unparsed character'
+    },
+    returns: 'Parsed double floating-point value.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strtof',
+    complexity: { time: 'O(N)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'char* end;\ndouble d = std::strtod("3.14159265", &end);',
+    seeAlso: ['std::strtol', 'std::strtoll']
+  },
+  'std::qsort': {
+    symbol: 'std::qsort',
+    canonicalSignature: 'void qsort(void* ptr, std::size_t count, std::size_t size, int (*comp)(const void*, const void*));',
+    summary: 'Sorts the array pointed to by ptr containing count elements of size bytes each using the comparison function comp.',
+    header: '<cstdlib>',
+    standard: 'C++98',
+    parameters: {
+      ptr: 'Pointer to the array to sort',
+      count: 'Number of elements in array',
+      size: 'Size of each element in bytes',
+      comp: 'Comparison function returning negative if first < second, positive if first > second, 0 if equal'
+    },
+    returns: 'void.',
+    docUrl: 'https://en.cppreference.com/w/cpp/algorithm/qsort',
+    complexity: { time: 'O(N log N) average' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'int arr[] = {5, 2, 8, 1};\nstd::qsort(arr, 4, sizeof(int), [](const void* a, const void* b) {\n    return (*static_cast<const int*>(a) - *static_cast<const int*>(b));\n});',
+    seeAlso: ['std::bsearch']
+  },
+  'std::bsearch': {
+    symbol: 'std::bsearch',
+    canonicalSignature: 'void* bsearch(const void* key, const void* ptr, std::size_t count, std::size_t size, int (*comp)(const void*, const void*));',
+    summary: 'Searches a sorted array of count elements of size bytes for key using binary search and comparison function comp.',
+    header: '<cstdlib>',
+    standard: 'C++98',
+    parameters: {
+      key: 'Pointer to the element to search for',
+      ptr: 'Pointer to the sorted array',
+      count: 'Number of elements in array',
+      size: 'Size of each element in bytes',
+      comp: 'Comparison function returning negative, 0, or positive'
+    },
+    returns: 'Pointer to matching element, or nullptr if not found.',
+    docUrl: 'https://en.cppreference.com/w/cpp/algorithm/bsearch',
+    complexity: { time: 'O(log N) comparisons' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'int key = 8;\nint* item = static_cast<int*>(std::bsearch(&key, arr, 4, sizeof(int), comp));',
+    seeAlso: ['std::qsort']
+  },
+  'std::div': {
+    symbol: 'std::div',
+    canonicalSignature: 'std::div_t div(int x, int y);\nstd::ldiv_t div(long x, long y);\nstd::lldiv_t div(long long x, long long y);',
+    summary: 'Computes both the quotient and the remainder of division x / y in a single operation, returned as a struct containing quot and rem.',
+    header: '<cstdlib>',
+    standard: 'C++98',
+    parameters: {
+      x: 'Dividend value',
+      y: 'Divisor value'
+    },
+    returns: 'Structure containing quot (quotient) and rem (remainder).',
+    docUrl: 'https://en.cppreference.com/w/cpp/numeric/math/div',
+    complexity: { time: 'O(1) hardware division instruction yielding both quotient and remainder' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'auto result = std::div(14, 3); // result.quot = 4, result.rem = 2',
+    seeAlso: ['std::remainder', 'std::fmod']
+  },
+  'std::quick_exit': {
+    symbol: 'std::quick_exit',
+    canonicalSignature: '[[noreturn]] void quick_exit(int exit_code) noexcept;',
+    summary: 'Causes normal program termination without cleaning up automatic or static resources, but calls functions registered with std::at_quick_exit.',
+    header: '<cstdlib>',
+    standard: 'C++11',
+    parameters: {
+      exit_code: 'Exit status of the program returned to host environment'
+    },
+    returns: 'Does not return.',
+    docUrl: 'https://en.cppreference.com/w/cpp/utility/program/quick_exit',
+    complexity: { time: 'O(N) where N is registered at_quick_exit callbacks' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'std::quick_exit(0);',
+    seeAlso: ['std::abort', 'std::exit']
   }
 };
 

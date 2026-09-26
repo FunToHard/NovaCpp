@@ -192,6 +192,107 @@ export const CSTRING_ENTRIES: Record<string, StlDocEntry> = {
     exceptionSafety: 'No-throw guarantee.',
     example: 'const char* ext = std::strchr("file.cpp", \'.\');',
     seeAlso: ['std::strrchr', 'std::strstr']
+  },
+  'std::strrchr': {
+    symbol: 'std::strrchr',
+    canonicalSignature: 'const char* strrchr(const char* str, int ch);\nchar* strrchr(char* str, int ch);',
+    summary: 'Finds the last occurrence of ch (converted to char) in the byte string pointed to by str.',
+    header: '<cstring>',
+    standard: 'C++98',
+    parameters: {
+      str: 'Pointer to null-terminated string to search',
+      ch: 'Character to search for'
+    },
+    returns: 'Pointer to last occurrence of ch, or nullptr if not found.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strrchr',
+    complexity: { time: 'O(N)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'const char* path = "/usr/local/bin/app";\nconst char* file = std::strrchr(path, \'/\');',
+    seeAlso: ['std::strchr', 'std::strpbrk']
+  },
+  'std::strspn': {
+    symbol: 'std::strspn',
+    canonicalSignature: 'std::size_t strspn(const char* dest, const char* src);',
+    summary: 'Returns the length of the maximum initial segment of dest consisting entirely of characters contained in src.',
+    header: '<cstring>',
+    standard: 'C++98',
+    parameters: {
+      dest: 'Pointer to null-terminated string to be analyzed',
+      src: 'Pointer to null-terminated string containing characters to match'
+    },
+    returns: 'Number of characters in initial segment consisting only of characters from src.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strspn',
+    complexity: { time: 'O(N * M)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'std::size_t digits = std::strspn("12345abc", "0123456789"); // 5',
+    seeAlso: ['std::strcspn', 'std::strpbrk']
+  },
+  'std::strcspn': {
+    symbol: 'std::strcspn',
+    canonicalSignature: 'std::size_t strcspn(const char* dest, const char* src);',
+    summary: 'Returns the length of the maximum initial segment of dest consisting entirely of characters NOT contained in src.',
+    header: '<cstring>',
+    standard: 'C++98',
+    parameters: {
+      dest: 'Pointer to null-terminated string to be analyzed',
+      src: 'Pointer to null-terminated string containing characters to reject'
+    },
+    returns: 'Number of characters in initial segment containing none of the characters from src.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strcspn',
+    complexity: { time: 'O(N * M)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'std::size_t non_vowels = std::strcspn("rhythm", "aeiou"); // 6',
+    seeAlso: ['std::strspn', 'std::strpbrk']
+  },
+  'std::strpbrk': {
+    symbol: 'std::strpbrk',
+    canonicalSignature: 'const char* strpbrk(const char* dest, const char* breakset);\nchar* strpbrk(char* dest, const char* breakset);',
+    summary: 'Finds the first character in dest that matches any character in breakset.',
+    header: '<cstring>',
+    standard: 'C++98',
+    parameters: {
+      dest: 'Pointer to null-terminated string to scan',
+      breakset: 'Pointer to null-terminated string containing characters to search for'
+    },
+    returns: 'Pointer to first matching character in dest, or nullptr if none found.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strpbrk',
+    complexity: { time: 'O(N * M)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'const char* pos = std::strpbrk("hello, world", " .,;");',
+    seeAlso: ['std::strchr', 'std::strspn', 'std::strcspn']
+  },
+  'std::strtok': {
+    symbol: 'std::strtok',
+    canonicalSignature: 'char* strtok(char* str, const char* delim);',
+    summary: 'Finds the next token in a null-terminated byte string pointed to by str, modifying the string by writing null characters. Not thread-safe.',
+    header: '<cstring>',
+    standard: 'C++98',
+    parameters: {
+      str: 'Pointer to string to tokenize, or nullptr to continue tokenizing previous string',
+      delim: 'Pointer to null-terminated string containing delimiters'
+    },
+    returns: 'Pointer to beginning of next token, or nullptr if no more tokens.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strtok',
+    complexity: { time: 'O(N)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'char str[] = "one,two,three";\nchar* tok = std::strtok(str, ",");\nwhile (tok != nullptr) {\n    tok = std::strtok(nullptr, ",");\n}',
+    seeAlso: ['std::strspn', 'std::strcspn']
+  },
+  'std::strerror': {
+    symbol: 'std::strerror',
+    canonicalSignature: 'char* strerror(int errnum);',
+    summary: 'Returns a pointer to the textual representation of the system error code errnum (matching errno values).',
+    header: '<cstring>',
+    standard: 'C++98',
+    parameters: {
+      errnum: 'Integral error number (usually errno)'
+    },
+    returns: 'Pointer to null-terminated byte string describing error.',
+    docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strerror',
+    complexity: { time: 'O(1)' },
+    exceptionSafety: 'No-throw guarantee.',
+    example: 'const char* msg = std::strerror(errno);',
+    seeAlso: ['std::perror']
   }
 };
 
