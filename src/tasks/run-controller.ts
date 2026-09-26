@@ -301,7 +301,9 @@ export class RunController implements vscode.Disposable {
       }
     }
 
-    this.runTerminal = vscode.window.createTerminal(terminalName);
+    this.runTerminal = isWindows
+      ? vscode.window.createTerminal({ name: terminalName, shellPath: 'powershell.exe' })
+      : vscode.window.createTerminal(terminalName);
     return { terminal: this.runTerminal, isNew: true };
   }
 }

@@ -162,6 +162,9 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
       const terminals = (vscode.window as any).terminals;
       assert.ok(terminals.length > 0);
       assert.strictEqual(terminals[0].name, 'NovaCpp: Run');
+      if (process.platform === 'win32') {
+        assert.strictEqual(terminals[0].options?.shellPath, 'powershell.exe');
+      }
     });
   });
 });
