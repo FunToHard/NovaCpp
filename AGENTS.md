@@ -59,6 +59,7 @@ The project enforces the strictest TypeScript compiler options in [`tsconfig.jso
 7. **No Unreachable Code**: Remove dead code paths and unused labels immediately.
 8. **Explicit Overrides**: Use the `override` keyword when overriding base class methods.
 9. **Zero Type Errors**: Always run `npm run check-types` before submitting any changes.
+10. **Strict No Emojis**: Do not use emojis in code, comments, documentation, or commit messages unless absolutely necessary.
 
 ---
 
@@ -88,6 +89,9 @@ Adhere strictly to these constraints when modifying the codebase:
 ### Confidentiality and Git Hygiene
 - Never stage or commit local handover or context files (e.g., `context.md`, `context*.md`).
 - Ensure all created test files and temporary artifacts clean up after execution.
+
+### Strict No Emojis Rule
+- Do not use emojis in source code, user-facing UI messages, diagnostics, comments, documentation, commit messages, or agent communication unless absolutely necessary. Maintain a clean, professional, and technical tone throughout.
 
 ---
 
