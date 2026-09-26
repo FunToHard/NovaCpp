@@ -17,6 +17,7 @@ import { ConfigPanel } from './webview/config-panel';
 import { CMakeWatcher } from './bridge/cmake-watcher';
 import { InactiveRegionsManager } from './bridge/inactive-regions';
 import { PostfixCompletionProvider } from './intelligence/postfix-provider';
+import { PreprocessorDirectiveCompletionProvider } from './intelligence/directive-completion-provider';
 import { NovaCppCodeActionProvider } from './intelligence/code-actions';
 import { SmartDefinitionManager } from './intelligence/smart-definition';
 import { InlayHintManager } from './intelligence/inlay-hints';
@@ -187,6 +188,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       cppSelector,
       new DoxygenCompletionProvider(),
       ...DoxygenCompletionProvider.triggerCharacters
+    ),
+    vscode.languages.registerCompletionItemProvider(
+      cppSelector,
+      new PreprocessorDirectiveCompletionProvider(),
+      ...PreprocessorDirectiveCompletionProvider.triggerCharacters
     ),
     vscode.languages.registerCodeActionsProvider(
       cppSelector,
