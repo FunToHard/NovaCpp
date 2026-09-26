@@ -48,6 +48,22 @@ describe('Preprocessor Directive Autocompletion Provider', () => {
     assert.ok(labels.includes('#include <...>'));
     assert.ok(labels.includes('#include "..."'));
     assert.ok(!labels.includes('#define (Constant)'));
+
+    const systemIncludeItem = items.find((i) => i.label === '#include <...>');
+    assert.ok(systemIncludeItem);
+    assert.strictEqual((systemIncludeItem.insertText as any).value, '#include <$0');
+    assert.deepStrictEqual(systemIncludeItem.command, {
+      command: 'editor.action.triggerSuggest',
+      title: 'Trigger Suggestions'
+    });
+
+    const localIncludeItem = items.find((i) => i.label === '#include "..."');
+    assert.ok(localIncludeItem);
+    assert.strictEqual((localIncludeItem.insertText as any).value, '#include "$0');
+    assert.deepStrictEqual(localIncludeItem.command, {
+      command: 'editor.action.triggerSuggest',
+      title: 'Trigger Suggestions'
+    });
   });
 
   it('should filter to conditional directives when typing #if', () => {

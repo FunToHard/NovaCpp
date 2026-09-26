@@ -7,6 +7,7 @@ export interface DirectiveTemplate {
   documentation: string;
   snippet: string;
   sortOrder: number;
+  command?: vscode.Command;
 }
 
 export const PREPROCESSOR_DIRECTIVE_TEMPLATES: DirectiveTemplate[] = [
@@ -16,8 +17,12 @@ export const PREPROCESSOR_DIRECTIVE_TEMPLATES: DirectiveTemplate[] = [
     detail: 'Preprocessor: Include system or library header',
     documentation:
       'Includes an ISO C++ standard library or external system header file enclosed in angle brackets (< >).\n\nExample:\n```cpp\n#include <vector>\n#include <iostream>\n```',
-    snippet: '#include <${1:header}>',
-    sortOrder: 10
+    snippet: '#include <$0',
+    sortOrder: 10,
+    command: {
+      command: 'editor.action.triggerSuggest',
+      title: 'Trigger Suggestions'
+    }
   },
   {
     label: '#include "..."',
@@ -25,8 +30,12 @@ export const PREPROCESSOR_DIRECTIVE_TEMPLATES: DirectiveTemplate[] = [
     detail: 'Preprocessor: Include local or project header',
     documentation:
       'Includes a local user-defined or project header file enclosed in quotes (" "). Searches current directory first before system include paths.\n\nExample:\n```cpp\n#include "my_header.h"\n```',
-    snippet: '#include "${1:header.h}"',
-    sortOrder: 11
+    snippet: '#include "$0',
+    sortOrder: 11,
+    command: {
+      command: 'editor.action.triggerSuggest',
+      title: 'Trigger Suggestions'
+    }
   },
   {
     label: '#if ... #endif',
@@ -255,6 +264,9 @@ export class PreprocessorDirectiveCompletionProvider implements vscode.Completio
       // Provide filterText that works whether user typed `#include` or `include`
       item.filterText = hashChar === '#' ? template.label.split(' ')[0] : template.label.replace(/^#/, '').split(' ')[0];
       item.sortText = `0_${String(template.sortOrder).padStart(2, '0')}_${template.label}`;
+      if (template.command) {
+        item.command = template.command;
+      }
 
       items.push(item);
     }
