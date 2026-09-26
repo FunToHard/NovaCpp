@@ -9,6 +9,7 @@ export interface CompilerInfo {
   name: string;
   type: CompilerType;
   path: string;
+  argsPrefix?: string[];
   version?: string;
   is64Bit?: boolean;
   msvcVersion?: string;
@@ -309,7 +310,8 @@ export class CompilerDetector {
             results.push({
               name: `WSL: ${bin} (${out})`,
               type: bin.includes('clang') ? 'wsl-clang' : 'wsl-gcc',
-              path: `wsl.exe ${bin}`
+              path: wslPath,
+              argsPrefix: [bin]
             });
           }
         } catch {

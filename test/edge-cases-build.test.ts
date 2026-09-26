@@ -12,6 +12,7 @@ import { CompilationDatabaseGenerator } from '../src/solution/compilation-databa
 import { parseDotConfig } from '../src/config/profile-manager';
 import { VcpkgAdvisor } from '../src/ecosystem/vcpkg-advisor';
 import { CompilerInfo } from '../src/prober/compiler-detector';
+import { SystemIncludeExtractor } from '../src/prober/system-includes';
 import { SolutionModel, VcxProjectModel } from '../src/solution/solution-models';
 
 describe('Build, Solutions & Configuration Edge Cases', () => {
@@ -213,6 +214,28 @@ CONFIG_MULTI_WORD="hello world with spaces"
       const match2 = VcpkgAdvisor.matchHeader('#include <boost\\container\\vector.hpp>');
       assert.ok(match2);
       assert.strictEqual(match2.info.port, 'boost');
+    });
+  });
+
+  describe('WSL Compiler Support & System Include Extraction', () => {
+    it('should support wsl-gcc compiler type with argsPrefix and preserve Linux paths', async () => {
+      const wslCompiler: CompilerInfo = {
+        name: 'WSL: g++ (/usr/bin/g++)',
+        type: 'wsl-gcc',
+        path: 'wsl.exe',
+        argsPrefix: ['g++']
+      };
+
+      const extractor = new SystemIncludeExtractor();
+      extractor.extractGccClangIncludes = (path: string, prefix?: string[]) => {
+        assert.strictEqual(path, 'wsl.exe');
+        assert.deepStrictEqual(prefix, ['g++']);
+        return ['/usr/include/c++/11', '/usr/include/x86_64-linux-gnu'];
+      };
+
+      const includes = await extractor.extractSystemIncludes(wslCompiler);
+      assert.ok(includes.includes('/usr/include/c++/11'));
+      assert.ok(includes.includes('/usr/include/x86_64-linux-gnu'));
     });
   });
 });

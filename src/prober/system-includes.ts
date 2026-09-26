@@ -18,18 +18,26 @@ export class SystemIncludeExtractor {
 
     if (compiler.type === 'msvc') {
       includes = this.extractMSVCIncludes(compiler);
-    } else if (compiler.type === 'gcc' || compiler.type === 'clang') {
-      includes = this.extractGccClangIncludes(compiler.path);
+    } else if (
+      compiler.type === 'gcc' ||
+      compiler.type === 'clang' ||
+      compiler.type === 'wsl-gcc' ||
+      compiler.type === 'wsl-clang'
+    ) {
+      includes = this.extractGccClangIncludes(compiler.path, compiler.argsPrefix);
     } else if (compiler.type === 'clang-cl') {
       // clang-cl can use MSVC includes if available
       includes = this.extractMSVCIncludes(compiler);
       if (includes.length === 0) {
-        includes = this.extractGccClangIncludes(compiler.path);
+        includes = this.extractGccClangIncludes(compiler.path, compiler.argsPrefix);
       }
     }
 
-    // Filter valid directories only
+    // Filter valid directories only (preserve WSL Linux paths starting with '/')
     const valid = includes.filter((p) => {
+      if (p.startsWith('/')) {
+        return true;
+      }
       try {
         return fs.existsSync(p) && fs.statSync(p).isDirectory();
       } catch {
@@ -44,9 +52,10 @@ export class SystemIncludeExtractor {
   /**
    * Probes GCC or Clang using the standard preprocessor command.
    */
-  public extractGccClangIncludes(compilerPath: string): string[] {
+  public extractGccClangIncludes(compilerPath: string, argsPrefix: string[] = []): string[] {
     try {
-      const res = cp.spawnSync(compilerPath, ['-E', '-x', 'c++', '-', '-v'], {
+      const args = [...argsPrefix, '-E', '-x', 'c++', '-', '-v'];
+      const res = cp.spawnSync(compilerPath, args, {
         input: '',
         encoding: 'utf8',
         timeout: 5000
