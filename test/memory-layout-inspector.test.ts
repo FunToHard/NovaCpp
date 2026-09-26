@@ -131,6 +131,45 @@ struct Buffer {
       assert.strictEqual(layout.totalSize, 120);
     });
 
+    it('should correctly scope #pragma pack to wrapped struct and preserve natural alignment on following structs', () => {
+      const code = `
+#pragma pack(push, 1)
+struct PackedHeader {
+    char flag;
+    int payloadSize;
+};
+#pragma pack(pop)
+
+struct StandardHeader {
+    char flag;
+    int payloadSize;
+};
+`;
+      const packedOffset = code.indexOf('PackedHeader') + 2;
+      const packed = extractStructAtPosition(code, packedOffset);
+      assert.ok(packed);
+      assert.strictEqual(packed?.name, 'PackedHeader');
+      assert.strictEqual(packed?.isPacked, true);
+      assert.strictEqual(packed?.maxPackAlignment, 1);
+      const packedLayout = calculateStructLayout(packed.name, packed.fields, {
+        isPacked: packed.isPacked,
+        maxPackAlignment: packed.maxPackAlignment
+      });
+      assert.strictEqual(packedLayout.totalSize, 5); // 1 + 4 (no padding)
+
+      const normalOffset = code.indexOf('StandardHeader') + 2;
+      const normal = extractStructAtPosition(code, normalOffset);
+      assert.ok(normal);
+      assert.strictEqual(normal?.name, 'StandardHeader');
+      assert.strictEqual(normal?.isPacked, false);
+      const normalLayout = calculateStructLayout(normal.name, normal.fields, {
+        isPacked: normal.isPacked,
+        maxPackAlignment: normal.maxPackAlignment
+      });
+      assert.strictEqual(normalLayout.totalSize, 8); // 1 + 3 pad + 4
+      assert.strictEqual(normalLayout.paddingBytes, 3);
+    });
+
     it('should return null when cursor is outside struct definition', () => {
       const code = `
 struct Foo { int a; };

@@ -268,10 +268,39 @@ export function generateLayoutMarkdown(layout: StructLayout): vscode.MarkdownStr
 /**
  * Parses struct or class definitions from C++ source code text at the cursor.
  */
+function getActivePragmaPack(textBefore: string): number | undefined {
+  const packRegex = /#pragma\s+pack\s*\(([^)]*)\)/g;
+  const stack: (number | undefined)[] = [];
+  let currentPack: number | undefined = undefined;
+
+  let m: RegExpExecArray | null;
+  while ((m = packRegex.exec(textBefore)) !== null) {
+    const arg = m[1].trim();
+    if (!arg) {
+      // #pragma pack() resets to default
+      currentPack = undefined;
+    } else if (arg.startsWith('push')) {
+      stack.push(currentPack);
+      const parts = arg.split(',');
+      if (parts.length > 1) {
+        const n = parseInt(parts[1].trim(), 10);
+        if (!isNaN(n)) currentPack = n;
+      }
+    } else if (arg.startsWith('pop')) {
+      currentPack = stack.pop();
+    } else {
+      const n = parseInt(arg, 10);
+      currentPack = !isNaN(n) ? n : undefined;
+    }
+  }
+
+  return currentPack;
+}
+
 export function extractStructAtPosition(
   text: string,
   cursorOffset: number
-): { name: string; isPacked: boolean; fields: { type: string; name: string }[] } | null {
+): { name: string; isPacked: boolean; maxPackAlignment?: number; fields: { type: string; name: string }[] } | null {
   // Find struct or class blocks
   const structRegex = /(?:struct|class)\s+([a-zA-Z_]\w*)\s*(?::\s*[^{]+)?\s*\{([^}]+)\}/g;
   let match: RegExpExecArray | null;
@@ -284,7 +313,13 @@ export function extractStructAtPosition(
     if (cursorOffset >= startIndex && cursorOffset <= endIndex) {
       const structName = match[1];
       const body = match[2];
-      const isPacked = text.includes('__attribute__((packed))') || text.includes('#pragma pack');
+      const textBefore = text.substring(0, startIndex);
+      const structText = text.substring(startIndex, endIndex);
+
+      const activePack = getActivePragmaPack(textBefore);
+      const hasPackedAttr = /__attribute__\s*\(\s*\(\s*packed\s*\)\s*\)/.test(structText);
+      const isPacked = hasPackedAttr || (activePack !== undefined && activePack <= 1);
+      const maxPackAlignment = activePack;
 
       const fields: { type: string; name: string }[] = [];
       const lines = body.split(';');
@@ -305,7 +340,7 @@ export function extractStructAtPosition(
       }
 
       if (fields.length > 0) {
-        return { name: structName, isPacked, fields };
+        return { name: structName, isPacked, maxPackAlignment, fields };
       }
     }
   }
@@ -344,7 +379,10 @@ export class MemoryLayoutInspector implements vscode.Disposable {
       return null;
     }
 
-    const layout = calculateStructLayout(parsed.name, parsed.fields, { isPacked: parsed.isPacked });
+    const layout = calculateStructLayout(parsed.name, parsed.fields, {
+      isPacked: parsed.isPacked,
+      maxPackAlignment: parsed.maxPackAlignment
+    });
     const diagram = generateLayoutAsciiDiagram(layout);
 
     this.outputChannel.clear();
