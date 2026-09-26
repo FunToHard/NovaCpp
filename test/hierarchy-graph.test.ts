@@ -68,6 +68,29 @@ struct Square : public Rectangle {
       assert.ok(derivedEdges.some(e => e.from === 'Dog' && e.to === 'Mammal'));
       assert.ok(derivedEdges.some(e => e.from === 'Cat' && e.to === 'Mammal'));
     });
+
+    it('should terminate safely without stack overflow on cyclic inheritance or CRTP patterns', () => {
+      // Simulate cyclic inheritance: A -> B -> A
+      const cyclicMap = new Map([
+        ['A', { bases: ['B'], kind: 'class' as const }],
+        ['B', { bases: ['A'], kind: 'class' as const }]
+      ]);
+
+      const graph = buildTypeHierarchyGraph('A', cyclicMap);
+      assert.strictEqual(graph.rootId, 'A');
+      assert.strictEqual(graph.nodes.size, 2);
+      assert.ok(graph.nodes.has('A') && graph.nodes.has('B'));
+
+      // Simulate CRTP pattern where Derived inherits Base<Derived> which references Derived
+      const crtpMap = new Map([
+        ['Derived', { bases: ['Base<Derived>'], kind: 'class' as const }],
+        ['Base<Derived>', { bases: ['Derived'], kind: 'class' as const }]
+      ]);
+
+      const crtpGraph = buildTypeHierarchyGraph('Derived', crtpMap);
+      assert.strictEqual(crtpGraph.rootId, 'Derived');
+      assert.strictEqual(crtpGraph.nodes.size, 2);
+    });
   });
 
   describe('formatHierarchyGraphAscii and Mermaid', () => {

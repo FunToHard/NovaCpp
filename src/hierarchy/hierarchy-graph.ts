@@ -72,7 +72,9 @@ export function buildTypeHierarchyGraph(
   });
 
   // 1. Add base classes (ancestors)
+  const visitedBases = new Set<string>([rootName]);
   function addBases(currentName: string, depth: number) {
+    if (depth > 32) return;
     const info = inheritanceMap.get(currentName);
     if (!info) return;
 
@@ -85,17 +87,24 @@ export function buildTypeHierarchyGraph(
           kind: baseInfo ? baseInfo.kind : 'class'
         });
       }
-      edges.push({
-        from: currentName,
-        to: base,
-        type: 'inherits'
-      });
-      addBases(base, depth + 1);
+      if (!edges.some(e => e.from === currentName && e.to === base && e.type === 'inherits')) {
+        edges.push({
+          from: currentName,
+          to: base,
+          type: 'inherits'
+        });
+      }
+      if (!visitedBases.has(base)) {
+        visitedBases.add(base);
+        addBases(base, depth + 1);
+      }
     }
   }
 
   // 2. Add derived classes (descendants)
+  const visitedDerived = new Set<string>([rootName]);
   function addDerived(currentName: string, depth: number) {
+    if (depth > 32) return;
     for (const [name, info] of inheritanceMap.entries()) {
       if (info.bases.includes(currentName)) {
         if (!nodes.has(name)) {
@@ -105,12 +114,17 @@ export function buildTypeHierarchyGraph(
             kind: info.kind
           });
         }
-        edges.push({
-          from: name,
-          to: currentName,
-          type: 'derived'
-        });
-        addDerived(name, depth + 1);
+        if (!edges.some(e => e.from === name && e.to === currentName && e.type === 'derived')) {
+          edges.push({
+            from: name,
+            to: currentName,
+            type: 'derived'
+          });
+        }
+        if (!visitedDerived.has(name)) {
+          visitedDerived.add(name);
+          addDerived(name, depth + 1);
+        }
       }
     }
   }
