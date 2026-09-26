@@ -68,6 +68,22 @@ describe('Visual Studio Developer Environment Injection', () => {
       assert.strictEqual(mockContext._envReplacements.get('VCToolsInstallDir'), dummyEnv.VCToolsInstallDir);
       assert.strictEqual(mockContext._envPrepends.get('PATH'), dummyEnv.PATH + ';');
     });
+
+    it('should filter out existing PATH entries to prevent Windows terminal PATH overflow', () => {
+      const mockContext = createMockContext();
+      const originalPath = process.env['PATH'];
+      try {
+        process.env['PATH'] = 'C:\\System32;C:\\ExistingApp';
+        const dummyEnv = {
+          PATH: 'C:\\MSVC\\bin;C:\\System32;C:\\ExistingApp'
+        };
+
+        VsEnvironmentManager.applyEnvironment(mockContext as any, dummyEnv, 'MSVC Toolset');
+        assert.strictEqual(mockContext._envPrepends.get('PATH'), 'C:\\MSVC\\bin;');
+      } finally {
+        process.env['PATH'] = originalPath;
+      }
+    });
   });
 
   describe('VsEnvironmentManager.clearVsDeveloperEnvironment', () => {

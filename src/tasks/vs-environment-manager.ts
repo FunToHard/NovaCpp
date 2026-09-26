@@ -193,10 +193,21 @@ export class VsEnvironmentManager {
       }
     }
 
-    // Prepend PATH case-insensitively so cl.exe, link.exe, msbuild.exe take precedence
+    // Prepend only newly added PATH entries to prevent Windows terminal environment overflow
     const pathKey = Object.keys(env).find((k) => k.toUpperCase() === 'PATH');
     if (pathKey && env[pathKey]) {
-      col.prepend('PATH', env[pathKey] + ';');
+      const vcvarsEntries = env[pathKey].split(';').filter((p) => p.trim().length > 0);
+      const existingEntries = new Set(
+        (process.env['PATH'] || process.env['Path'] || '')
+          .split(';')
+          .filter((p) => p.trim().length > 0)
+          .map((p) => path.normalize(p.trim()).toLowerCase())
+      );
+      const newEntries = vcvarsEntries.filter(
+        (p) => !existingEntries.has(path.normalize(p.trim()).toLowerCase())
+      );
+      const pathToAdd = newEntries.length > 0 ? newEntries.join(';') : env[pathKey];
+      col.prepend('PATH', pathToAdd + ';');
     }
   }
 
