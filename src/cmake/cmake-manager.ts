@@ -100,7 +100,9 @@ export class CMakeManager implements vscode.Disposable {
     const compilerBin = compiler?.path || 'clang++';
     const isMsvc = compiler?.type === 'msvc';
 
-    const standard = this.activeProject.cppStandard || 'c++20';
+    const cppStandard = this.activeProject.cppStandard || 'c++20';
+    const cStandard = this.activeProject.cStandard || 'c11';
+    const cStdMsvc = (cStandard === 'c17' || cStandard === 'c11') ? cStandard : 'c11';
     const targetFile = outputFilePath || path.join(workspaceRoot, 'compile_commands.json');
 
     const globalIncludes = this.activeProject.globalIncludeDirectories ?? this.activeProject.includeDirectories;
@@ -126,11 +128,16 @@ export class CMakeManager implements vscode.Disposable {
         if (seenFiles.has(norm.toLowerCase())) continue;
         seenFiles.add(norm.toLowerCase());
 
+        const isC = /\.c$/i.test(src);
         const isHeader = /\.(h|hpp|hxx|inl|ipp)$/i.test(src);
         const args: string[] = [compilerBin];
 
         if (isMsvc) {
-          args.push('/nologo', `/std:${standard}`, '/EHsc', '/TP');
+          if (isC) {
+            args.push('/nologo', `/std:${cStdMsvc}`, '/TC');
+          } else {
+            args.push('/nologo', `/std:${cppStandard}`, '/EHsc', '/TP');
+          }
           for (const def of allDefs) {
             args.push(`/D${def}`);
           }
@@ -139,7 +146,11 @@ export class CMakeManager implements vscode.Disposable {
           }
           args.push('/c', norm);
         } else {
-          args.push(isHeader ? '-xc++-header' : '-xc++', `-std=${standard}`, '-Wall');
+          if (isC) {
+            args.push('-xc', `-std=${cStandard}`, '-Wall');
+          } else {
+            args.push(isHeader ? '-xc++-header' : '-xc++', `-std=${cppStandard}`, '-Wall');
+          }
           for (const def of allDefs) {
             args.push(`-D${def}`);
           }
@@ -165,11 +176,16 @@ export class CMakeManager implements vscode.Disposable {
 
       for (const file of sourceFiles) {
         const norm = file.replace(/\\/g, '/');
+        const isC = /\.c$/i.test(file);
         const isHeader = /\.(h|hpp|hxx|inl|ipp)$/i.test(file);
         const args: string[] = [compilerBin];
 
         if (isMsvc) {
-          args.push('/nologo', `/std:${standard}`, '/EHsc', '/TP');
+          if (isC) {
+            args.push('/nologo', `/std:${cStdMsvc}`, '/TC');
+          } else {
+            args.push('/nologo', `/std:${cppStandard}`, '/EHsc', '/TP');
+          }
           for (const def of globalDefs) {
             args.push(`/D${def}`);
           }
@@ -178,7 +194,11 @@ export class CMakeManager implements vscode.Disposable {
           }
           args.push('/c', norm);
         } else {
-          args.push(isHeader ? '-xc++-header' : '-xc++', `-std=${standard}`, '-Wall');
+          if (isC) {
+            args.push('-xc', `-std=${cStandard}`, '-Wall');
+          } else {
+            args.push(isHeader ? '-xc++-header' : '-xc++', `-std=${cppStandard}`, '-Wall');
+          }
           for (const def of globalDefs) {
             args.push(`-D${def}`);
           }

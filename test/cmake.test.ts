@@ -324,6 +324,59 @@ describe('CMake Static Include Extraction & IntelliSense Integration', () => {
       assert.ok(parsed.globalIncludeDirectories.includes(norm('common_inc')));
       assert.strictEqual(parsed.globalIncludeDirectories.includes(norm('target_a_private')), false);
     });
+
+    it('should emit pure C compiler flags and C standard for C source files', async () => {
+      mockVscode.workspace.workspaceFolders = [
+        {
+          uri: { fsPath: tempDir },
+          name: 'CTest',
+          index: 0
+        }
+      ];
+
+      const cmakeLists = path.join(tempDir, 'CMakeLists.txt');
+      fs.writeFileSync(
+        cmakeLists,
+        `
+        project(MixedProject C CXX)
+        set(CMAKE_C_STANDARD 11)
+        set(CMAKE_CXX_STANDARD 17)
+        add_executable(MixedApp main.cpp helper.c)
+        `,
+        'utf8'
+      );
+
+      const detector = new CompilerDetector();
+      const extractor = new SystemIncludeExtractor();
+
+      const manager = new CMakeManager(detector, extractor, async () => {});
+      await manager.initialize();
+
+      const compDbPath = path.join(tempDir, 'compile_commands.json');
+      assert.ok(fs.existsSync(compDbPath));
+
+      const content = fs.readFileSync(compDbPath, 'utf8');
+      const entries = JSON.parse(content);
+      assert.strictEqual(entries.length, 2);
+
+      const cppEntry = entries.find((e: any) => e.file.endsWith('main.cpp'));
+      const cEntry = entries.find((e: any) => e.file.endsWith('helper.c'));
+      assert.ok(cppEntry && cEntry);
+
+      const preferredCompiler = await detector.getPreferredCompiler();
+      const isMsvc = preferredCompiler?.type === 'msvc';
+      if (isMsvc) {
+        assert.ok(cEntry.arguments.includes('/TC'), 'C file should compile with /TC on MSVC');
+        assert.ok(cEntry.arguments.includes('/std:c11'), 'C file should specify C11 standard on MSVC');
+        assert.ok(cppEntry.arguments.includes('/TP'), 'C++ file should compile with /TP on MSVC');
+      } else {
+        assert.ok(cEntry.arguments.includes('-xc'), 'C file should compile with -xc');
+        assert.ok(cEntry.arguments.includes('-std=c11'), 'C file should specify -std=c11');
+        assert.ok(cppEntry.arguments.includes('-xc++'), 'C++ file should compile with -xc++');
+      }
+
+      manager.dispose();
+    });
   });
 
   describe('CMakeDetector', () => {
