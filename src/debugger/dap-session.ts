@@ -59,6 +59,11 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
     if (config.request === 'attach') {
       if (!config.processId) {
         config.processId = '${command:novacpp.pickProcess}';
+      } else if (config.processId === '${command:novacpp.pickProcess}') {
+        const picked = await vscode.commands.executeCommand<number | string | undefined>('novacpp.pickProcess');
+        if (picked !== undefined && picked !== null) {
+          config.processId = typeof picked === 'number' ? picked : parseInt(String(picked).trim(), 10);
+        }
       } else if (typeof config.processId === 'string' && /^\d+$/.test(config.processId.trim())) {
         config.processId = parseInt(config.processId.trim(), 10);
       }

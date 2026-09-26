@@ -92,6 +92,32 @@ describe('Debugger Enhancements: Process Picker & Evaluatable Expressions', () =
       assert.strictEqual(resolved.processId, '${command:novacpp.pickProcess}');
     });
 
+    it('should dynamically execute novacpp.pickProcess when processId is command placeholder', async () => {
+      const provider = new NovaCppDebugConfigurationProvider();
+      const config: vscode.DebugConfiguration = {
+        name: 'Attach Pick Process Test',
+        type: 'novacpp-debug',
+        request: 'attach',
+        processId: '${command:novacpp.pickProcess}'
+      };
+
+      const origExecuteCommand = vscode.commands.executeCommand;
+      try {
+        (vscode.commands as any).executeCommand = async (cmd: string) => {
+          if (cmd === 'novacpp.pickProcess') {
+            return 4567;
+          }
+          return undefined;
+        };
+
+        const resolved = await provider.resolveDebugConfiguration(undefined, config);
+        assert.ok(resolved);
+        assert.strictEqual(resolved.processId, 4567);
+      } finally {
+        (vscode.commands as any).executeCommand = origExecuteCommand;
+      }
+    });
+
     it('should resolve sourceFileMap variables in launch configuration', async () => {
       const provider = new NovaCppDebugConfigurationProvider();
       const config: any = {
