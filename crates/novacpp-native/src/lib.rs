@@ -1,6 +1,8 @@
+pub mod solution;
 pub mod time_trace;
 
 use napi_derive::napi;
+pub use solution::*;
 pub use time_trace::*;
 
 #[napi]
