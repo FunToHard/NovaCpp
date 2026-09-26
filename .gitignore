@@ -30,3 +30,8 @@ compile_commands.json
 # Local developer overrides
 .env
 .env.local
+
+# Native Rust binaries & Cargo build artifacts
+target/
+native/
+*.node
