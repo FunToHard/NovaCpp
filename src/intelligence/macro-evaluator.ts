@@ -87,7 +87,7 @@ function substituteMacroParams(def: MacroDef, args: string[]): string {
   }
 
   // 3. Concatenate tokens across ## (deleting ## and surrounding whitespace)
-  result = result.replace(/[\\t ]*##[\\t ]*/g, '').replace(/\s+/g, ' ').trim();
+  result = result.replace(/[\t ]*##[\t ]*/g, '').replace(/\s+/g, ' ').trim();
   return result;
 }
 

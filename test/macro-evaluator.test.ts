@@ -79,6 +79,9 @@ describe('Macro Expansion & constexpr Evaluator', () => {
 
       const res2 = expandMacroRecursively('CONCAT(foo, 42)', defs);
       assert.strictEqual(res2.finalExpansion, 'foo42');
+
+      const res3 = expandMacroRecursively('CONCAT(cat, dog)', defs);
+      assert.strictEqual(res3.finalExpansion, 'catdog');
     });
   });
 
