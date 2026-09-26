@@ -105,7 +105,7 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
       // 1. Documentation Link Code Action
       const docUrl = ClangTidyManager.getDocUrl(checkName);
       const docAction = new vscode.CodeAction(
-        `📖 Open Clang-Tidy Documentation for '${checkName}'`,
+        `Open Clang-Tidy Documentation for '${checkName}'`,
         vscode.CodeActionKind.Empty
       );
       docAction.command = {

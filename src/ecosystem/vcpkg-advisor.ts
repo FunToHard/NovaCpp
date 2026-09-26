@@ -236,7 +236,7 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
 
     // 1. Copy install command to clipboard
     const copyAction = new vscode.CodeAction(
-      `📦 Copy 'vcpkg install ${info.port}' to clipboard`,
+      `Copy 'vcpkg install ${info.port}' to clipboard`,
       vscode.CodeActionKind.QuickFix
     );
     copyAction.command = {
@@ -248,7 +248,7 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
 
     // 2. Run in terminal
     const installAction = new vscode.CodeAction(
-      `⚡ Run 'vcpkg install ${info.port}' in Terminal`,
+      `Run 'vcpkg install ${info.port}' in Terminal`,
       vscode.CodeActionKind.QuickFix
     );
     installAction.command = {
@@ -261,7 +261,7 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
     // 3. Online help
     if (info.homepage) {
       const helpAction = new vscode.CodeAction(
-        `🌐 Open documentation for '${info.port}'`,
+        `Open documentation for '${info.port}'`,
         vscode.CodeActionKind.Empty
       );
       helpAction.command = {

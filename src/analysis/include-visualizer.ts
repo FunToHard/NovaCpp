@@ -241,9 +241,8 @@ export function formatIncludeTreeAscii(nodes: IncludeNode[], prefix: string = ''
     const node = nodes[i];
     const isLast = i === nodes.length - 1;
     const branch = isLast ? '└── ' : '├── ';
-    const icon = node.isSystem ? '📦' : '📄';
     const tag = node.isSystem ? '<...>' : '"..."';
-    lines.push(`${prefix}${branch}${icon} ${node.path} (${tag} L${node.line})`);
+    lines.push(`${prefix}${branch}${node.path} (${tag} L${node.line})`);
 
     if (node.children.length > 0) {
       const childPrefix = prefix + (isLast ? '    ' : '│   ');
@@ -438,7 +437,7 @@ export class IncludeVisualizerManager implements vscode.Disposable {
       this.outputChannel.appendLine('');
       this.outputChannel.appendLine(`--- Optimization Tips & IWYU Insights ---`);
       for (const s of analysis.suggestions) {
-        this.outputChannel.appendLine(`💡 ${s}`);
+        this.outputChannel.appendLine(`- ${s}`);
       }
     }
 
@@ -480,20 +479,20 @@ export class IncludeVisualizerManager implements vscode.Disposable {
 
       this.outputChannel.appendLine(`\n--- Slowest Header Files (Frontend Parsing) ---`);
       for (const h of summary.slowestHeaders) {
-        this.outputChannel.appendLine(`⏳ ${h.durationMs.toString().padStart(6)} ms (${h.percentage.toString().padStart(3)}%) │ ${h.file}`);
+        this.outputChannel.appendLine(`  ${h.durationMs.toString().padStart(6)} ms (${h.percentage.toString().padStart(3)}%) │ ${h.file}`);
       }
 
       if (summary.slowestTemplates.length > 0) {
         this.outputChannel.appendLine(`\n--- Slowest Template Instantiations ---`);
         for (const t of summary.slowestTemplates) {
-          this.outputChannel.appendLine(`🧩 ${t.durationMs.toString().padStart(6)} ms │ ${t.template}`);
+          this.outputChannel.appendLine(`  ${t.durationMs.toString().padStart(6)} ms │ ${t.template}`);
         }
       }
 
       if (summary.slowestFunctions.length > 0) {
         this.outputChannel.appendLine(`\n--- Slowest Backend CodeGen & Optimization ---`);
         for (const f of summary.slowestFunctions) {
-          this.outputChannel.appendLine(`⚡ ${f.durationMs.toString().padStart(6)} ms │ ${f.name}`);
+          this.outputChannel.appendLine(`  ${f.durationMs.toString().padStart(6)} ms │ ${f.name}`);
         }
       }
 

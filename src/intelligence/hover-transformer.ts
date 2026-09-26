@@ -531,17 +531,17 @@ export class HoverTransformer {
         if (typeStlDoc.complexity) {
           const timeBadge = `**Time**: \`${typeStlDoc.complexity.time}\``;
           const spaceBadge = typeStlDoc.complexity.space
-            ? ` | 💾 **Space**: \`${typeStlDoc.complexity.space}\``
+            ? ` | **Space**: \`${typeStlDoc.complexity.space}\``
             : '';
-          md.appendMarkdown(`⏱️ **Complexity**: ${timeBadge}${spaceBadge}\n\n`);
+          md.appendMarkdown(`**Complexity**: ${timeBadge}${spaceBadge}\n\n`);
         }
 
         if (typeStlDoc.exceptionSafety) {
-          md.appendMarkdown(`🛡️ **Exception Safety**: ${typeStlDoc.exceptionSafety}\n\n`);
+          md.appendMarkdown(`**Exception Safety**: ${typeStlDoc.exceptionSafety}\n\n`);
         }
 
         if (typeStlDoc.invalidation) {
-          md.appendMarkdown(`> ⚠️ **Iterator Invalidation**: ${typeStlDoc.invalidation}\n\n`);
+          md.appendMarkdown(`> **Iterator Invalidation**: ${typeStlDoc.invalidation}\n\n`);
         }
 
         if (typeStlDoc.example) {
@@ -557,7 +557,7 @@ export class HoverTransformer {
 
         md.appendMarkdown('---\n');
         md.appendMarkdown(
-          `[📖 cppreference: ${typeStlDoc.symbol}](${typeStlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+          `[cppreference: ${typeStlDoc.symbol}](${typeStlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
         );
         return new vscode.Hover(md, hover.range);
       }
@@ -638,19 +638,19 @@ export class HoverTransformer {
       if (stlDoc.complexity) {
         const timeBadge = `**Time**: \`${stlDoc.complexity.time}\``;
         const spaceBadge = stlDoc.complexity.space
-          ? ` | 💾 **Space**: \`${stlDoc.complexity.space}\``
+          ? ` | **Space**: \`${stlDoc.complexity.space}\``
           : '';
-        md.appendMarkdown(`⏱️ **Complexity**: ${timeBadge}${spaceBadge}\n\n`);
+        md.appendMarkdown(`**Complexity**: ${timeBadge}${spaceBadge}\n\n`);
       }
 
       // Exception Safety
       if (stlDoc.exceptionSafety) {
-        md.appendMarkdown(`🛡️ **Exception Safety**: ${stlDoc.exceptionSafety}\n\n`);
+        md.appendMarkdown(`**Exception Safety**: ${stlDoc.exceptionSafety}\n\n`);
       }
 
       // Iterator Invalidation
       if (stlDoc.invalidation) {
-        md.appendMarkdown(`> ⚠️ **Iterator Invalidation**: ${stlDoc.invalidation}\n\n`);
+        md.appendMarkdown(`> **Iterator Invalidation**: ${stlDoc.invalidation}\n\n`);
       }
 
       // Parameters table with curated STL explanations
@@ -692,7 +692,7 @@ export class HoverTransformer {
       // Documentation & Action links
       md.appendMarkdown('---\n');
       md.appendMarkdown(
-        `[📖 cppreference: ${stlDoc.symbol}](${stlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+        `[cppreference: ${stlDoc.symbol}](${stlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
       );
     } else {
       // --- User-Defined Function AST Card ---

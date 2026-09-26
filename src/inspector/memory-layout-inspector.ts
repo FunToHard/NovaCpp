@@ -260,11 +260,11 @@ export function generateLayoutMarkdown(layout: StructLayout): vscode.MarkdownStr
   md.isTrusted = true;
   md.supportHtml = true;
 
-  md.appendMarkdown(`### 📐 Memory Layout: \`${layout.name}\`\n\n`);
+  md.appendMarkdown(`### Memory Layout: \`${layout.name}\`\n\n`);
   md.appendMarkdown(`- **Total Size**: \`${layout.totalSize} bytes\`\n`);
   md.appendMarkdown(`- **Alignment**: \`${layout.alignment} bytes\`\n`);
   md.appendMarkdown(`- **Padding Overhead**: \`${layout.paddingBytes} bytes\` (${layout.totalSize > 0 ? Math.round((layout.paddingBytes / layout.totalSize) * 100) : 0}%)\n`);
-  md.appendMarkdown(`- **Cache Lines (64B)**: \`${layout.cacheLines}\` ${layout.cacheLines > 1 ? '⚠️ *Straddles multiple cache lines*' : '✅ *Fits in 1 cache line*'}\n\n`);
+  md.appendMarkdown(`- **Cache Lines (64B)**: \`${layout.cacheLines}\` ${layout.cacheLines > 1 ? '[Warning: Straddles multiple cache lines]' : '[Fits in 1 cache line]'}\n\n`);
 
   md.appendMarkdown('| Offset | Size | Field | Type |\n');
   md.appendMarkdown('| :--- | :--- | :--- | :--- |\n');
@@ -278,7 +278,7 @@ export function generateLayoutMarkdown(layout: StructLayout): vscode.MarkdownStr
   }
 
   if (layout.recommendation) {
-    md.appendMarkdown(`\n> 💡 **Optimization Tip**: ${layout.recommendation}\n`);
+    md.appendMarkdown(`\n> **Optimization Tip**: ${layout.recommendation}\n`);
   }
 
   return md;

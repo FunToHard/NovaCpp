@@ -156,7 +156,7 @@ export function formatHierarchyGraphAscii(graph: HierarchyGraph): string {
   if (inheritsEdges.length > 0) {
     lines.push(`▲ Base Classes / Interfaces:`);
     for (const e of inheritsEdges) {
-      lines.push(`   └── 🏛️  ${e.to}`);
+      lines.push(`   └── ${e.to}`);
     }
   }
 
@@ -167,7 +167,7 @@ export function formatHierarchyGraphAscii(graph: HierarchyGraph): string {
   if (derivedEdges.length > 0) {
     lines.push(`▼ Derived Subclasses:`);
     for (const e of derivedEdges) {
-      lines.push(`   └── 🏷️  ${e.from}`);
+      lines.push(`   └── ${e.from}`);
     }
   }
 

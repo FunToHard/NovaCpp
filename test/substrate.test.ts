@@ -123,7 +123,7 @@ describe('Language Server Substrate & Clangd Configuration', () => {
       const docStr = (item.documentation as any).value;
       assert.ok(docStr.includes('### `std::vector::push_back` *(Standard Library)*'));
       assert.ok(docStr.includes('`[<vector>]`'));
-      assert.ok(docStr.includes('⏱️ **Complexity**:'));
+      assert.ok(docStr.includes('**Complexity**:'));
       assert.ok(docStr.includes('#### Example'));
       assert.ok(item.detail?.includes('[<vector>]'));
     });

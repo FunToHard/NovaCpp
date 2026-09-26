@@ -86,17 +86,17 @@ export function enrichCompletionItemWithStl(item: vscode.CompletionItem): void {
     if (docEntry.complexity) {
       const timeBadge = `**Time**: \`${docEntry.complexity.time}\``;
       const spaceBadge = docEntry.complexity.space
-        ? ` | 💾 **Space**: \`${docEntry.complexity.space}\``
+        ? ` | **Space**: \`${docEntry.complexity.space}\``
         : '';
-      md.appendMarkdown(`⏱️ **Complexity**: ${timeBadge}${spaceBadge}\n\n`);
+      md.appendMarkdown(`**Complexity**: ${timeBadge}${spaceBadge}\n\n`);
     }
 
     if (docEntry.exceptionSafety) {
-      md.appendMarkdown(`🛡️ **Exception Safety**: ${docEntry.exceptionSafety}\n\n`);
+      md.appendMarkdown(`**Exception Safety**: ${docEntry.exceptionSafety}\n\n`);
     }
 
     if (docEntry.invalidation) {
-      md.appendMarkdown(`> ⚠️ **Iterator Invalidation**: ${docEntry.invalidation}\n\n`);
+      md.appendMarkdown(`> **Iterator Invalidation**: ${docEntry.invalidation}\n\n`);
     }
 
     if (docEntry.example) {
@@ -106,7 +106,7 @@ export function enrichCompletionItemWithStl(item: vscode.CompletionItem): void {
     }
 
     md.appendMarkdown('---\n');
-    md.appendMarkdown(`[📖 cppreference: ${docEntry.symbol}](${docEntry.docUrl})`);
+    md.appendMarkdown(`[cppreference: ${docEntry.symbol}](${docEntry.docUrl})`);
 
     item.documentation = md;
     const headerTag = `[${docEntry.header}]`;

@@ -234,7 +234,7 @@ int x = 42;
       const layout = calculateStructLayout('Simple', fields);
       const md = generateLayoutMarkdown(layout);
 
-      assert.ok(md.value.includes('### 📐 Memory Layout: `Simple`'));
+      assert.ok(md.value.includes('### Memory Layout: `Simple`'));
       assert.ok(md.value.includes('Offset'));
     });
   });
