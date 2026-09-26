@@ -1,9 +1,11 @@
 pub mod cmake;
+pub mod memory_layout;
 pub mod solution;
 pub mod time_trace;
 
 use napi_derive::napi;
 pub use cmake::*;
+pub use memory_layout::*;
 pub use solution::*;
 pub use time_trace::*;
 
