@@ -202,7 +202,7 @@ make_unique<geometry::Cube, <double>, 0>(double &&_Args)`;
       assert.ok(content.includes('https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique'));
     });
 
-    it('should enrich container member functions using class scope hint', () => {
+    it('should enrich container member functions using class scope hint and render complexity, invalidation, and exception safety', () => {
       const rawCode = `\`\`\`cpp\n// In class std::vector<int>\nvoid push_back(const int &_Val)\n\`\`\``;
 
       const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
@@ -214,6 +214,30 @@ make_unique<geometry::Cube, <double>, 0>(double &&_Args)`;
       assert.ok(content.includes('`[<vector>]`'));
       assert.ok(content.includes('Appends the given element'));
       assert.ok(content.includes('`value`'));
+      assert.ok(content.includes('⏱️ **Complexity**: **Time**: `Amortized O(1); O(N) when vector reallocates capacity`'));
+      assert.ok(content.includes('🛡️ **Exception Safety**:'));
+      assert.ok(content.includes('> ⚠️ **Iterator Invalidation**:'));
+      assert.ok(content.includes('#### Example'));
+      assert.ok(content.includes('words.push_back("hello");'));
+    });
+
+    it('should enrich STL type hover when hovering over std::vector class definition', () => {
+      const rawCode = `\`\`\`cpp\n// In namespace std\ntemplate <typename T, typename Allocator = std::allocator<T>>\nclass vector\n\`\`\``;
+
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
+      const transformed = HoverTransformer.transform(inputHover);
+
+      assert.ok(transformed);
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      assert.ok(content.includes('### `std::vector` *(Standard Library)*'));
+      assert.ok(content.includes('`[<vector>]`'));
+      assert.ok(content.includes('`[C++98]`'));
+      assert.ok(content.includes('Sequence container that encapsulates dynamic size arrays'));
+      assert.ok(content.includes('⏱️ **Complexity**:'));
+      assert.ok(content.includes('> ⚠️ **Iterator Invalidation**:'));
+      assert.ok(content.includes('#### Example'));
+      assert.ok(content.includes('std::vector<int> numbers = {1, 2, 3, 4};'));
+      assert.ok(content.includes('**See Also**:'));
     });
   });
 });

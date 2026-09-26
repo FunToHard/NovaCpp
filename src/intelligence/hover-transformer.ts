@@ -499,6 +499,62 @@ export class HoverTransformer {
 
     const sig = parseSignature(codeBlock);
     if (!sig) {
+      // Check if this type definition corresponds to a known STL type (e.g. std::vector, std::string)
+      let typeStlDoc = null;
+      const typeMatch = codeBlock.match(/(?:class|struct|using)\s+([A-Za-z0-9_:]+)/);
+      if (typeMatch) {
+        typeStlDoc = findStlDocumentation(typeMatch[1]);
+      } else {
+        const words = codeBlock.trim().split(/[\s<({]/);
+        if (words[0]) {
+          typeStlDoc = findStlDocumentation(words[0]);
+        }
+      }
+
+      if (typeStlDoc) {
+        const md = new vscode.MarkdownString();
+        md.isTrusted = true;
+        md.appendMarkdown(`### \`${typeStlDoc.symbol}\` *(Standard Library)*\n\n`);
+        md.appendMarkdown(
+          `**Standard**: \`[Standard Library]\` \`[${typeStlDoc.header}]\` \`[${typeStlDoc.standard}]\`\n\n`
+        );
+        md.appendCodeblock(typeStlDoc.canonicalSignature, 'cpp');
+        md.appendMarkdown(`${typeStlDoc.summary}\n\n`);
+
+        if (typeStlDoc.complexity) {
+          const timeBadge = `**Time**: \`${typeStlDoc.complexity.time}\``;
+          const spaceBadge = typeStlDoc.complexity.space
+            ? ` | 💾 **Space**: \`${typeStlDoc.complexity.space}\``
+            : '';
+          md.appendMarkdown(`⏱️ **Complexity**: ${timeBadge}${spaceBadge}\n\n`);
+        }
+
+        if (typeStlDoc.exceptionSafety) {
+          md.appendMarkdown(`🛡️ **Exception Safety**: ${typeStlDoc.exceptionSafety}\n\n`);
+        }
+
+        if (typeStlDoc.invalidation) {
+          md.appendMarkdown(`> ⚠️ **Iterator Invalidation**: ${typeStlDoc.invalidation}\n\n`);
+        }
+
+        if (typeStlDoc.example) {
+          md.appendMarkdown('#### Example\n\n');
+          md.appendCodeblock(typeStlDoc.example, 'cpp');
+          md.appendMarkdown('\n');
+        }
+
+        if (typeStlDoc.seeAlso && typeStlDoc.seeAlso.length > 0) {
+          const seeAlsoLinks = typeStlDoc.seeAlso.map((s) => `\`${s}\``).join(', ');
+          md.appendMarkdown(`**See Also**: ${seeAlsoLinks}\n\n`);
+        }
+
+        md.appendMarkdown('---\n');
+        md.appendMarkdown(
+          `[📖 cppreference: ${typeStlDoc.symbol}](${typeStlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+        );
+        return new vscode.Hover(md, hover.range);
+      }
+
       // If not a function signature (e.g. struct/class definition or variable), format cleanly
       const isStructOrClass =
         codeBlock.includes('class ') || codeBlock.includes('struct ') || codeBlock.includes('union ');
@@ -571,6 +627,25 @@ export class HoverTransformer {
       // Summary description
       md.appendMarkdown(`${stlDoc.summary}\n\n`);
 
+      // Complexity
+      if (stlDoc.complexity) {
+        const timeBadge = `**Time**: \`${stlDoc.complexity.time}\``;
+        const spaceBadge = stlDoc.complexity.space
+          ? ` | 💾 **Space**: \`${stlDoc.complexity.space}\``
+          : '';
+        md.appendMarkdown(`⏱️ **Complexity**: ${timeBadge}${spaceBadge}\n\n`);
+      }
+
+      // Exception Safety
+      if (stlDoc.exceptionSafety) {
+        md.appendMarkdown(`🛡️ **Exception Safety**: ${stlDoc.exceptionSafety}\n\n`);
+      }
+
+      // Iterator Invalidation
+      if (stlDoc.invalidation) {
+        md.appendMarkdown(`> ⚠️ **Iterator Invalidation**: ${stlDoc.invalidation}\n\n`);
+      }
+
       // Parameters table with curated STL explanations
       if (sig.parameters.length > 0) {
         md.appendMarkdown('#### Parameters\n\n');
@@ -593,6 +668,19 @@ export class HoverTransformer {
       // Returns section
       const retDoc = stlDoc.returns ? ` - ${stlDoc.returns}` : '';
       md.appendMarkdown(`**Returns**: \`${sig.returnType}\`${retDoc}\n\n`);
+
+      // Code example
+      if (stlDoc.example) {
+        md.appendMarkdown('#### Example\n\n');
+        md.appendCodeblock(stlDoc.example, 'cpp');
+        md.appendMarkdown('\n');
+      }
+
+      // See Also
+      if (stlDoc.seeAlso && stlDoc.seeAlso.length > 0) {
+        const seeAlsoLinks = stlDoc.seeAlso.map((s) => `\`${s}\``).join(', ');
+        md.appendMarkdown(`**See Also**: ${seeAlsoLinks}\n\n`);
+      }
 
       // Documentation & Action links
       md.appendMarkdown('---\n');
