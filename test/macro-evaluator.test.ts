@@ -140,5 +140,17 @@ describe('Macro Expansion & constexpr Evaluator', () => {
       assert.strictEqual(res.success, false);
       assert.ok(res.error);
     });
+
+    it('should evaluate mixed BigInt and standard integer expressions with LL/ULL suffixes', () => {
+      const e = evaluateConstexprExpression('1 + 2LL');
+      assert.strictEqual(e.success, true);
+      assert.strictEqual(e.value, 3n);
+      assert.strictEqual(e.type, 'int64_t');
+
+      const e2 = evaluateConstexprExpression('(1024ULL * 1024) + 0x10');
+      assert.strictEqual(e2.success, true);
+      assert.strictEqual(e2.value, 1048576n + 16n);
+      assert.strictEqual(e2.type, 'int64_t');
+    });
   });
 });

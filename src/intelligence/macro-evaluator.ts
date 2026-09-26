@@ -277,6 +277,11 @@ export function evaluateConstexprExpression(
   clean = clean.replace(/(\d+)LL\b/gi, '$1n');
   clean = clean.replace(/(\d+)[UL]+\b/gi, '$1');
 
+  if (/\d+n\b/.test(clean)) {
+    // If any BigInt literal exists, promote remaining bare integers and hex/binary literals to BigInt literals
+    clean = clean.replace(/\b(0x[0-9a-fA-F]+|0b[01]+|\d+)\b(?!n)/g, '$1n');
+  }
+
   // Handle C++ hex literals: 0x...
   // Handle binary literals: 0b...
   // Handle bitwise operators: <<, >>, |, &, ^, ~
