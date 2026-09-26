@@ -150,10 +150,10 @@ describe('Include Tree & Build Time Bottleneck Visualizer', () => {
       const sampleTrace = JSON.stringify({
         traceEvents: [
           { name: 'ExecuteCompiler', ph: 'X', ts: 0, dur: 500000 }, // 500ms
-          { name: 'Source', ph: 'X', ts: 10, dur: 180000, args: { detail: '/usr/include/boost/asio.hpp' } },
-          { name: 'Source', ph: 'X', ts: 200, dur: 120000, args: { detail: '/usr/include/iostream' } },
-          { name: 'InstantiateFunction', ph: 'X', ts: 350, dur: 85000, args: { detail: 'std::vector<MyStruct>::emplace_back' } },
-          { name: 'OptFunction', ph: 'X', ts: 450, dur: 45000, args: { detail: 'MatrixMultiply' } }
+          { name: 'Source', ph: 'X', ts: 10000, dur: 180000, args: { detail: '/usr/include/boost/asio.hpp' } },
+          { name: 'Source', ph: 'X', ts: 200000, dur: 120000, args: { detail: '/usr/include/iostream' } },
+          { name: 'InstantiateFunction', ph: 'X', ts: 350000, dur: 85000, args: { detail: 'std::vector<MyStruct>::emplace_back' } },
+          { name: 'OptFunction', ph: 'X', ts: 450000, dur: 45000, args: { detail: 'MatrixMultiply' } }
         ]
       });
 
@@ -172,6 +172,45 @@ describe('Include Tree & Build Time Bottleneck Visualizer', () => {
       assert.strictEqual(summary.slowestFunctions.length, 1);
       assert.strictEqual(summary.slowestFunctions[0].name, 'MatrixMultiply');
       assert.strictEqual(summary.slowestFunctions[0].durationMs, 45);
+    });
+
+    it('should calculate self-time by subtracting nested child durations in Clang time trace events', () => {
+      const nestedTrace = JSON.stringify({
+        traceEvents: [
+          { name: 'ExecuteCompiler', ph: 'X', ts: 0, dur: 1000000 }, // 1000ms
+          // main.cpp: 0 to 1000ms (1000000us)
+          { name: 'Source', ph: 'X', ts: 0, dur: 1000000, args: { detail: '/src/main.cpp' } },
+          // a.h: 100ms to 500ms (400000us) inside main.cpp
+          { name: 'Source', ph: 'X', ts: 100000, dur: 400000, args: { detail: '/src/a.h' } },
+          // b.h: 200ms to 350ms (150000us) inside a.h
+          { name: 'Source', ph: 'X', ts: 200000, dur: 150000, args: { detail: '/src/b.h' } }
+        ]
+      });
+
+      const summary = parseFTimeTrace(nestedTrace);
+      assert.strictEqual(summary.totalDurationMs, 1000);
+
+      // Verify self-times:
+      // b.h: 150ms
+      // a.h: 400ms - 150ms = 250ms
+      // main.cpp: 1000ms - 400ms = 600ms
+      const main = summary.slowestHeaders.find(h => h.file === '/src/main.cpp');
+      const a = summary.slowestHeaders.find(h => h.file === '/src/a.h');
+      const b = summary.slowestHeaders.find(h => h.file === '/src/b.h');
+
+      assert.ok(main && a && b);
+      assert.strictEqual(main!.durationMs, 600);
+      assert.strictEqual(main!.percentage, 60);
+
+      assert.strictEqual(a!.durationMs, 250);
+      assert.strictEqual(a!.percentage, 25);
+
+      assert.strictEqual(b!.durationMs, 150);
+      assert.strictEqual(b!.percentage, 15);
+
+      // Sum of percentages must equal 100%, never > 100%
+      const totalPercentage = main!.percentage + a!.percentage + b!.percentage;
+      assert.strictEqual(totalPercentage, 100);
     });
   });
 });

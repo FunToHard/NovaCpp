@@ -26,6 +26,8 @@ export interface TimeTraceEvent {
   ph: string;
   ts: number;
   dur: number; // in microseconds
+  tid?: number;
+  pid?: number;
   args?: {
     detail?: string;
   };
@@ -264,16 +266,21 @@ export function parseFTimeTrace(jsonContent: string): TimeTraceSummary {
   const headerMap = new Map<string, number>();
   const templateMap = new Map<string, number>();
   const functionMap = new Map<string, number>();
+  const sourceEventsByThread = new Map<number | string, TimeTraceEvent[]>();
 
   for (const event of traceEvents) {
     if (event.name === 'Total ExecuteCompiler' || event.name === 'ExecuteCompiler') {
       totalDurationUs = Math.max(totalDurationUs, event.dur || 0);
     }
 
-    if (event.name === 'Source' && event.args?.detail) {
-      const header = event.args.detail;
-      const current = headerMap.get(header) || 0;
-      headerMap.set(header, current + (event.dur || 0));
+    if (event.name === 'Source' && event.args?.detail && event.dur) {
+      const tid = event.tid ?? 0;
+      let list = sourceEventsByThread.get(tid);
+      if (!list) {
+        list = [];
+        sourceEventsByThread.set(tid, list);
+      }
+      list.push(event);
     } else if (event.name === 'InstantiateFunction' || event.name === 'InstantiateClass') {
       const detail = event.args?.detail || 'anonymous_template';
       const current = templateMap.get(detail) || 0;
@@ -282,6 +289,56 @@ export function parseFTimeTrace(jsonContent: string): TimeTraceSummary {
       const detail = event.args?.detail || 'function';
       const current = functionMap.get(detail) || 0;
       functionMap.set(detail, current + (event.dur || 0));
+    }
+  }
+
+  // Calculate self-time for Source events by subtracting nested intervals
+  for (const [, events] of sourceEventsByThread) {
+    const hasTimestamps = events.every((e) => e.ts !== undefined);
+    if (!hasTimestamps) {
+      for (const e of events) {
+        const file = e.args!.detail!;
+        headerMap.set(file, (headerMap.get(file) || 0) + (e.dur || 0));
+      }
+      continue;
+    }
+
+    // Sort by timestamp ascending; if same start time, outer interval (larger dur) comes first
+    events.sort((a, b) => (a.ts! !== b.ts! ? a.ts! - b.ts! : (b.dur || 0) - (a.dur || 0)));
+
+    const stack: { file: string; endTs: number; childDur: number; totalDur: number }[] = [];
+
+    for (const e of events) {
+      const start = e.ts!;
+      const dur = e.dur || 0;
+      const end = start + dur;
+      const file = e.args!.detail!;
+
+      // Pop finished intervals
+      while (stack.length > 0 && stack[stack.length - 1].endTs <= start) {
+        const top = stack.pop()!;
+        const selfTime = Math.max(0, top.totalDur - top.childDur);
+        headerMap.set(top.file, (headerMap.get(top.file) || 0) + selfTime);
+      }
+
+      if (stack.length > 0) {
+        // Direct child interval nested within top of stack
+        stack[stack.length - 1].childDur += dur;
+      }
+
+      stack.push({
+        file,
+        endTs: end,
+        childDur: 0,
+        totalDur: dur
+      });
+    }
+
+    // Pop remaining intervals on stack
+    while (stack.length > 0) {
+      const top = stack.pop()!;
+      const selfTime = Math.max(0, top.totalDur - top.childDur);
+      headerMap.set(top.file, (headerMap.get(top.file) || 0) + selfTime);
     }
   }
 
