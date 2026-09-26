@@ -103,8 +103,8 @@ export class CMakeManager implements vscode.Disposable {
     const standard = this.activeProject.cppStandard || 'c++20';
     const targetFile = outputFilePath || path.join(workspaceRoot, 'compile_commands.json');
 
-    const globalIncludes = this.activeProject.includeDirectories;
-    const globalDefs = this.activeProject.compileDefinitions;
+    const globalIncludes = this.activeProject.globalIncludeDirectories ?? this.activeProject.includeDirectories;
+    const globalDefs = this.activeProject.globalCompileDefinitions ?? this.activeProject.compileDefinitions;
 
     const entries: {
       directory: string;

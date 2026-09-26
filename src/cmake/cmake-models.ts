@@ -10,7 +10,9 @@ export interface CMakeProjectInfo {
   workspaceRoot: string;
   cmakeListsPath: string;
   includeDirectories: string[];
+  globalIncludeDirectories?: string[];
   compileDefinitions: string[];
+  globalCompileDefinitions?: string[];
   cppStandard?: string;
   cStandard?: string;
   targets: CMakeTargetInfo[];

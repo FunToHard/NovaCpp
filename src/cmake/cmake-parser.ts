@@ -143,7 +143,9 @@ export class CMakeParser {
     visitedFiles: Set<string> = new Set()
   ): {
     includeDirectories: string[];
+    globalIncludeDirectories?: string[];
     compileDefinitions: string[];
+    globalCompileDefinitions?: string[];
     cppStandard?: string;
     cStandard?: string;
     targets: CMakeTargetInfo[];
@@ -153,7 +155,9 @@ export class CMakeParser {
     if (visitedFiles.has(normalizedFilePath.toLowerCase())) {
       return {
         includeDirectories: [],
+        globalIncludeDirectories: [],
         compileDefinitions: [],
+        globalCompileDefinitions: [],
         targets: [],
         subdirectories: []
       };
@@ -162,7 +166,9 @@ export class CMakeParser {
 
     const result = {
       includeDirectories: [] as string[],
+      globalIncludeDirectories: [] as string[],
       compileDefinitions: [] as string[],
+      globalCompileDefinitions: [] as string[],
       cppStandard: undefined as string | undefined,
       cStandard: undefined as string | undefined,
       targets: [] as CMakeTargetInfo[],
@@ -207,7 +213,15 @@ export class CMakeParser {
     };
 
     const addInclude = (rawPath: string, target?: CMakeTargetInfo) => {
-      const resolved = resolveVariables(rawPath).trim();
+      let candidate = rawPath.trim();
+      const buildInterfaceMatch = candidate.match(/\$<BUILD_INTERFACE:([^>]+)>/i);
+      if (buildInterfaceMatch) {
+        candidate = buildInterfaceMatch[1].trim();
+      } else if (candidate.includes('$<INSTALL_INTERFACE:')) {
+        return; // Skip install-only interface paths
+      }
+
+      const resolved = resolveVariables(candidate).trim();
       if (!resolved || resolved.startsWith('$') || resolved.includes('<') || resolved.includes('>')) {
         return; // Skip unresolved generator expressions or missing variables
       }
@@ -225,8 +239,14 @@ export class CMakeParser {
       if (!result.includeDirectories.includes(normalized)) {
         result.includeDirectories.push(normalized);
       }
-      if (target && !target.includeDirectories.includes(normalized)) {
-        target.includeDirectories.push(normalized);
+      if (!target) {
+        if (!result.globalIncludeDirectories.includes(normalized)) {
+          result.globalIncludeDirectories.push(normalized);
+        }
+      } else {
+        if (!target.includeDirectories.includes(normalized)) {
+          target.includeDirectories.push(normalized);
+        }
       }
     };
 
@@ -246,8 +266,14 @@ export class CMakeParser {
       if (!result.compileDefinitions.includes(resolved)) {
         result.compileDefinitions.push(resolved);
       }
-      if (target && !target.compileDefinitions.includes(resolved)) {
-        target.compileDefinitions.push(resolved);
+      if (!target) {
+        if (!result.globalCompileDefinitions.includes(resolved)) {
+          result.globalCompileDefinitions.push(resolved);
+        }
+      } else {
+        if (!target.compileDefinitions.includes(resolved)) {
+          target.compileDefinitions.push(resolved);
+        }
       }
     };
 
@@ -448,9 +474,23 @@ export class CMakeParser {
                   result.includeDirectories.push(inc);
                 }
               }
+              if (subParsed.globalIncludeDirectories) {
+                for (const inc of subParsed.globalIncludeDirectories) {
+                  if (!result.globalIncludeDirectories.includes(inc)) {
+                    result.globalIncludeDirectories.push(inc);
+                  }
+                }
+              }
               for (const def of subParsed.compileDefinitions) {
                 if (!result.compileDefinitions.includes(def)) {
                   result.compileDefinitions.push(def);
+                }
+              }
+              if (subParsed.globalCompileDefinitions) {
+                for (const def of subParsed.globalCompileDefinitions) {
+                  if (!result.globalCompileDefinitions.includes(def)) {
+                    result.globalCompileDefinitions.push(def);
+                  }
                 }
               }
               for (const subTarget of subParsed.targets) {
@@ -487,9 +527,23 @@ export class CMakeParser {
                     result.includeDirectories.push(inc);
                   }
                 }
+                if (incParsed.globalIncludeDirectories) {
+                  for (const inc of incParsed.globalIncludeDirectories) {
+                    if (!result.globalIncludeDirectories.includes(inc)) {
+                      result.globalIncludeDirectories.push(inc);
+                    }
+                  }
+                }
                 for (const def of incParsed.compileDefinitions) {
                   if (!result.compileDefinitions.includes(def)) {
                     result.compileDefinitions.push(def);
+                  }
+                }
+                if (incParsed.globalCompileDefinitions) {
+                  for (const def of incParsed.globalCompileDefinitions) {
+                    if (!result.globalCompileDefinitions.includes(def)) {
+                      result.globalCompileDefinitions.push(def);
+                    }
                   }
                 }
                 break;
@@ -522,7 +576,9 @@ export class CMakeParser {
       workspaceRoot,
       cmakeListsPath: rootCMake,
       includeDirectories: parsed.includeDirectories,
+      globalIncludeDirectories: parsed.globalIncludeDirectories,
       compileDefinitions: parsed.compileDefinitions,
+      globalCompileDefinitions: parsed.globalCompileDefinitions,
       cppStandard: parsed.cppStandard,
       cStandard: parsed.cStandard,
       targets: parsed.targets,

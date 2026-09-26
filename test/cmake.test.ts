@@ -291,6 +291,39 @@ describe('CMake Static Include Extraction & IntelliSense Integration', () => {
 
       manager.dispose();
     });
+
+    it('should isolate target private includes and unwrap BUILD_INTERFACE generator expressions', () => {
+      const cmakeLists = path.join(tempDir, 'CMakeLists.txt');
+      fs.writeFileSync(
+        cmakeLists,
+        `
+        project(MultiTarget)
+        include_directories(common_inc)
+        add_executable(TargetA a.cpp)
+        target_include_directories(TargetA PRIVATE target_a_private $<BUILD_INTERFACE:\${CMAKE_CURRENT_SOURCE_DIR}/build_only>)
+        add_executable(TargetB b.cpp)
+        target_include_directories(TargetB PRIVATE target_b_private)
+        `,
+        'utf8'
+      );
+
+      const parsed = CMakeParser.parseWorkspace(tempDir);
+      assert.ok(parsed);
+      assert.strictEqual(parsed.targets.length, 2);
+
+      const targetA = parsed.targets.find(t => t.name === 'TargetA');
+      const targetB = parsed.targets.find(t => t.name === 'TargetB');
+      assert.ok(targetA && targetB);
+
+      const norm = (p: string) => path.join(tempDir, p).replace(/\\/g, '/');
+      assert.ok(targetA.includeDirectories.includes(norm('target_a_private')));
+      assert.ok(targetA.includeDirectories.includes(norm('build_only')));
+      assert.strictEqual(targetB.includeDirectories.includes(norm('target_a_private')), false);
+
+      assert.ok(parsed.globalIncludeDirectories);
+      assert.ok(parsed.globalIncludeDirectories.includes(norm('common_inc')));
+      assert.strictEqual(parsed.globalIncludeDirectories.includes(norm('target_a_private')), false);
+    });
   });
 
   describe('CMakeDetector', () => {
