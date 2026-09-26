@@ -211,21 +211,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     inlayHintManager
   );
 
-  // Auto-synthesize configuration and discover external SDKs in workspace root
+  // Auto-discover external SDKs in workspace root if enabled
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
     const rootPath = workspaceFolders[0].uri.fsPath;
     const config = vscode.workspace.getConfiguration('novacpp');
     if (config.get<boolean>('discovery.detectExternalSdks', true)) {
       ExternalSdkDetector.syncWorkspaceClangdConfig(rootPath);
-    }
-    try {
-      const generated = await synthesizer.synthesizeFlagsFile(rootPath);
-      if (generated) {
-        console.log(`NovaCpp: Synthesized compile_flags.txt at ${generated}`);
-      }
-    } catch (err) {
-      console.warn('NovaCpp: Could not auto-synthesize compile_flags.txt:', err);
     }
   }
 

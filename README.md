@@ -37,7 +37,7 @@ NovaCpp combines the blazing index and AST completion speed of LLVM's **`clangd`
 
 ### 2. Zero-Configuration Compiler & SDK Discovery
 - **Automatic Compiler Probing**: Detects installed MSVC (`cl.exe`), Clang (`clang++`), GCC/MinGW (`g++`), and WSL toolchains without manual path configuration.
-- **Flags Synthesis**: Automatically generates `compile_flags.txt` and `compile_commands.json` for single-file scripts and unstructured projects.
+- **Flags Synthesis**: Generates `compile_flags.txt` on-demand via the Command Palette (`NovaCpp: Generate compile_flags.txt`) and synthesizes compilation flags for single-file scripts and unstructured projects.
 - **Ecosystem & SDK Discovery**: Out-of-the-box detection of common graphics and system SDKs:
   - **Vulkan SDK** (`C:\VulkanSDK\<version>` or `$VULKAN_SDK`)
   - **raylib** (`C:\raylib` or `/usr/local/include/raylib`)

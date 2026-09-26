@@ -220,14 +220,16 @@ export class ProfileManager implements vscode.Disposable {
     this.activeProfile = picked.profile;
     this.updateStatusBar();
 
-    // Auto-update compile_flags.txt if in workspace
+    // Update compile_flags.txt if already present in workspace
     if (wsRoot) {
       try {
-        const compiler = await this.detector.getPreferredCompiler();
-        if (compiler) {
-          const flags = this.synthesizeProfileFlags(this.activeProfile, wsRoot, compiler);
-          const flagsPath = path.join(wsRoot, 'compile_flags.txt');
-          await fs.promises.writeFile(flagsPath, flags.join('\n') + '\n', 'utf8');
+        const flagsPath = path.join(wsRoot, 'compile_flags.txt');
+        if (fs.existsSync(flagsPath)) {
+          const compiler = await this.detector.getPreferredCompiler();
+          if (compiler) {
+            const flags = this.synthesizeProfileFlags(this.activeProfile, wsRoot, compiler);
+            await fs.promises.writeFile(flagsPath, flags.join('\n') + '\n', 'utf8');
+          }
         }
       } catch (err) {
         console.warn('NovaCpp: Could not update compile_flags.txt on profile change:', err);
