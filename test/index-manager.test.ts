@@ -43,4 +43,29 @@ describe('IndexManager', () => {
     assert.strictEqual(fs.existsSync(indexDir), false);
     assert.strictEqual(fs.existsSync(cacheDir), false);
   });
+
+  it('should call onStopServer before deleting index files to release Windows file locks', async () => {
+    const clangdDir = path.join(tempDir, '.clangd');
+    const indexDir = path.join(clangdDir, 'index');
+    await fs.promises.mkdir(indexDir, { recursive: true });
+    await fs.promises.writeFile(path.join(indexDir, 'locked.idx'), 'data');
+
+    const executionOrder: string[] = [];
+
+    const result = await IndexManager.resetIndex(
+      tempDir,
+      async () => {
+        executionOrder.push('restartServer');
+      },
+      async () => {
+        executionOrder.push('stopServer');
+        // Verify index files still exist when stopServer is called
+        assert.strictEqual(fs.existsSync(indexDir), true);
+      }
+    );
+
+    assert.strictEqual(result, true);
+    assert.deepStrictEqual(executionOrder, ['stopServer', 'restartServer']);
+    assert.strictEqual(fs.existsSync(indexDir), false);
+  });
 });

@@ -8,13 +8,19 @@ export class IndexManager {
    */
   public static async resetIndex(
     workspaceRoot?: string,
-    onRestartServer?: () => Promise<void>
+    onRestartServer?: () => Promise<void>,
+    onStopServer?: () => Promise<void>
   ): Promise<boolean> {
     const root =
       workspaceRoot ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!root) {
       vscode.window.showWarningMessage('NovaCpp: No workspace folder open to reset index.');
       return false;
+    }
+
+    // Stop language server to release open file handles on Windows before deleting
+    if (onStopServer) {
+      await onStopServer();
     }
 
     const candidateDirs = [

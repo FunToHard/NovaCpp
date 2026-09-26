@@ -413,9 +413,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await DiagnosticsLogger.logDiagnostics(detector, extractor, solutionManager, stlCollector);
     }),
     vscode.commands.registerCommand('novacpp.resetIndex', async () => {
-      await IndexManager.resetIndex(undefined, async () => {
-        await daemonManager?.restart();
-      });
+      await IndexManager.resetIndex(
+        undefined,
+        async () => {
+          await daemonManager?.start();
+        },
+        async () => {
+          await daemonManager?.stop();
+        }
+      );
     }),
     vscode.commands.registerCommand('novacpp.goToNextDirectiveInGroup', async () => {
       await DirectiveNavigator.goToNextDirective();
