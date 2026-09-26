@@ -53,6 +53,14 @@ describe('STL Usage Telemetry & Adaptive Ranking Subsystem', () => {
       };
       assert.strictEqual(extractStlSymbolKey(item), null);
     });
+
+    it('should return null when custom methods are called on derived STL containers to protect privacy', () => {
+      const item: vscode.CompletionItem = {
+        label: 'custom_secret_operation',
+        detail: 'void Derived::custom_secret_operation() (in std::vector<int>)'
+      };
+      assert.strictEqual(extractStlSymbolKey(item), null);
+    });
   });
 
   describe('Empirical Ranking Table (ranking-table.ts)', () => {

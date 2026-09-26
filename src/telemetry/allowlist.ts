@@ -85,6 +85,90 @@ export const KNOWN_STL_GLOBAL_FUNCTIONS = new Set([
   'stof'
 ]);
 
+export const KNOWN_STL_CONTAINER_METHODS = new Set([
+  'push_back',
+  'emplace_back',
+  'pop_back',
+  'push_front',
+  'emplace_front',
+  'pop_front',
+  'push',
+  'pop',
+  'top',
+  'insert',
+  'insert_or_assign',
+  'insert_range',
+  'emplace',
+  'emplace_hint',
+  'erase',
+  'clear',
+  'swap',
+  'assign',
+  'assign_range',
+  'append',
+  'append_range',
+  'resize',
+  'reserve',
+  'shrink_to_fit',
+  'capacity',
+  'size',
+  'length',
+  'max_size',
+  'empty',
+  'at',
+  'data',
+  'front',
+  'back',
+  'begin',
+  'cbegin',
+  'end',
+  'cend',
+  'rbegin',
+  'crbegin',
+  'rend',
+  'crend',
+  'find',
+  'count',
+  'contains',
+  'lower_bound',
+  'upper_bound',
+  'equal_range',
+  'extract',
+  'merge',
+  'key_comp',
+  'value_comp',
+  'bucket_count',
+  'max_bucket_count',
+  'bucket_size',
+  'bucket',
+  'load_factor',
+  'max_load_factor',
+  'rehash',
+  'get_allocator',
+  'substr',
+  'compare',
+  'starts_with',
+  'ends_with',
+  'c_str',
+  'copy',
+  'replace',
+  'get',
+  'reset',
+  'release',
+  'use_count',
+  'unique',
+  'has_value',
+  'value',
+  'value_or',
+  'error',
+  'index',
+  'real',
+  'imag',
+  'lock',
+  'unlock',
+  'try_lock'
+]);
+
 /**
  * Validates whether a fully qualified symbol belongs exclusively to the C++ Standard Library.
  */
@@ -123,7 +207,10 @@ export function extractStlSymbolKey(item: {
     for (const container of KNOWN_STL_CONTAINERS) {
       const containerPattern = new RegExp(`\\bstd::(?:__\\w+::)?${container}\\b`);
       if (containerPattern.test(detailStr)) {
-        return `std::${container}::${cleanSymbolSignature(trimmedLabel)}`;
+        const method = cleanSymbolSignature(trimmedLabel);
+        if (KNOWN_STL_CONTAINER_METHODS.has(method)) {
+          return `std::${container}::${method}`;
+        }
       }
     }
 
