@@ -2,6 +2,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as which from 'which';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(cp.execFile);
 
 export type CompilerType = 'msvc' | 'clang' | 'clang-cl' | 'gcc' | 'wsl-gcc' | 'wsl-clang';
 
@@ -33,14 +36,14 @@ export class CompilerDetector {
 
     // Run detections
     if (process.platform === 'win32') {
-      compilers.push(...this.detectMSVC());
+      compilers.push(...(await this.detectMSVC()));
     }
 
     compilers.push(...this.detectClang());
     compilers.push(...this.detectGCC());
 
     if (process.platform === 'win32') {
-      compilers.push(...this.detectWSL());
+      compilers.push(...(await this.detectWSL()));
     }
 
     // Deduplicate by normalized path
@@ -59,7 +62,7 @@ export class CompilerDetector {
   /**
    * Detects MSVC toolsets using vswhere.exe or default VS directories.
    */
-  public detectMSVC(): CompilerInfo[] {
+  public async detectMSVC(): Promise<CompilerInfo[]> {
     const results: CompilerInfo[] = [];
     const vswherePath = path.join(
       process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)',
@@ -76,7 +79,7 @@ export class CompilerDetector {
 
     if (fs.existsSync(vswherePath)) {
       try {
-        const stdout = cp.execFileSync(
+        const { stdout } = await execFileAsync(
           vswherePath,
           ['-latest', '-products', '*', '-format', 'json'],
           { encoding: 'utf8', timeout: 5000 }
@@ -292,7 +295,7 @@ export class CompilerDetector {
     return results;
   }
 
-  public detectWSL(): CompilerInfo[] {
+  public async detectWSL(): Promise<CompilerInfo[]> {
     const results: CompilerInfo[] = [];
     if (process.platform !== 'win32') return results;
 
@@ -302,10 +305,11 @@ export class CompilerDetector {
 
       for (const bin of ['g++', 'gcc', 'clang++']) {
         try {
-          const out = cp.execFileSync(wslPath, ['which', bin], {
+          const { stdout } = await execFileAsync(wslPath, ['which', bin], {
             encoding: 'utf8',
             timeout: 1000
-          }).trim();
+          });
+          const out = stdout.trim();
           if (out && out.startsWith('/')) {
             results.push({
               name: `WSL: ${bin} (${out})`,

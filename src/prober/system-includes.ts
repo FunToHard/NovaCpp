@@ -24,12 +24,12 @@ export class SystemIncludeExtractor {
       compiler.type === 'wsl-gcc' ||
       compiler.type === 'wsl-clang'
     ) {
-      includes = this.extractGccClangIncludes(compiler.path, compiler.argsPrefix);
+      includes = await this.extractGccClangIncludesAsync(compiler.path, compiler.argsPrefix);
     } else if (compiler.type === 'clang-cl') {
       // clang-cl can use MSVC includes if available
       includes = this.extractMSVCIncludes(compiler);
       if (includes.length === 0) {
-        includes = this.extractGccClangIncludes(compiler.path, compiler.argsPrefix);
+        includes = await this.extractGccClangIncludesAsync(compiler.path, compiler.argsPrefix);
       }
     }
 
@@ -47,6 +47,36 @@ export class SystemIncludeExtractor {
 
     this.cache.set(compiler.path, valid);
     return valid;
+  }
+
+  /**
+   * Asynchronously probes GCC or Clang using non-blocking child process execution.
+   */
+  public async extractGccClangIncludesAsync(compilerPath: string, argsPrefix: string[] = []): Promise<string[]> {
+    if (this.extractGccClangIncludes !== SystemIncludeExtractor.prototype.extractGccClangIncludes) {
+      return this.extractGccClangIncludes(compilerPath, argsPrefix);
+    }
+    try {
+      const args = [...argsPrefix, '-E', '-x', 'c++', '-', '-v'];
+      const child = cp.execFile(compilerPath, args, {
+        encoding: 'utf8',
+        timeout: 5000
+      });
+      child.stdin?.end();
+      const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        let out = '';
+        let err = '';
+        child.stdout?.on('data', (d) => { out += d; });
+        child.stderr?.on('data', (d) => { err += d; });
+        child.on('close', () => resolve({ stdout: out, stderr: err }));
+        child.on('error', reject);
+      });
+
+      const output = (stderr || '') + '\n' + (stdout || '');
+      return this.parseSearchList(output);
+    } catch {
+      return [];
+    }
   }
 
   /**
