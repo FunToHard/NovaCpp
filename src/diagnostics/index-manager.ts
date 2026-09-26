@@ -23,12 +23,10 @@ export class IndexManager {
       path.join(root, '.cache', 'clangd')
     ];
 
-    let removedAny = false;
     for (const dir of candidateDirs) {
       try {
         if (fs.existsSync(dir)) {
           await fs.promises.rm(dir, { recursive: true, force: true });
-          removedAny = true;
         }
       } catch (err) {
         console.warn(`NovaCpp: Could not remove directory ${dir}:`, err);

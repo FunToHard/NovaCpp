@@ -57,7 +57,7 @@ export class DaemonManager implements vscode.Disposable {
   private lastRestartTime = 0;
 
   constructor(
-    private readonly context: vscode.ExtensionContext,
+    _context: vscode.ExtensionContext,
     private readonly installer: ClangdInstaller,
     private readonly rankingTable: StlRankingTable = new StlRankingTable()
   ) {
@@ -188,7 +188,7 @@ export class DaemonManager implements vscode.Disposable {
       outputChannel: this.outputChannel,
       middleware: createClangdMiddleware(this.rankingTable),
       errorHandler: {
-        error: (error, message, count) => {
+        error: (error, _message, count) => {
           this.outputChannel.appendLine(`[Error] ${error.message} (${count})`);
           return { action: 1, handled: true }; // Continue
         },

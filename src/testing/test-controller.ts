@@ -16,7 +16,7 @@ export interface CppTestCase {
 /**
  * Extracts unit test definitions from C++ source files (GoogleTest, Catch2, doctest, Boost.Test).
  */
-export function extractTestsFromSource(content: string, uri?: vscode.Uri): CppTestCase[] {
+export function extractTestsFromSource(content: string, _uri?: vscode.Uri): CppTestCase[] {
   const tests: CppTestCase[] = [];
   const lines = content.split(/\r?\n/);
 
@@ -204,8 +204,8 @@ export class CppTestController implements vscode.Disposable {
   }
 
   private async runHandler(
-    request: vscode.TestRunRequest,
-    token: vscode.CancellationToken,
+    _request: vscode.TestRunRequest,
+    _token: vscode.CancellationToken,
     isDebug: boolean = false
   ): Promise<void> {
     vscode.window.showInformationMessage(

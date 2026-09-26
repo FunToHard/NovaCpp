@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { CompilerDetector, CompilerInfo } from '../prober/compiler-detector';
+import { CompilerDetector } from '../prober/compiler-detector';
 import { SystemIncludeExtractor } from '../prober/system-includes';
 import { SolutionManager } from '../solution/solution-manager';
 import { StlUsageCollector } from '../telemetry/stl-collector';

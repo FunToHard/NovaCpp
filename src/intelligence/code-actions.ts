@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { findCounterpartFile, HEADER_EXTENSIONS, isSystemHeader } from './smart-definition';
 import { DoxygenGenerator, DoxygenStyle } from '../documentation/doxygen-generator';
 import { splitParameters } from './hover-transformer';

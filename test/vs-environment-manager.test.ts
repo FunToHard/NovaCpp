@@ -1,6 +1,5 @@
 import './vscode-mock';
 import * as assert from 'assert';
-import * as vscode from 'vscode';
 import { VsEnvironmentManager } from '../src/tasks/vs-environment-manager';
 import { CompilerDetector } from '../src/prober/compiler-detector';
 

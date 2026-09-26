@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import { isAllowedStlSymbol, extractStlSymbolKey } from '../src/telemetry/allowlist';
-import { StlRankingTable, DEFAULT_STL_EMPIRICAL_WEIGHTS } from '../src/telemetry/ranking-table';
+import { StlRankingTable } from '../src/telemetry/ranking-table';
 import { StlUsageCollector } from '../src/telemetry/stl-collector';
 import { BatchDispatcher } from '../src/telemetry/batch-dispatcher';
 

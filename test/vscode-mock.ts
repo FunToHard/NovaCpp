@@ -535,7 +535,7 @@ export const mockVscode: any = {
       dispose: () => {},
       options
     }),
-    createWebviewPanel: (viewType: string, title: string, showOptions: any, options: any) => {
+    createWebviewPanel: (viewType: string, title: string, _showOptions: any, _options: any) => {
       let messageListener: any = null;
       let disposeListener: any = null;
       return {

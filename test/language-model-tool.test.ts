@@ -1,6 +1,5 @@
 import './vscode-mock';
 import * as assert from 'assert';
-import * as vscode from 'vscode';
 import { NovaCppConfigurationTool } from '../src/ai/language-model-tool';
 import { CompilerDetector } from '../src/prober/compiler-detector';
 

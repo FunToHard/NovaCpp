@@ -15,10 +15,7 @@ describe('Configuration Webview Editor', () => {
   const synthesizer = new FlagSynthesizer(detector, extractor);
 
   it('should render ConfigPanel and serve HTML with CSP', () => {
-    let reloaded = false;
-    const onReload = async () => {
-      reloaded = true;
-    };
+    const onReload = async () => {};
 
     const panel = ConfigPanel.render(
       mockVscode.Uri.file(path.resolve('.')),

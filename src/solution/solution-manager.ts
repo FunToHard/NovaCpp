@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { SolutionModel, SolutionConfiguration, VcxProjectModel } from './solution-models';
 import { parseSolutionFile, loadVcxProject } from './sln-parser';
 import { CompilationDatabaseGenerator } from './compilation-database-generator';

@@ -53,7 +53,7 @@ const HEAVY_HEADER_ADVICE: Record<string, string> = {
  */
 export function extractDirectIncludes(
   content: string,
-  filePath: string
+  _filePath?: string
 ): { includePath: string; isSystem: boolean; line: number }[] {
   const results: { includePath: string; isSystem: boolean; line: number }[] = [];
   const lines = content.split(/\r?\n/);

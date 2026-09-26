@@ -28,7 +28,7 @@ export class BatchDispatcher implements vscode.Disposable {
 
   constructor(
     private readonly collector: StlUsageCollector,
-    private readonly globalStoragePath?: string,
+    globalStoragePath?: string,
     private readonly endpointUrl: string = 'https://telemetry.novacpp.dev/v1/telemetry/stl-usage',
     private readonly flushIntervalMs: number = 60 * 60 * 1000 // 60 minutes
   ) {

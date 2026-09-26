@@ -1,6 +1,5 @@
 import './vscode-mock';
 import * as assert from 'assert';
-import * as path from 'path';
 import {
   parseSln,
   parseSlnx,
