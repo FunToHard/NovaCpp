@@ -104,7 +104,7 @@ export function buildIncludeTree(
   rootFile: string,
   workspaceFolders: string[] = [],
   maxDepth: number = 5,
-  visited: Set<string> = new Set(),
+  activeStack: Set<string> = new Set(),
   currentDepth: number = 0
 ): IncludeNode[] {
   const nodes: IncludeNode[] = [];
@@ -113,10 +113,11 @@ export function buildIncludeTree(
   }
 
   const normalizedRoot = path.normalize(rootFile);
-  if (visited.has(normalizedRoot)) {
+  if (activeStack.has(normalizedRoot)) {
     return nodes; // prevent circular dependency infinite loops
   }
-  visited.add(normalizedRoot);
+  const nextStack = new Set(activeStack);
+  nextStack.add(normalizedRoot);
 
   try {
     const content = fs.readFileSync(rootFile, 'utf-8');
@@ -151,12 +152,12 @@ export function buildIncludeTree(
         children: []
       };
 
-      if (resolved && !visited.has(path.normalize(resolved))) {
+      if (resolved && !nextStack.has(path.normalize(resolved))) {
         node.children = buildIncludeTree(
           resolved,
           workspaceFolders,
           maxDepth,
-          visited,
+          nextStack,
           currentDepth + 1
         );
       }

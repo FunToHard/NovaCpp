@@ -68,6 +68,41 @@ describe('Include Tree & Build Time Bottleneck Visualizer', () => {
       // B.h children should not recursively re-enter A.h forever
       assert.ok(tree[0].children.length > 0);
     });
+
+    it('should support diamond include DAGs without dropping shared headers across branches', () => {
+      // main.cpp -> B.h and C.h
+      // B.h -> common.h
+      // C.h -> common.h
+      // common.h -> leaf.h
+      const main = path.join(tempDir, 'main.cpp');
+      const b = path.join(tempDir, 'B.h');
+      const c = path.join(tempDir, 'C.h');
+      const common = path.join(tempDir, 'common.h');
+      const leaf = path.join(tempDir, 'leaf.h');
+
+      fs.writeFileSync(main, `#include "B.h"\n#include "C.h"\n`);
+      fs.writeFileSync(b, `#include "common.h"\n`);
+      fs.writeFileSync(c, `#include "common.h"\n`);
+      fs.writeFileSync(common, `#include "leaf.h"\n`);
+      fs.writeFileSync(leaf, `// leaf header\n`);
+
+      const tree = buildIncludeTree(main, [tempDir], 5);
+      assert.strictEqual(tree.length, 2);
+      assert.strictEqual(tree[0].path, 'B.h');
+      assert.strictEqual(tree[1].path, 'C.h');
+
+      // Verify B.h -> common.h -> leaf.h
+      assert.strictEqual(tree[0].children.length, 1);
+      assert.strictEqual(tree[0].children[0].path, 'common.h');
+      assert.strictEqual(tree[0].children[0].children.length, 1);
+      assert.strictEqual(tree[0].children[0].children[0].path, 'leaf.h');
+
+      // Verify C.h -> common.h -> leaf.h (was previously empty/pruned under global visited set)
+      assert.strictEqual(tree[1].children.length, 1);
+      assert.strictEqual(tree[1].children[0].path, 'common.h');
+      assert.strictEqual(tree[1].children[0].children.length, 1);
+      assert.strictEqual(tree[1].children[0].children[0].path, 'leaf.h');
+    });
   });
 
   describe('analyzeIncludeTree & Heavy Header Advice', () => {
