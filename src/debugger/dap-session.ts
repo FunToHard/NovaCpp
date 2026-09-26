@@ -80,7 +80,39 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
         'Cancel'
       );
       if (choice === 'Build and Debug') {
-        await vscode.commands.executeCommand('workbench.action.tasks.build');
+        await new Promise<void>((resolve) => {
+          let disposable: vscode.Disposable | undefined;
+          let settled = false;
+
+          const finish = () => {
+            if (!settled) {
+              settled = true;
+              clearTimeout(timer);
+              if (disposable) disposable.dispose();
+              resolve();
+            }
+          };
+
+          const timer = setTimeout(finish, 30000);
+
+          if (typeof vscode.tasks?.onDidEndTaskProcess === 'function') {
+            disposable = vscode.tasks.onDidEndTaskProcess((_e) => {
+              finish();
+            });
+          }
+
+          vscode.commands.executeCommand('workbench.action.tasks.build').then(
+            () => {
+              if (!vscode.tasks?.onDidEndTaskProcess) {
+                finish();
+              }
+            },
+            () => {
+              finish();
+            }
+          );
+        });
+
         if (!fs.existsSync(config.program)) {
           vscode.window.showErrorMessage(`NovaCpp: Build completed but executable still not found.`);
           return null;

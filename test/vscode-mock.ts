@@ -606,7 +606,9 @@ export const mockVscode: any = {
     executeCommand: async () => undefined
   },
   tasks: {
-    registerTaskProvider: () => ({ dispose: () => {} })
+    registerTaskProvider: () => ({ dispose: () => {} }),
+    onDidEndTaskProcess: (_cb: any) => ({ dispose: () => {} }),
+    onDidEndTask: (_cb: any) => ({ dispose: () => {} })
   },
   debug: {
     registerDebugConfigurationProvider: () => ({ dispose: () => {} }),
