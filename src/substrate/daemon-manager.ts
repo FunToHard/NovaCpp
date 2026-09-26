@@ -7,7 +7,9 @@ import {
   RequestType,
   NotificationType,
   TextDocumentIdentifier,
-  State
+  State,
+  CloseAction,
+  ErrorAction
 } from 'vscode-languageclient/node';
 import { ClangdInstaller } from './installer';
 import { createClangdMiddleware, EditorEventDebouncer } from './protocol-filter';
@@ -190,7 +192,7 @@ export class DaemonManager implements vscode.Disposable {
       errorHandler: {
         error: (error, _message, count) => {
           this.outputChannel.appendLine(`[Error] ${error.message} (${count})`);
-          return { action: 1, handled: true }; // Continue
+          return { action: ErrorAction.Continue, handled: true };
         },
         closed: () => {
           this.outputChannel.appendLine('[Closed] Connection to clangd closed.');
@@ -206,13 +208,13 @@ export class DaemonManager implements vscode.Disposable {
               `[Watchdog] Attempting auto-restart (${this.restartCount}/${this.maxRestarts})...`
             );
             this.restart();
-            return { action: 2, handled: true }; // Restart
+            return { action: CloseAction.DoNotRestart, handled: true };
           } else {
             vscode.window.showErrorMessage(
               'NovaCpp: clangd daemon crashed repeatedly. Auto-restart aborted.'
             );
             this.updateStatusBar('$(error) NovaCpp: Crashed', 'Click to restart language server');
-            return { action: 1, handled: true }; // Do not restart
+            return { action: CloseAction.DoNotRestart, handled: true };
           }
         }
       }
