@@ -183,8 +183,18 @@ export class TextEdit {
   constructor(public range: Range, public newText: string) {}
 }
 
+export class SnippetTextEdit {
+  static replace(range: Range, snippet: SnippetString): SnippetTextEdit {
+    return new SnippetTextEdit(range, snippet);
+  }
+  static insert(position: Position, snippet: SnippetString): SnippetTextEdit {
+    return new SnippetTextEdit(new Range(position, position), snippet);
+  }
+  constructor(public range: Range, public snippet: SnippetString) {}
+}
+
 export class WorkspaceEdit {
-  private changes = new Map<string, TextEdit[]>();
+  private changes = new Map<string, any[]>();
   insert(uri: any, position: Position, newText: string): void {
     const key = uri.toString ? uri.toString() : String(uri);
     const list = this.changes.get(key) || [];
@@ -203,11 +213,11 @@ export class WorkspaceEdit {
     list.push(TextEdit.delete(range));
     this.changes.set(key, list);
   }
-  set(uri: any, edits: TextEdit[]): void {
+  set(uri: any, edits: any[]): void {
     const key = uri.toString ? uri.toString() : String(uri);
     this.changes.set(key, edits);
   }
-  get(uri: any): TextEdit[] | undefined {
+  get(uri: any): any[] | undefined {
     const key = uri.toString ? uri.toString() : String(uri);
     return this.changes.get(key);
   }
@@ -681,7 +691,8 @@ export const mockVscode: any = {
     Debug: 2,
     Coverage: 3
   },
-  EvaluatableExpression
+  EvaluatableExpression,
+  SnippetTextEdit
 };
 
 const originalRequire = (Module.prototype as any).require;

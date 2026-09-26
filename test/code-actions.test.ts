@@ -123,5 +123,44 @@ describe('Code Actions & Refactoring Assists', () => {
       assert.ok(includeVector);
       assert.strictEqual(includeVector.kind, vscode.CodeActionKind.QuickFix);
     });
+
+    it('should provide Generate Exhaustive Enum Switch Cases using SnippetTextEdit', () => {
+      const provider = new NovaCppCodeActionProvider();
+      const mockDoc = {
+        uri: vscode.Uri.file('F:/project/main.cpp'),
+        lineCount: 3,
+        lineAt: (idx: number) => {
+          const lines = [
+            'enum class State { Init, Running, Done };',
+            'switch (state) {',
+            '}'
+          ];
+          return { text: lines[idx] };
+        },
+        getText: () => 'enum class State { Init, Running, Done };\nswitch (state) {\n}'
+      } as unknown as vscode.TextDocument;
+
+      const range = new vscode.Range(new vscode.Position(1, 0), new vscode.Position(1, 10));
+      const actions = provider.provideCodeActions(
+        mockDoc,
+        range,
+        {} as vscode.CodeActionContext,
+        {} as vscode.CancellationToken
+      ) as vscode.CodeAction[];
+
+      assert.ok(Array.isArray(actions));
+      const switchAction = actions.find((a) => a.title.includes('Generate Exhaustive Enum Switch Cases'));
+      assert.ok(switchAction);
+      assert.ok(switchAction.edit);
+
+      const edits = switchAction.edit.get(mockDoc.uri);
+      assert.ok(edits && edits.length > 0);
+      const firstEdit = edits[0] as any;
+      if (firstEdit.snippet) {
+        assert.strictEqual(firstEdit.snippet.value, '    case ${1:Value}: {\n        break;\n    }\n    default:\n        break;\n');
+      } else {
+        assert.ok(firstEdit.newText.includes('case Value:'));
+      }
+    });
   });
 });

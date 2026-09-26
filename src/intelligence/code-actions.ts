@@ -192,9 +192,15 @@ export class NovaCppCodeActionProvider implements vscode.CodeActionProvider {
         'NovaCpp: Generate Exhaustive Enum Switch Cases',
         vscode.CodeActionKind.Refactor
       );
-      const snippet = `    case \${1:Value}: {\n        break;\n    }\n    default:\n        break;\n`;
       const edit = new vscode.WorkspaceEdit();
-      edit.insert(document.uri, new vscode.Position(lineIndex + 1, 0), snippet);
+      const pos = new vscode.Position(lineIndex + 1, 0);
+      if (typeof vscode.SnippetTextEdit !== 'undefined') {
+        const snippet = new vscode.SnippetString('    case ${1:Value}: {\n        break;\n    }\n    default:\n        break;\n');
+        edit.set(document.uri, [vscode.SnippetTextEdit.insert(pos, snippet)]);
+      } else {
+        const plainText = '    case Value: {\n        break;\n    }\n    default:\n        break;\n';
+        edit.insert(document.uri, pos, plainText);
+      }
       switchAction.edit = edit;
       actions.push(switchAction);
     }
