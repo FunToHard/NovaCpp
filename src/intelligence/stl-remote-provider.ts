@@ -132,6 +132,44 @@ const SYSTEM_OFFLINE_DOCS: Record<string, StlDocEntry> = {
       'close(fd);',
     seeAlso: ['open', 'read', 'write']
   },
+  'read': {
+    symbol: 'read',
+    canonicalSignature: 'ssize_t read(int fd, void *buf, size_t count);',
+    summary:
+      'Attempts to read up to count bytes from file descriptor fd into the buffer starting at buf.',
+    header: '<unistd.h>',
+    standard: 'POSIX.1-2001',
+    parameters: {
+      fd: 'File descriptor to read from.',
+      buf: 'Destination buffer to receive read bytes.',
+      count: 'Maximum number of bytes to read.'
+    },
+    returns: 'On success, the number of bytes read is returned (0 indicates end of file). On error, -1 is returned and errno is set.',
+    docUrl: 'https://man7.org/linux/man-pages/man2/read.2.html',
+    complexity: { time: 'OS filesystem read syscall' },
+    example:
+      'char buffer[256];\nssize_t bytesRead = read(fd, buffer, sizeof(buffer));',
+    seeAlso: ['write', 'open', 'close']
+  },
+  'write': {
+    symbol: 'write',
+    canonicalSignature: 'ssize_t write(int fd, const void *buf, size_t count);',
+    summary:
+      'Writes up to count bytes from the buffer starting at buf to the file referred to by the file descriptor fd.',
+    header: '<unistd.h>',
+    standard: 'POSIX.1-2001',
+    parameters: {
+      fd: 'File descriptor to write to.',
+      buf: 'Source buffer containing bytes to write.',
+      count: 'Number of bytes to write.'
+    },
+    returns: 'On success, the number of bytes written is returned. On error, -1 is returned and errno is set.',
+    docUrl: 'https://man7.org/linux/man-pages/man2/write.2.html',
+    complexity: { time: 'OS filesystem write syscall' },
+    example:
+      'const char msg[] = "data\\n";\nwrite(fd, msg, sizeof(msg) - 1);',
+    seeAlso: ['read', 'open', 'close']
+  },
   'pthread_create': {
     symbol: 'pthread_create',
     canonicalSignature:
@@ -276,6 +314,22 @@ export class StlRemoteProvider {
     }
 
     return null;
+  }
+
+  /**
+   * Retrieves all built-in offline documentation records matching a given header.
+   */
+  public getOfflineEntriesByHeader(headerName: string): StlDocEntry[] {
+    let norm = headerName.trim().toLowerCase();
+    if (!norm.startsWith('<')) norm = `<${norm}>`;
+
+    const results: StlDocEntry[] = [];
+    for (const entry of Object.values(SYSTEM_OFFLINE_DOCS)) {
+      if (entry.header.trim().toLowerCase() === norm) {
+        results.push(entry);
+      }
+    }
+    return results;
   }
 
   private async readFromDiskCache(symbol: string): Promise<StlDocEntry | null> {

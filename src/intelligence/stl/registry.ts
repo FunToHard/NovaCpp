@@ -22,6 +22,18 @@ export class StlRegistry {
     }
     headerSet.add(entry.symbol);
 
+    // Also index under C header counterpart if <c...> (e.g. <cstdio> -> <stdio.h>)
+    const cMatch = normHeader.match(/^<c([a-z0-9_]+)>$/);
+    if (cMatch) {
+      const cHeader = `<${cMatch[1]}.h>`;
+      let cSet = this.headerIndex.get(cHeader);
+      if (!cSet) {
+        cSet = new Set<string>();
+        this.headerIndex.set(cHeader, cSet);
+      }
+      cSet.add(entry.symbol);
+    }
+
     // Also register bare C function name if it starts with std:: and belongs to a C library header (<c...>)
     if (entry.symbol.startsWith('std::') && normHeader.startsWith('<c') && normHeader.endsWith('>')) {
       const bareName = entry.symbol.replace(/^std::/, '');
@@ -120,13 +132,34 @@ export class StlRegistry {
   public getByHeader(headerName: string): StlDocEntry[] {
     let norm = headerName.trim().toLowerCase();
     if (!norm.startsWith('<')) norm = `<${norm}>`;
-    const symbols = this.headerIndex.get(norm);
-    if (!symbols) return [];
-    const list: StlDocEntry[] = [];
-    for (const sym of symbols) {
-      const entry = this.entries.get(sym);
-      if (entry) list.push(entry);
+
+    const candidateHeaders = [norm];
+    const cMatch = norm.match(/^<c([a-z0-9_]+)>$/);
+    if (cMatch) {
+      candidateHeaders.push(`<${cMatch[1]}.h>`);
+    } else {
+      const hMatch = norm.match(/^<([a-z0-9_]+)\.h>$/);
+      if (hMatch) {
+        candidateHeaders.push(`<c${hMatch[1]}>`);
+      }
     }
+
+    const seenSymbols = new Set<string>();
+    const list: StlDocEntry[] = [];
+
+    for (const h of candidateHeaders) {
+      const symbols = this.headerIndex.get(h);
+      if (symbols) {
+        for (const sym of symbols) {
+          if (!seenSymbols.has(sym)) {
+            seenSymbols.add(sym);
+            const entry = this.entries.get(sym);
+            if (entry) list.push(entry);
+          }
+        }
+      }
+    }
+
     return list;
   }
 

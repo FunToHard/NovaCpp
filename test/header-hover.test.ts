@@ -268,6 +268,146 @@ void renderMesh(const Shape3D& shape, ColorMode mode);
       });
     });
 
+    it('should generate hover card for C standard header <stdio.h> listing functions and C standard classification', () => {
+      const hover = HeaderHoverProvider.provideHeaderHover(
+        { uri: vscode.Uri.file('/src/main.c') } as any,
+        new mockVscode.Position(0, 0),
+        {
+          headerName: 'stdio.h',
+          headerText: '<stdio.h>',
+          isStandard: true,
+          range: new mockVscode.Range(0, 0, 0, 18)
+        }
+      );
+
+      return hover.then((result) => {
+        assert.ok(result);
+        const md = (result.contents as any).value || (result.contents[0] as any).value;
+        assert.ok(md.includes('### Header `<stdio.h>` *(C Standard Library)*'));
+        assert.ok(md.includes('**Standard**: `[C Standard Library]` `[<stdio.h>]`'));
+        assert.ok(md.includes('Standard C input and output operations'));
+        assert.ok(md.includes('#### Available Functions'));
+        assert.ok(md.includes('`printf`'));
+        assert.ok(md.includes('`snprintf`'));
+        assert.ok(md.includes('`fopen`'));
+        assert.ok(md.includes('https://en.cppreference.com/w/c/io'));
+      });
+    });
+
+    it('should generate hover card for C standard header <math.h> listing math functions', () => {
+      const hover = HeaderHoverProvider.provideHeaderHover(
+        { uri: vscode.Uri.file('/src/main.c') } as any,
+        new mockVscode.Position(0, 0),
+        {
+          headerName: 'math.h',
+          headerText: '<math.h>',
+          isStandard: true,
+          range: new mockVscode.Range(0, 0, 0, 17)
+        }
+      );
+
+      return hover.then((result) => {
+        assert.ok(result);
+        const md = (result.contents as any).value || (result.contents[0] as any).value;
+        assert.ok(md.includes('### Header `<math.h>` *(C Standard Library)*'));
+        assert.ok(md.includes('#### Available Functions'));
+        assert.ok(md.includes('`sqrt`'));
+        assert.ok(md.includes('`pow`'));
+        assert.ok(md.includes('`abs`'));
+      });
+    });
+
+    it('should generate hover card for C standard header <stdlib.h> listing memory and utility functions', () => {
+      const hover = HeaderHoverProvider.provideHeaderHover(
+        { uri: vscode.Uri.file('/src/main.c') } as any,
+        new mockVscode.Position(0, 0),
+        {
+          headerName: 'stdlib.h',
+          headerText: '<stdlib.h>',
+          isStandard: true,
+          range: new mockVscode.Range(0, 0, 0, 19)
+        }
+      );
+
+      return hover.then((result) => {
+        assert.ok(result);
+        const md = (result.contents as any).value || (result.contents[0] as any).value;
+        assert.ok(md.includes('### Header `<stdlib.h>` *(C Standard Library)*'));
+        assert.ok(md.includes('#### Available Functions'));
+        assert.ok(md.includes('`malloc`'));
+        assert.ok(md.includes('`free`'));
+        assert.ok(md.includes('`exit`'));
+      });
+    });
+
+    it('should generate hover card for C standard header <string.h> listing string and memory functions', () => {
+      const hover = HeaderHoverProvider.provideHeaderHover(
+        { uri: vscode.Uri.file('/src/main.c') } as any,
+        new mockVscode.Position(0, 0),
+        {
+          headerName: 'string.h',
+          headerText: '<string.h>',
+          isStandard: true,
+          range: new mockVscode.Range(0, 0, 0, 19)
+        }
+      );
+
+      return hover.then((result) => {
+        assert.ok(result);
+        const md = (result.contents as any).value || (result.contents[0] as any).value;
+        assert.ok(md.includes('### Header `<string.h>` *(C Standard Library)*'));
+        assert.ok(md.includes('#### Available Functions'));
+        assert.ok(md.includes('`memcpy`'));
+        assert.ok(md.includes('`strlen`'));
+        assert.ok(md.includes('`strcpy`'));
+      });
+    });
+
+    it('should generate hover card for Windows header <windows.h> with Win32 classification and symbols', () => {
+      const hover = HeaderHoverProvider.provideHeaderHover(
+        { uri: vscode.Uri.file('/src/main.cpp') } as any,
+        new mockVscode.Position(0, 0),
+        {
+          headerName: 'windows.h',
+          headerText: '<windows.h>',
+          isStandard: true,
+          range: new mockVscode.Range(0, 0, 0, 20)
+        }
+      );
+
+      return hover.then((result) => {
+        assert.ok(result);
+        const md = (result.contents as any).value || (result.contents[0] as any).value;
+        assert.ok(md.includes('### Header `<windows.h>` *(Windows SDK / Win32 API)*'));
+        assert.ok(md.includes('**Standard**: `[Windows SDK]` `[<windows.h>]`'));
+        assert.ok(md.includes('Master C/C++ include header for the Microsoft Windows API'));
+        assert.ok(md.includes('`CreateWindowEx`') || md.includes('`CreateFileW`'));
+      });
+    });
+
+    it('should generate hover card for POSIX header <unistd.h> with POSIX classification and symbols', () => {
+      const hover = HeaderHoverProvider.provideHeaderHover(
+        { uri: vscode.Uri.file('/src/main.c') } as any,
+        new mockVscode.Position(0, 0),
+        {
+          headerName: 'unistd.h',
+          headerText: '<unistd.h>',
+          isStandard: true,
+          range: new mockVscode.Range(0, 0, 0, 19)
+        }
+      );
+
+      return hover.then((result) => {
+        assert.ok(result);
+        const md = (result.contents as any).value || (result.contents[0] as any).value;
+        assert.ok(md.includes('### Header `<unistd.h>` *(POSIX System Library)*'));
+        assert.ok(md.includes('**Standard**: `[POSIX Library]` `[<unistd.h>]`'));
+        assert.ok(md.includes('`fork`'));
+        assert.ok(md.includes('`read`'));
+        assert.ok(md.includes('`write`'));
+      });
+    });
+
     it('should display resolved file path when provided', () => {
       const hover = formatStandardHeaderHover(
         'vector',
@@ -325,6 +465,33 @@ void renderMesh(const Shape3D& shape, ColorMode mode);
       assert.ok(md.includes('Available Functions'));
       assert.ok(md.includes('`push_back`'));
       assert.ok(md.includes('`emplace_back`'));
+    });
+
+    it('should intercept hover on #include <stdio.h> line and return rich C Standard Library functions list', async () => {
+      const middleware = createClangdMiddleware();
+      assert.ok(middleware.provideHover);
+
+      const mockDoc: any = {
+        lineAt: (_line: number) => ({ text: '#include <stdio.h>' }),
+        uri: vscode.Uri.file('/workspace/src/app.c')
+      };
+      const mockPos = new mockVscode.Position(0, 10);
+      const mockToken = {} as any;
+
+      const mockNext = async () => {
+        return new mockVscode.Hover([
+          new mockVscode.MarkdownString('stdio.h\n\nC:/MSVC/include/stdio.h')
+        ]);
+      };
+
+      const result = await middleware.provideHover!(mockDoc, mockPos, mockToken, mockNext);
+      assert.ok(result);
+      const md = (result.contents as any).value || (result.contents[0] as any).value;
+
+      assert.ok(md.includes('### Header `<stdio.h>` *(C Standard Library)*'));
+      assert.ok(md.includes('Available Functions'));
+      assert.ok(md.includes('`printf`'));
+      assert.ok(md.includes('`fopen`'));
     });
 
     it('should bypass include hover on non-include lines and fall through to standard hover transformer', async () => {
