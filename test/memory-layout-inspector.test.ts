@@ -29,6 +29,10 @@ describe('Type & Memory Layout Inspector', () => {
       const arrInfo = resolveTypeInfo('int[4]');
       assert.strictEqual(arrInfo.size, 16);
       assert.strictEqual(arrInfo.alignment, 4);
+
+      const multiInfo = resolveTypeInfo('int[10][20]');
+      assert.strictEqual(multiInfo.size, 800);
+      assert.strictEqual(multiInfo.alignment, 4);
     });
   });
 
@@ -101,6 +105,30 @@ int main() { return 0; }
       assert.strictEqual(extracted?.fields.length, 4);
       assert.strictEqual(extracted?.fields[0].name, 'x');
       assert.strictEqual(extracted?.fields[3].name, 'mass');
+    });
+
+    it('should capture array dimensions on struct fields and calculate correct size', () => {
+      const code = `
+struct Buffer {
+    char header[16];
+    int values[10];
+    double matrix[2][4];
+};
+`;
+      const extracted = extractStructAtPosition(code, 15);
+      assert.ok(extracted);
+      assert.strictEqual(extracted?.name, 'Buffer');
+      assert.strictEqual(extracted?.fields.length, 3);
+      assert.strictEqual(extracted?.fields[0].type, 'char[16]');
+      assert.strictEqual(extracted?.fields[1].type, 'int[10]');
+      assert.strictEqual(extracted?.fields[2].type, 'double[2][4]');
+
+      const layout = calculateStructLayout('Buffer', extracted.fields);
+      // header: 16B (offset 0)
+      // values: 40B (offset 16, alignment 4)
+      // matrix: 64B (offset 56, alignment 8)
+      // totalSize: 120B
+      assert.strictEqual(layout.totalSize, 120);
     });
 
     it('should return null when cursor is outside struct definition', () => {

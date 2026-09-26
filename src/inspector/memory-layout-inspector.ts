@@ -69,14 +69,15 @@ export function resolveTypeInfo(typeStr: string): TypeInfo {
     return { size: 8, alignment: 8 };
   }
 
-  // Check for fixed array: type[N]
-  const arrayMatch = trimmed.match(/^([^\[]+)\[(\d+)\]$/);
-  if (arrayMatch) {
-    const elemType = arrayMatch[1].trim();
-    const count = parseInt(arrayMatch[2], 10);
+  // Check for fixed array: type[N] or multi-dimensional type[N][M]...
+  const multiArrayMatch = trimmed.match(/^([^\[]+)((?:\[\d+\])+)$/);
+  if (multiArrayMatch) {
+    const elemType = multiArrayMatch[1].trim();
+    const dims = [...multiArrayMatch[2].matchAll(/\[(\d+)\]/g)].map((m) => parseInt(m[1], 10));
+    const totalCount = dims.reduce((acc, val) => acc * val, 1);
     const elemInfo = resolveTypeInfo(elemType);
     return {
-      size: elemInfo.size * count,
+      size: elemInfo.size * totalCount,
       alignment: elemInfo.alignment
     };
   }
@@ -294,11 +295,12 @@ export function extractStructAtPosition(
           continue; // skip methods and access specifiers
         }
 
-        const memberMatch = clean.match(/^([\w:*&<>]+(?:\s+[\w:*&<>]+)*)\s+([a-zA-Z_]\w*)(?:\[\d+\])?$/);
+        const memberMatch = clean.match(/^([\w:*&<>]+(?:\s+[\w:*&<>]+)*)\s+([a-zA-Z_]\w*)((?:\[\d+\])+)?$/);
         if (memberMatch) {
-          const type = memberMatch[1].trim();
+          const baseType = memberMatch[1].trim();
           const name = memberMatch[2].trim();
-          fields.push({ type, name });
+          const arraySuffix = memberMatch[3] ? memberMatch[3].trim() : '';
+          fields.push({ type: baseType + arraySuffix, name });
         }
       }
 
