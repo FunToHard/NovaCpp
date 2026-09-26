@@ -4,6 +4,7 @@
  * standard version badges, canonical signatures, time/space complexity, iterator invalidation rules,
  * exception safety guarantees, and runnable modern C++ examples.
  */
+import { StlRemoteProvider } from './stl-remote-provider';
 
 export interface StlComplexity {
   time: string;
@@ -1300,4 +1301,19 @@ export function findStlDocumentation(symbolKey: string, scope?: string): StlDocE
   }
 
   return null;
+}
+
+/**
+ * Asynchronously searches both the bundled ISO C++ Knowledge Base and the
+ * remote/system header provider (Windows Win32, POSIX headers).
+ */
+export async function findStlDocumentationAsync(
+  symbolKey: string,
+  scope?: string
+): Promise<StlDocEntry | null> {
+  const local = findStlDocumentation(symbolKey, scope);
+  if (local) {
+    return local;
+  }
+  return StlRemoteProvider.getInstance().lookup(symbolKey);
 }

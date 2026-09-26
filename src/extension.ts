@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import { StlRemoteProvider } from './intelligence/stl-remote-provider';
 import { ClangdInstaller } from './substrate/installer';
 import { DaemonManager } from './substrate/daemon-manager';
 import { CompilerDetector } from './prober/compiler-detector';
@@ -64,6 +66,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   stlCollector = new StlUsageCollector();
   rankingTable = new StlRankingTable();
   const storagePath = context.globalStorageUri?.fsPath ?? context.storageUri?.fsPath;
+  if (storagePath) {
+    StlRemoteProvider.getInstance().setCacheDirectory(path.join(storagePath, 'stl_docs'));
+  }
   batchDispatcher = new BatchDispatcher(stlCollector, storagePath);
   batchDispatcher.start();
 

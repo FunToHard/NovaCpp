@@ -147,7 +147,7 @@ export function createClangdMiddleware(
       if (!hover) {
         return hover;
       }
-      return HoverTransformer.transform(hover);
+      return HoverTransformer.transformAsync(hover);
     },
 
     provideDefinition: async (

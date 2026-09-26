@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { findStlDocumentation } from './stl-knowledge-base';
+import { findStlDocumentation, findStlDocumentationAsync, StlDocEntry } from './stl-knowledge-base';
 
 export interface ParameterInfo {
   name: string;
@@ -468,14 +468,7 @@ export function parseDoxygen(text: string): {
  * Transforms standard Clangd hovers into rich, rust-analyzer style developer cards.
  */
 export class HoverTransformer {
-  /**
-   * Transforms an incoming vscode.Hover from clangd into an enriched hover.
-   */
-  public static transform(hover: vscode.Hover): vscode.Hover {
-    if (!hover || !hover.contents || hover.contents.length === 0) {
-      return hover;
-    }
-
+  public static extractHoverPayload(hover: vscode.Hover): { codeBlock: string; docText: string } {
     let codeBlock = '';
     let docText = '';
 
@@ -493,6 +486,18 @@ export class HoverTransformer {
       }
     }
 
+    return { codeBlock, docText };
+  }
+
+  /**
+   * Transforms an incoming vscode.Hover from clangd into an enriched hover.
+   */
+  public static transform(hover: vscode.Hover, stlDocOverride?: StlDocEntry): vscode.Hover {
+    if (!hover || !hover.contents || hover.contents.length === 0) {
+      return hover;
+    }
+
+    const { codeBlock, docText } = this.extractHoverPayload(hover);
     if (!codeBlock) {
       return hover;
     }
@@ -500,14 +505,16 @@ export class HoverTransformer {
     const sig = parseSignature(codeBlock);
     if (!sig) {
       // Check if this type definition corresponds to a known STL type (e.g. std::vector, std::string)
-      let typeStlDoc = null;
-      const typeMatch = codeBlock.match(/(?:class|struct|using)\s+([A-Za-z0-9_:]+)/);
-      if (typeMatch) {
-        typeStlDoc = findStlDocumentation(typeMatch[1]);
-      } else {
-        const words = codeBlock.trim().split(/[\s<({]/);
-        if (words[0]) {
-          typeStlDoc = findStlDocumentation(words[0]);
+      let typeStlDoc: StlDocEntry | null = stlDocOverride ?? null;
+      if (!typeStlDoc) {
+        const typeMatch = codeBlock.match(/(?:class|struct|using)\s+([A-Za-z0-9_:]+)/);
+        if (typeMatch) {
+          typeStlDoc = findStlDocumentation(typeMatch[1]);
+        } else {
+          const words = codeBlock.trim().split(/[\s<({]/);
+          if (words[0]) {
+            typeStlDoc = findStlDocumentation(words[0]);
+          }
         }
       }
 
@@ -585,7 +592,7 @@ export class HoverTransformer {
     }
 
     // Check if this is a standard library function recognized by the Curated STL Knowledge Base
-    const stlDoc = findStlDocumentation(sig.name, sig.scope);
+    const stlDoc = stlDocOverride ?? findStlDocumentation(sig.name, sig.scope);
 
     const md = new vscode.MarkdownString();
     md.isTrusted = true;
@@ -739,5 +746,44 @@ export class HoverTransformer {
     }
 
     return new vscode.Hover([md], hover.range);
+  }
+
+  /**
+   * Asynchronously transforms an incoming vscode.Hover from clangd into an enriched hover,
+   * querying both the local ISO C++ knowledge base and remote/system header providers.
+   */
+  public static async transformAsync(hover: vscode.Hover): Promise<vscode.Hover> {
+    if (!hover || !hover.contents || hover.contents.length === 0) {
+      return hover;
+    }
+
+    const { codeBlock } = this.extractHoverPayload(hover);
+    if (!codeBlock) {
+      return hover;
+    }
+
+    const sig = parseSignature(codeBlock);
+    if (!sig) {
+      let candidate = '';
+      const typeMatch = codeBlock.match(/(?:class|struct|using)\s+([A-Za-z0-9_:]+)/);
+      if (typeMatch) {
+        candidate = typeMatch[1];
+      } else {
+        const words = codeBlock.trim().split(/[\s<({]/);
+        if (words[0]) {
+          candidate = words[0];
+        }
+      }
+      if (candidate) {
+        const doc = await findStlDocumentationAsync(candidate);
+        if (doc) {
+          return this.transform(hover, doc);
+        }
+      }
+      return this.transform(hover);
+    }
+
+    const doc = await findStlDocumentationAsync(sig.name, sig.scope);
+    return this.transform(hover, doc ?? undefined);
   }
 }
