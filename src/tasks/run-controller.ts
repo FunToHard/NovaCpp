@@ -8,7 +8,7 @@ import { isCppFile, getOutputBinaryPath } from './runner';
 
 const execFileAsync = promisify(execFile);
 
-function escapePwshDoubleQuoted(s: string): string {
+export function escapePwshDoubleQuoted(s: string): string {
   return s.replace(/[`$""]/g, '`$&');
 }
 
@@ -213,13 +213,17 @@ export class RunController implements vscode.Disposable {
             const devShellScript = isWindows ? findLaunchVsDevShell(compiler) : null;
             if (devShellScript) {
               const arch = compiler.is64Bit !== false ? 'x64' : 'x86';
-              const clCmd = `& "${compiler.path}" /EHsc /std:${standard} /Zi "${sourceFile}" /Fe:"${outputBinary}"`;
+              const compilerEsc = escapePwshDoubleQuoted(compiler.path);
+              const sourceEsc = escapePwshDoubleQuoted(sourceFile);
+              const outputEsc = escapePwshDoubleQuoted(outputBinary);
+              const devShellEsc = devShellScript.replace(/'/g, "''");
+              const clCmd = `& "${compilerEsc}" /EHsc /std:${standard} /Zi "${sourceEsc}" /Fe:"${outputEsc}"`;
               const psArgs = [
                 '-NoProfile',
                 '-ExecutionPolicy',
                 'Bypass',
                 '-Command',
-                `& '${devShellScript}' -Arch ${arch} -HostArch ${arch} -SkipAutomaticLocation -NoLogo ; ${clCmd}`
+                `& '${devShellEsc}' -Arch ${arch} -HostArch ${arch} -SkipAutomaticLocation -NoLogo ; ${clCmd}`
               ];
 
               await execFileAsync('powershell.exe', psArgs, {

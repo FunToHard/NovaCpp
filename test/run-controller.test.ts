@@ -3,10 +3,18 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
-import { buildRunCommand, findLaunchVsDevShell, RunController } from '../src/tasks/run-controller';
+import { buildRunCommand, findLaunchVsDevShell, RunController, escapePwshDoubleQuoted } from '../src/tasks/run-controller';
 import { CompilerInfo, CompilerDetector } from '../src/prober/compiler-detector';
 
 describe('Run & Debug Controller (Title Bar Actions)', () => {
+  describe('escapePwshDoubleQuoted', () => {
+    it('should escape backticks, dollar signs, and double quotes for PowerShell', () => {
+      const raw = 'C:\\Project $Folder\\file "name"`1.cpp';
+      const escaped = escapePwshDoubleQuoted(raw);
+      assert.strictEqual(escaped, 'C:\\Project `$Folder\\file `"name`"``1.cpp');
+    });
+  });
+
   describe('buildRunCommand', () => {
     it('should generate MSVC shell command on Windows with /Fe and terminal execution', () => {
       const msvc: CompilerInfo = {
