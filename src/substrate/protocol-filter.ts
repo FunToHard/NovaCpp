@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { Middleware } from 'vscode-languageclient';
 import { HoverTransformer } from '../intelligence/hover-transformer';
+import {
+  HeaderHoverProvider,
+  parseIncludeLine,
+  extractPathFromClangdHover
+} from '../intelligence/header-hover-provider';
 import { prioritizeDefinitionLocations } from '../intelligence/smart-definition';
 import { DotToArrowController } from '../intelligence/dot-to-arrow';
 import { StlRankingTable } from '../telemetry/ranking-table';
@@ -236,6 +241,31 @@ export function createClangdMiddleware(
         token: vscode.CancellationToken
       ) => vscode.ProviderResult<vscode.Hover>
     ): Promise<vscode.Hover | null | undefined> => {
+      const lineText = document.lineAt(position.line).text;
+      const includeInfo = parseIncludeLine(lineText, position.line, position.character);
+
+      if (includeInfo) {
+        let resolvedPath: string | undefined;
+        try {
+          const rawHover = await next(document, position, token);
+          if (rawHover) {
+            resolvedPath = extractPathFromClangdHover(rawHover);
+          }
+        } catch {
+          // Language server offline or indexing
+        }
+
+        const headerHover = await HeaderHoverProvider.provideHeaderHover(
+          document,
+          position,
+          includeInfo,
+          resolvedPath
+        );
+        if (headerHover) {
+          return headerHover;
+        }
+      }
+
       const hover = await next(document, position, token);
       if (!hover) {
         return hover;
