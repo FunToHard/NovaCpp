@@ -1,7 +1,11 @@
 import './vscode-mock';
 import * as assert from 'assert';
 import { DaemonManager, defaultClangdArguments } from '../src/substrate/daemon-manager';
-import { createClangdMiddleware, debounce } from '../src/substrate/protocol-filter';
+import {
+  createClangdMiddleware,
+  debounce,
+  enrichCompletionItemWithStl
+} from '../src/substrate/protocol-filter';
 import { mockVscode } from './vscode-mock';
 
 describe('Language Server Substrate & Clangd Configuration', () => {
@@ -107,6 +111,40 @@ describe('Language Server Substrate & Clangd Configuration', () => {
 
       assert.strictEqual(result[0].name, 'vector');
       assert.strictEqual(result[0].containerName, 'std');
+    });
+
+    it('should enrich completion items with Rust-like STL documentation and complexity', async () => {
+      const item = new mockVscode.CompletionItem('push_back');
+      item.detail = 'void push_back(const _Ty& _Val)';
+      // Mark as container method via detail or label
+      enrichCompletionItemWithStl(item as any);
+
+      assert.ok(item.documentation);
+      const docStr = (item.documentation as any).value;
+      assert.ok(docStr.includes('### `std::vector::push_back` *(Standard Library)*'));
+      assert.ok(docStr.includes('`[<vector>]`'));
+      assert.ok(docStr.includes('⏱️ **Complexity**:'));
+      assert.ok(docStr.includes('#### Example'));
+      assert.ok(item.detail?.includes('[<vector>]'));
+    });
+
+    it('should resolve and enrich completion item via middleware resolveCompletionItem', async () => {
+      const item = new mockVscode.CompletionItem('std::make_unique');
+      const next = async (i: any) => i;
+
+      const resolved: any = await (middleware.resolveCompletionItem as any)(
+        item,
+        {},
+        next
+      );
+
+      assert.ok(resolved);
+      assert.ok(resolved.documentation);
+      const docStr = resolved.documentation.value;
+      assert.ok(docStr.includes('std::make_unique'));
+      assert.ok(docStr.includes('`[<memory>]`'));
+      assert.ok(docStr.includes('`[C++14]`'));
+      assert.ok(docStr.includes('Constructs an object of type `T` on the heap'));
     });
   });
 
