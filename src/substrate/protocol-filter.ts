@@ -41,73 +41,83 @@ export function debounce<T extends (...args: any[]) => any>(
  * Enriches a completion item with Rust-like STL documentation card if matching standard library symbol.
  */
 export function enrichCompletionItemWithStl(item: vscode.CompletionItem): void {
-  const symbolKey = extractStlSymbolKey(item);
-  let docEntry: StlDocEntry | null = null;
-  if (symbolKey) {
-    docEntry = findStlDocumentation(symbolKey);
-  }
-  if (!docEntry) {
-    const labelStr = typeof item.label === 'string' ? item.label : item.label.label;
-    docEntry = findStlDocumentation(labelStr, item.detail);
-  }
-  if (!docEntry) {
-    const labelStr = typeof item.label === 'string' ? item.label : item.label.label;
-    const cleanLabel = labelStr.trim().replace(/\(.*\)$/, '');
-    for (const prefix of ['std::vector::', 'std::string::', 'std::map::', 'std::unordered_map::', 'std::span::']) {
-      const candidate = `${prefix}${cleanLabel}`;
-      const found = findStlDocumentation(candidate);
-      if (found) {
-        docEntry = found;
-        break;
+  try {
+    const symbolKey = extractStlSymbolKey(item);
+    let docEntry: StlDocEntry | null = null;
+    if (symbolKey) {
+      docEntry = findStlDocumentation(symbolKey);
+    }
+    const labelStr = typeof item.label === 'string' ? item.label : (item.label?.label ?? '');
+    if (!docEntry && labelStr) {
+      const detailStr = typeof item.detail === 'string' ? item.detail : undefined;
+      docEntry = findStlDocumentation(labelStr, detailStr);
+    }
+    if (!docEntry && labelStr) {
+      const cleanLabel = labelStr.trim().replace(/\(.*\)$/, '');
+      for (const prefix of [
+        'std::vector::',
+        'std::string::',
+        'std::map::',
+        'std::unordered_map::',
+        'std::span::'
+      ]) {
+        const candidate = `${prefix}${cleanLabel}`;
+        const found = findStlDocumentation(candidate);
+        if (found) {
+          docEntry = found;
+          break;
+        }
       }
     }
-  }
 
-  if (!docEntry) {
-    return;
-  }
+    if (!docEntry) {
+      return;
+    }
 
-  const md = new vscode.MarkdownString();
-  md.isTrusted = true;
-  md.appendMarkdown(`### \`${docEntry.symbol}\` *(Standard Library)*\n\n`);
-  md.appendMarkdown(
-    `**Standard**: \`[Standard Library]\` \`[${docEntry.header}]\` \`[${docEntry.standard}]\`\n\n`
-  );
-  md.appendCodeblock(docEntry.canonicalSignature, 'cpp');
-  md.appendMarkdown(`${docEntry.summary}\n\n`);
+    const md = new vscode.MarkdownString();
+    md.isTrusted = true;
+    md.appendMarkdown(`### \`${docEntry.symbol}\` *(Standard Library)*\n\n`);
+    md.appendMarkdown(
+      `**Standard**: \`[Standard Library]\` \`[${docEntry.header}]\` \`[${docEntry.standard}]\`\n\n`
+    );
+    md.appendCodeblock(docEntry.canonicalSignature, 'cpp');
+    md.appendMarkdown(`${docEntry.summary}\n\n`);
 
-  if (docEntry.complexity) {
-    const timeBadge = `**Time**: \`${docEntry.complexity.time}\``;
-    const spaceBadge = docEntry.complexity.space
-      ? ` | 💾 **Space**: \`${docEntry.complexity.space}\``
-      : '';
-    md.appendMarkdown(`⏱️ **Complexity**: ${timeBadge}${spaceBadge}\n\n`);
-  }
+    if (docEntry.complexity) {
+      const timeBadge = `**Time**: \`${docEntry.complexity.time}\``;
+      const spaceBadge = docEntry.complexity.space
+        ? ` | 💾 **Space**: \`${docEntry.complexity.space}\``
+        : '';
+      md.appendMarkdown(`⏱️ **Complexity**: ${timeBadge}${spaceBadge}\n\n`);
+    }
 
-  if (docEntry.exceptionSafety) {
-    md.appendMarkdown(`🛡️ **Exception Safety**: ${docEntry.exceptionSafety}\n\n`);
-  }
+    if (docEntry.exceptionSafety) {
+      md.appendMarkdown(`🛡️ **Exception Safety**: ${docEntry.exceptionSafety}\n\n`);
+    }
 
-  if (docEntry.invalidation) {
-    md.appendMarkdown(`> ⚠️ **Iterator Invalidation**: ${docEntry.invalidation}\n\n`);
-  }
+    if (docEntry.invalidation) {
+      md.appendMarkdown(`> ⚠️ **Iterator Invalidation**: ${docEntry.invalidation}\n\n`);
+    }
 
-  if (docEntry.example) {
-    md.appendMarkdown('#### Example\n\n');
-    md.appendCodeblock(docEntry.example, 'cpp');
-    md.appendMarkdown('\n');
-  }
+    if (docEntry.example) {
+      md.appendMarkdown('#### Example\n\n');
+      md.appendCodeblock(docEntry.example, 'cpp');
+      md.appendMarkdown('\n');
+    }
 
-  md.appendMarkdown('---\n');
-  md.appendMarkdown(`[📖 cppreference: ${docEntry.symbol}](${docEntry.docUrl})`);
+    md.appendMarkdown('---\n');
+    md.appendMarkdown(`[📖 cppreference: ${docEntry.symbol}](${docEntry.docUrl})`);
 
-  item.documentation = md;
-  const headerTag = `[${docEntry.header}]`;
-  if (!item.detail || item.detail.startsWith('(')) {
-    const firstLine = docEntry.canonicalSignature.split('\n')[0];
-    item.detail = `${headerTag} ${firstLine}`;
-  } else if (!item.detail.includes(headerTag)) {
-    item.detail = `${headerTag} ${item.detail}`;
+    item.documentation = md;
+    const headerTag = `[${docEntry.header}]`;
+    if (!item.detail || item.detail.startsWith('(')) {
+      const firstLine = docEntry.canonicalSignature.split('\n')[0];
+      item.detail = `${headerTag} ${firstLine}`;
+    } else if (!item.detail.includes(headerTag)) {
+      item.detail = `${headerTag} ${item.detail}`;
+    }
+  } catch {
+    // Fail silently to prevent interrupting autocomplete
   }
 }
 
@@ -140,19 +150,24 @@ export function createClangdMiddleware(
       const rawItems = Array.isArray(list) ? list : list.items;
       const isIncomplete = Array.isArray(list) ? false : list.isIncomplete;
 
-      const items = await DotToArrowController.processCompletionItems(
-        document,
-        position,
-        rawItems
-      );
+      let items = rawItems;
+      try {
+        items = await DotToArrowController.processCompletionItems(
+          document,
+          position,
+          rawItems
+        );
+      } catch {
+        items = rawItems;
+      }
 
       for (const item of items) {
         // A. Apply Adaptive Empirical STL Re-Ranking
         rankingTable.applyStlRanking(item);
 
         // B. Completion Re-Ranking Preservation
-        const labelText = typeof item.label === 'string' ? item.label : item.label.label;
-        if (!item.filterText) {
+        const labelText = typeof item.label === 'string' ? item.label : (item.label?.label ?? '');
+        if (!item.filterText && labelText) {
           item.filterText = labelText;
         }
 
@@ -181,22 +196,12 @@ export function createClangdMiddleware(
         } else if (baseCommand) {
           item.command = baseCommand;
         }
+
+        // D. Enrich with Rust-like STL Documentation Card
+        enrichCompletionItemWithStl(item);
       }
 
       return new vscode.CompletionList(items, isIncomplete);
-    },
-
-    resolveCompletionItem: async (
-      item: vscode.CompletionItem,
-      token: vscode.CancellationToken,
-      next: (
-        item: vscode.CompletionItem,
-        token: vscode.CancellationToken
-      ) => vscode.ProviderResult<vscode.CompletionItem>
-    ): Promise<vscode.CompletionItem> => {
-      const resolved = (await next(item, token)) ?? item;
-      enrichCompletionItemWithStl(resolved);
-      return resolved;
     },
 
     provideWorkspaceSymbols: async (

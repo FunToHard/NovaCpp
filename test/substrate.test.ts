@@ -128,19 +128,21 @@ describe('Language Server Substrate & Clangd Configuration', () => {
       assert.ok(item.detail?.includes('[<vector>]'));
     });
 
-    it('should resolve and enrich completion item via middleware resolveCompletionItem', async () => {
+    it('should enrich completion items directly within provideCompletionItem', async () => {
       const item = new mockVscode.CompletionItem('std::make_unique');
-      const next = async (i: any) => i;
+      const next = async () => [item];
 
-      const resolved: any = await (middleware.resolveCompletionItem as any)(
-        item,
+      const result: any = await (middleware.provideCompletionItem as any)(
+        {} as any,
+        new mockVscode.Position(0, 0),
+        {},
         {},
         next
       );
 
-      assert.ok(resolved);
-      assert.ok(resolved.documentation);
-      const docStr = resolved.documentation.value;
+      const items = result.items ?? result;
+      assert.ok(items[0].documentation);
+      const docStr = items[0].documentation.value;
       assert.ok(docStr.includes('std::make_unique'));
       assert.ok(docStr.includes('`[<memory>]`'));
       assert.ok(docStr.includes('`[C++14]`'));
