@@ -38,16 +38,30 @@ export function extractMacroDefinitions(sourceText: string): Map<string, MacroDe
       fullLine = fullLine.slice(0, -1).trim() + ' ' + lines[i].trim();
     }
 
-    // Match #define NAME(params) body or #define NAME body
-    const match = fullLine.match(/^#\s*define\s+([a-zA-Z_]\w*)(?:\(([^\)]*)\))?(?:\s+(.*))?$/);
-    if (match) {
-      const name = match[1];
-      const hasParams = match[2] !== undefined;
-      const params = hasParams
-        ? match[2].split(',').map((p) => p.trim()).filter((p) => p.length > 0)
-        : undefined;
-      const body = (match[3] || '').trim();
+    // In ISO C/C++, a macro is function-like if and only if '(' immediately follows the macro name.
+    // Otherwise it is an object-like macro (e.g. #define BUFFER_SIZE (1024 * 1024)).
+    let name = '';
+    let hasParams = false;
+    let params: string[] | undefined = undefined;
+    let body = '';
 
+    const funcMatch = fullLine.match(/^#\s*define\s+([a-zA-Z_]\w*)\(([^)]*)\)(?:\s*(.*))?$/);
+    if (funcMatch) {
+      name = funcMatch[1];
+      hasParams = true;
+      params = funcMatch[2].split(',').map((p) => p.trim()).filter((p) => p.length > 0);
+      body = (funcMatch[3] || '').trim();
+    } else {
+      const objMatch = fullLine.match(/^#\s*define\s+([a-zA-Z_]\w*)(?:\s+(.*))?$/);
+      if (objMatch) {
+        name = objMatch[1];
+        hasParams = false;
+        params = undefined;
+        body = (objMatch[2] || '').trim();
+      }
+    }
+
+    if (name) {
       macros.set(name, {
         name,
         params,

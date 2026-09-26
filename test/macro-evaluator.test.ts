@@ -35,6 +35,40 @@ describe('Macro Expansion & constexpr Evaluator', () => {
       assert.ok(multi);
       assert.ok(multi?.body.includes('while (0)'));
     });
+
+    it('should correctly classify parenthesized object macros and compact function macros', () => {
+      const code = `
+#define BUFFER_SIZE (1024 * 1024)
+#define SQR(x)(x*x)
+#define NOOP()
+#define EMPTY_OBJECT
+`;
+      const defs = extractMacroDefinitions(code);
+      assert.strictEqual(defs.size, 4);
+
+      const buf = defs.get('BUFFER_SIZE');
+      assert.ok(buf);
+      assert.strictEqual(buf?.isFunctionLike, false);
+      assert.strictEqual(buf?.body, '(1024 * 1024)');
+      assert.strictEqual(buf?.params, undefined);
+
+      const sqr = defs.get('SQR');
+      assert.ok(sqr);
+      assert.strictEqual(sqr?.isFunctionLike, true);
+      assert.strictEqual(sqr?.body, '(x*x)');
+      assert.deepStrictEqual(sqr?.params, ['x']);
+
+      const noop = defs.get('NOOP');
+      assert.ok(noop);
+      assert.strictEqual(noop?.isFunctionLike, true);
+      assert.strictEqual(noop?.body, '');
+      assert.deepStrictEqual(noop?.params, []);
+
+      const empty = defs.get('EMPTY_OBJECT');
+      assert.ok(empty);
+      assert.strictEqual(empty?.isFunctionLike, false);
+      assert.strictEqual(empty?.body, '');
+    });
   });
 
   describe('splitMacroArguments', () => {
