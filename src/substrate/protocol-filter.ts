@@ -76,23 +76,9 @@ export function createClangdMiddleware(
         rankingTable.applyStlRanking(item);
 
         // B. Completion Re-Ranking Preservation
-        let prefix = '';
-        if (item.range) {
-          const start =
-            item.range instanceof vscode.Range
-              ? item.range.start
-              : (item.range as { inserting: vscode.Range; replacing: vscode.Range }).inserting.start;
-          prefix = document.getText(new vscode.Range(start, position));
-          if (prefix.includes('.')) {
-            prefix = prefix.substring(prefix.lastIndexOf('.') + 1);
-          } else if (prefix.includes('->')) {
-            prefix = prefix.substring(prefix.lastIndexOf('->') + 2);
-          }
-        }
-
         const labelText = typeof item.label === 'string' ? item.label : item.label.label;
-        if (prefix && !item.sortText?.startsWith('!00_')) {
-          item.filterText = prefix + '_' + (item.filterText ?? labelText);
+        if (!item.filterText) {
+          item.filterText = labelText;
         }
 
         // Avoid accidental commits on punctuation

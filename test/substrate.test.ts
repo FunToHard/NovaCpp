@@ -22,7 +22,7 @@ describe('Language Server Substrate & Clangd Configuration', () => {
   describe('Protocol Filter Middleware', () => {
     const middleware = createClangdMiddleware();
 
-    it('should preserve completion re-ranking by prefixing filterText', async () => {
+    it('should preserve completion filterText without corrupting fuzzy matching', async () => {
       const doc: any = {
         getText: (_range: any) => 'vec'
       };
@@ -42,7 +42,7 @@ describe('Language Server Substrate & Clangd Configuration', () => {
 
       const items = result.items ?? result;
       assert.strictEqual(items.length, 1);
-      assert.strictEqual(items[0].filterText, 'vec_vector');
+      assert.strictEqual(items[0].filterText, 'vector');
       assert.deepStrictEqual(items[0].commitCharacters, []);
     });
 
