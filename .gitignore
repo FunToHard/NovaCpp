@@ -33,5 +33,5 @@ compile_commands.json
 
 # Native Rust binaries & Cargo build artifacts
 target/
-native/
+/native/
 *.node
