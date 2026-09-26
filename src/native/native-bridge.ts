@@ -4,6 +4,8 @@ import { TimeTraceSummary, parseFTimeTrace } from '../analysis/include-visualize
 import { StructLayout, calculateStructLayout, StructLayoutOptions } from '../inspector/memory-layout-inspector';
 import { CMakeProjectInfo } from '../cmake/cmake-models';
 import { CMakeParser } from '../cmake/cmake-parser';
+import { SolutionModel, VcxProjectModel, ProjectCompileOptions } from '../solution/solution-models';
+import { parseSolutionFile, loadVcxProject, readFileWithEncoding } from '../solution/sln-parser';
 
 export interface INativeBridge {
   readonly isAccelerated: boolean;
@@ -16,6 +18,8 @@ export interface INativeBridge {
     options?: StructLayoutOptions
   ): StructLayout;
   parseCMakeWorkspace(workspaceRoot: string): Promise<CMakeProjectInfo | null>;
+  parseSolution(filePath: string): Promise<SolutionModel | null>;
+  parseVcxproj(filePath: string, solutionDir?: string): Promise<VcxProjectModel | null>;
 }
 
 export class NativeBridgeImpl implements INativeBridge {
@@ -120,6 +124,51 @@ export class NativeBridgeImpl implements INativeBridge {
     }
 
     return CMakeParser.parseWorkspace(workspaceRoot);
+  }
+
+  public async parseSolution(filePath: string): Promise<SolutionModel | null> {
+    if (this.isAccelerated && (this.nativeBinding?.parseSlnContentNative || this.nativeBinding?.parseSlnxContentNative)) {
+      try {
+        if (!fs.existsSync(filePath)) return null;
+        const content = await readFileWithEncoding(filePath);
+        const ext = path.extname(filePath).toLowerCase();
+        if (ext === '.slnx' && this.nativeBinding.parseSlnxContentNative) {
+          return this.nativeBinding.parseSlnxContentNative(content, filePath);
+        } else if (ext === '.sln' && this.nativeBinding.parseSlnContentNative) {
+          return this.nativeBinding.parseSlnContentNative(content, filePath);
+        }
+      } catch (err) {
+        console.warn('NovaCpp: Native solution parser failed, falling back to TypeScript:', err);
+      }
+    }
+
+    return parseSolutionFile(filePath);
+  }
+
+  public async parseVcxproj(filePath: string, solutionDir?: string): Promise<VcxProjectModel | null> {
+    if (this.isAccelerated && this.nativeBinding?.parseVcxprojContentNative) {
+      try {
+        if (!fs.existsSync(filePath)) return null;
+        const content = await readFileWithEncoding(filePath);
+        const nativeModel = this.nativeBinding.parseVcxprojContentNative(content, filePath, solutionDir);
+        if (nativeModel) {
+          const compileOptionsByConfig = new Map<string, ProjectCompileOptions>();
+          if (nativeModel.compileOptionsByConfig) {
+            for (const [k, v] of Object.entries(nativeModel.compileOptionsByConfig)) {
+              compileOptionsByConfig.set(k, v as ProjectCompileOptions);
+            }
+          }
+          return {
+            ...nativeModel,
+            compileOptionsByConfig
+          };
+        }
+      } catch (err) {
+        console.warn('NovaCpp: Native vcxproj parser failed, falling back to TypeScript:', err);
+      }
+    }
+
+    return loadVcxProject(filePath, solutionDir);
   }
 }
 
