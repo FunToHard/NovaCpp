@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 napi = { version = "2.16.14", default-features = false, features = ["napi8", "async", "tokio_rt"] }
@@ -12,6 +12,7 @@ napi-derive = "2.16.13"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 quick-xml = "0.36"
+tokio = { version = "1", features = ["rt", "fs"] }
 
 [build-dependencies]
 napi-build = "2.1.4"
