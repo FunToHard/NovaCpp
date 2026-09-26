@@ -9,6 +9,33 @@ const execFileAsync = promisify(execFile);
 
 export class VsEnvironmentManager {
   private static readonly STORAGE_KEY = 'novacpp.activeVsEnvironment';
+  private static readonly envCache = new Map<string, Record<string, string>>();
+
+  /**
+   * Retrieves or extracts the environment variables for an MSVC compiler.
+   */
+  public static async getEnvironmentForCompiler(
+    compiler: CompilerInfo,
+    arch: 'x64' | 'x86' = 'x64'
+  ): Promise<Record<string, string> | undefined> {
+    if (compiler.type !== 'msvc') return undefined;
+    const vcvars = this.findVcvarsall(compiler);
+    if (!vcvars) return undefined;
+
+    const cacheKey = `${vcvars}|${arch}`;
+    const cached = this.envCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const env = await this.extractEnvironment(vcvars, arch);
+      this.envCache.set(cacheKey, env);
+      return env;
+    } catch {
+      return undefined;
+    }
+  }
 
   /**
    * Locates vcvarsall.bat associated with a compiler or Visual Studio directory.

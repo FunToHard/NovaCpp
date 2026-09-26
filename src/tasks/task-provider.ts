@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CompilerDetector } from '../prober/compiler-detector';
 import { isCppFile, getOutputBinaryPath, createBuildExecution } from './runner';
+import { VsEnvironmentManager } from './vs-environment-manager';
 
 export interface NovaCppTaskDefinition extends vscode.TaskDefinition {
   type: 'novacpp';
@@ -34,7 +35,8 @@ export class NovaCppTaskProvider implements vscode.TaskProvider {
     const standard = config.get<string>('cppStandard') ?? 'c++20';
 
     const outputFile = getOutputBinaryPath(activeFile, workspaceRoot);
-    const execution = createBuildExecution(compiler, activeFile, outputFile, standard);
+    const env = compiler.type === 'msvc' ? await VsEnvironmentManager.getEnvironmentForCompiler(compiler) : undefined;
+    const execution = createBuildExecution(compiler, activeFile, outputFile, standard, env);
     const problemMatchers = compiler.type === 'msvc' ? ['$msvc'] : ['$gcc'];
 
     const taskDefinition: NovaCppTaskDefinition = {
@@ -80,7 +82,8 @@ export class NovaCppTaskProvider implements vscode.TaskProvider {
     const standard = config.get<string>('cppStandard') ?? 'c++20';
 
     const outputFile = getOutputBinaryPath(targetFile);
-    const execution = createBuildExecution(compiler, targetFile, outputFile, standard);
+    const env = compiler.type === 'msvc' ? await VsEnvironmentManager.getEnvironmentForCompiler(compiler) : undefined;
+    const execution = createBuildExecution(compiler, targetFile, outputFile, standard, env);
     const problemMatchers = compiler.type === 'msvc' ? ['$msvc'] : ['$gcc'];
 
     const resolved = new vscode.Task(

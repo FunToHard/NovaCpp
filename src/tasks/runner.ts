@@ -28,7 +28,8 @@ export function createBuildExecution(
   compiler: CompilerInfo,
   sourceFile: string,
   outputFile: string,
-  standard: string = 'c++20'
+  standard: string = 'c++20',
+  env?: Record<string, string>
 ): vscode.ProcessExecution {
   const isWindows = process.platform === 'win32';
   const args: string[] = [];
@@ -44,7 +45,12 @@ export function createBuildExecution(
     }
   }
 
-  return new vscode.ProcessExecution(compiler.path, args, {
+  const options: vscode.ProcessExecutionOptions = {
     cwd: path.dirname(sourceFile)
-  });
+  };
+  if (env) {
+    options.env = env;
+  }
+
+  return new vscode.ProcessExecution(compiler.path, args, options);
 }

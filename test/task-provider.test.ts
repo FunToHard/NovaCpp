@@ -61,6 +61,22 @@ describe('Build Task Provider & Execution Engine', () => {
       assert.ok(execution.args.includes('C:/app/main.cpp'));
     });
 
+    it('should attach MSVC environment dictionary to ProcessExecution options', () => {
+      const dummyMsvc: CompilerInfo = {
+        name: 'MSVC',
+        type: 'msvc',
+        path: 'C:/MSVC/cl.exe'
+      };
+      const dummyEnv = {
+        INCLUDE: 'C:\\MSVC\\include',
+        LIB: 'C:\\MSVC\\lib',
+        PATH: 'C:\\MSVC\\bin'
+      };
+
+      const execution = createBuildExecution(dummyMsvc, 'C:/app/main.cpp', 'C:/app/main.exe', 'c++20', dummyEnv);
+      assert.strictEqual(execution.options?.env, dummyEnv);
+    });
+
     it('should generate GCC/Clang build arguments correctly', () => {
       const dummyGcc: CompilerInfo = {
         name: 'GCC',
