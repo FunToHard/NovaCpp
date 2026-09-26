@@ -270,7 +270,12 @@ export function createClangdMiddleware(
       if (!hover) {
         return hover;
       }
-      return HoverTransformer.transformAsync(hover);
+      const wordRange =
+        typeof document.getWordRangeAtPosition === 'function'
+          ? document.getWordRangeAtPosition(position)
+          : undefined;
+      const hoveredWord = wordRange ? document.getText(wordRange) : undefined;
+      return HoverTransformer.transformAsync(hover, hoveredWord);
     },
 
     provideDefinition: async (

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { findStlDocumentation, findStlDocumentationAsync, StlDocEntry } from './stl-knowledge-base';
+import { TypedefProvider } from './typedef-provider';
 
 export interface ParameterInfo {
   name: string;
@@ -492,7 +493,11 @@ export class HoverTransformer {
   /**
    * Transforms an incoming vscode.Hover from clangd into an enriched hover.
    */
-  public static transform(hover: vscode.Hover, stlDocOverride?: StlDocEntry): vscode.Hover {
+  public static transform(
+    hover: vscode.Hover,
+    stlDocOverride?: StlDocEntry,
+    hoveredWord?: string
+  ): vscode.Hover {
     if (!hover || !hover.contents || hover.contents.length === 0) {
       return hover;
     }
@@ -504,6 +509,12 @@ export class HoverTransformer {
 
     const sig = parseSignature(codeBlock);
     if (!sig) {
+      // 1. Check if this hover corresponds to a known or user-defined typedef / type alias
+      const typedefHover = TypedefProvider.provideTypedefHover(codeBlock, hoveredWord, hover.range);
+      if (typedefHover) {
+        return typedefHover;
+      }
+
       // Check if this type definition corresponds to a known STL type (e.g. std::vector, std::string)
       let typeStlDoc: StlDocEntry | null = stlDocOverride ?? null;
       if (!typeStlDoc) {
@@ -752,7 +763,10 @@ export class HoverTransformer {
    * Asynchronously transforms an incoming vscode.Hover from clangd into an enriched hover,
    * querying both the local ISO C++ knowledge base and remote/system header providers.
    */
-  public static async transformAsync(hover: vscode.Hover): Promise<vscode.Hover> {
+  public static async transformAsync(
+    hover: vscode.Hover,
+    hoveredWord?: string
+  ): Promise<vscode.Hover> {
     if (!hover || !hover.contents || hover.contents.length === 0) {
       return hover;
     }
@@ -764,6 +778,12 @@ export class HoverTransformer {
 
     const sig = parseSignature(codeBlock);
     if (!sig) {
+      // 1. Check if this hover corresponds to a known or user-defined typedef / type alias
+      const typedefHover = TypedefProvider.provideTypedefHover(codeBlock, hoveredWord, hover.range);
+      if (typedefHover) {
+        return typedefHover;
+      }
+
       let candidate = '';
       const typeMatch = codeBlock.match(/(?:class|struct|using)\s+([A-Za-z0-9_:]+)/);
       if (typeMatch) {
@@ -777,13 +797,13 @@ export class HoverTransformer {
       if (candidate) {
         const doc = await findStlDocumentationAsync(candidate);
         if (doc) {
-          return this.transform(hover, doc);
+          return this.transform(hover, doc, hoveredWord);
         }
       }
-      return this.transform(hover);
+      return this.transform(hover, undefined, hoveredWord);
     }
 
     const doc = await findStlDocumentationAsync(sig.name, sig.scope);
-    return this.transform(hover, doc ?? undefined);
+    return this.transform(hover, doc ?? undefined, hoveredWord);
   }
 }
