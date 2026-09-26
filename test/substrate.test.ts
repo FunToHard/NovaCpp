@@ -1,6 +1,6 @@
 import './vscode-mock';
 import * as assert from 'assert';
-import { defaultClangdArguments } from '../src/substrate/daemon-manager';
+import { DaemonManager, defaultClangdArguments } from '../src/substrate/daemon-manager';
 import { createClangdMiddleware, debounce } from '../src/substrate/protocol-filter';
 import { mockVscode } from './vscode-mock';
 
@@ -148,4 +148,28 @@ describe('Language Server Substrate & Clangd Configuration', () => {
       }, 70);
     });
   });
+
+  describe('DaemonManager Lifecycle Serialization', () => {
+    it('should single-flight concurrent start calls and not double-initialize', async () => {
+      let resolveCallCount = 0;
+      const fakeInstaller: any = {
+        resolveClangdPath: async () => {
+          resolveCallCount++;
+          await new Promise((r) => setTimeout(r, 20));
+          return null;
+        }
+      };
+
+      const manager = new DaemonManager({} as any, fakeInstaller);
+      await Promise.all([manager.start(), manager.start()]);
+
+      assert.strictEqual(
+        resolveCallCount,
+        1,
+        'resolveClangdPath must only be called once when start is called concurrently'
+      );
+      manager.dispose();
+    });
+  });
 });
+

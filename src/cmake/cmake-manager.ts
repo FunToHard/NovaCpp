@@ -61,7 +61,7 @@ export class CMakeManager implements vscode.Disposable {
    * Statically re-parses CMakeLists.txt across the workspace, updates active project info,
    * syncs include paths into IntelliSense, and notifies the language server.
    */
-  public async refresh(): Promise<void> {
+  public async refresh(reloadServer = true): Promise<void> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
       this.statusBarItem.hide();
@@ -82,7 +82,7 @@ export class CMakeManager implements vscode.Disposable {
     // Automatically synchronize discovered CMake includes into workspace compile_commands.json
     await this.synthesizeCompilationDatabase();
 
-    if (this.onReloadServer) {
+    if (reloadServer && this.onReloadServer) {
       await this.onReloadServer();
     }
   }

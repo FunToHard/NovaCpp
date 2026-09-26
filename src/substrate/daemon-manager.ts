@@ -57,6 +57,10 @@ export class DaemonManager implements vscode.Disposable {
   private restartCount = 0;
   private maxRestarts = 5;
   private lastRestartTime = 0;
+  private isStopping = false;
+  private startPromise: Promise<void> | null = null;
+  private stopPromise: Promise<void> | null = null;
+  private restartPromise: Promise<void> | null = null;
 
   constructor(
     _context: vscode.ExtensionContext,
@@ -81,6 +85,26 @@ export class DaemonManager implements vscode.Disposable {
   }
 
   public async start(): Promise<void> {
+    if (this.client && this.client.isRunning()) {
+      return;
+    }
+    if (this.startPromise) {
+      return this.startPromise;
+    }
+    if (this.stopPromise) {
+      await this.stopPromise;
+    }
+    if (this.client && this.client.isRunning()) {
+      return;
+    }
+
+    this.startPromise = this.doStart().finally(() => {
+      this.startPromise = null;
+    });
+    return this.startPromise;
+  }
+
+  private async doStart(): Promise<void> {
     this.updateStatusBar('$(sync~spin) NovaCpp: Resolving clangd...', 'Searching for clangd binary');
     this.statusBarItem.show();
 
@@ -196,6 +220,9 @@ export class DaemonManager implements vscode.Disposable {
         },
         closed: () => {
           this.outputChannel.appendLine('[Closed] Connection to clangd closed.');
+          if (this.isStopping) {
+            return { action: CloseAction.DoNotRestart, handled: true };
+          }
           const now = Date.now();
           if (now - this.lastRestartTime > 60000) {
             this.restartCount = 0;
@@ -295,28 +322,64 @@ export class DaemonManager implements vscode.Disposable {
   }
 
   public async restart(): Promise<void> {
-    this.outputChannel.appendLine('[Info] Restarting NovaCpp Language Server...');
-    await this.stop();
-    await this.start();
+    if (this.restartPromise) {
+      return this.restartPromise;
+    }
+
+    this.restartPromise = (async () => {
+      try {
+        this.outputChannel.appendLine('[Info] Restarting NovaCpp Language Server...');
+        await this.stop();
+        await this.start();
+      } finally {
+        this.restartPromise = null;
+      }
+    })();
+
+    return this.restartPromise;
   }
 
   public async stop(): Promise<void> {
-    for (const d of this.clientDisposables) {
-      d.dispose();
-    }
-    this.clientDisposables = [];
-
-    if (this.client) {
+    if (this.startPromise) {
       try {
-        if (this.client.isRunning()) {
-          await this.client.stop();
-        } else {
-          await this.client.dispose();
-        }
-      } catch (err) {
-        this.outputChannel.appendLine(`[Warn] Error stopping client: ${err}`);
+        await this.startPromise;
+      } catch {
+        // Ignore startup error when stopping
       }
-      this.client = null;
+    }
+    if (this.stopPromise) {
+      return this.stopPromise;
+    }
+
+    this.stopPromise = this.doStop().finally(() => {
+      this.stopPromise = null;
+    });
+    return this.stopPromise;
+  }
+
+  private async doStop(): Promise<void> {
+    this.isStopping = true;
+    try {
+      for (const d of this.clientDisposables) {
+        d.dispose();
+      }
+      this.clientDisposables = [];
+
+      if (this.client) {
+        const clientToStop = this.client;
+        this.client = null;
+        try {
+          if (clientToStop.isRunning()) {
+            await clientToStop.stop();
+          } else {
+            await clientToStop.dispose();
+          }
+        } catch (err) {
+          this.outputChannel.appendLine(`[Warn] Error stopping client: ${err}`);
+        }
+      }
+    } finally {
+      this.isStopping = false;
     }
   }
 
