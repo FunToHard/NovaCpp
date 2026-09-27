@@ -10,6 +10,9 @@ const buildOptions = {
   bundle: true,
   outfile: "dist/extension.js",
   external: ["vscode", "@aws-sdk/client-s3"],
+  alias: {
+    punycode: require.resolve("punycode/")
+  },
   format: "cjs",
   platform: "node",
   target: "node20",

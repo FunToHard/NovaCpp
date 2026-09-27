@@ -637,6 +637,7 @@
   },
   "dependencies": {
     "@clangd/install": "^0.1.20",
+    "punycode": "^2.3.1",
     "vscode-languageclient": "^9.0.1",
     "which": "^4.0.0"
   },
