@@ -1,7 +1,7 @@
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[napi(object)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
