@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { isCppFile, getOutputBinaryPath, createBuildExecution } from '../src/tasks/runner';
-import { NovaCppTaskProvider } from '../src/tasks/task-provider';
+import { TurboCppTaskProvider } from '../src/tasks/task-provider';
 import { CompilerInfo } from '../src/prober/compiler-detector';
 import { mockVscode } from './vscode-mock';
 
@@ -32,7 +32,7 @@ describe('Build Task Provider & Execution Engine', () => {
     });
 
     it('should generate output binary inside build/ if directory exists', () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-task-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-task-'));
       const buildDir = path.join(tmpDir, 'build');
       fs.mkdirSync(buildDir, { recursive: true });
 
@@ -94,9 +94,9 @@ describe('Build Task Provider & Execution Engine', () => {
     });
   });
 
-  describe('NovaCppTaskProvider', () => {
+  describe('TurboCppTaskProvider', () => {
     it('should provide build tasks when an active C++ editor exists', async () => {
-      const provider = new NovaCppTaskProvider();
+      const provider = new TurboCppTaskProvider();
 
       // Mock active text editor
       mockVscode.window.activeTextEditor = {
@@ -115,7 +115,7 @@ describe('Build Task Provider & Execution Engine', () => {
       const tasks = await provider.provideTasks();
       assert.strictEqual(tasks.length, 1);
       assert.strictEqual(tasks[0].name, 'C/C++: Build Active File');
-      assert.strictEqual(tasks[0].definition.type, 'novacpp');
+      assert.strictEqual(tasks[0].definition.type, 'turbocpp');
       assert.strictEqual(tasks[0].definition.task, 'buildActiveFile');
       assert.ok(tasks[0].execution);
 
@@ -124,7 +124,7 @@ describe('Build Task Provider & Execution Engine', () => {
     });
 
     it('should return empty task list when no active C++ editor exists', async () => {
-      const provider = new NovaCppTaskProvider();
+      const provider = new TurboCppTaskProvider();
       delete mockVscode.window.activeTextEditor;
 
       const tasks = await provider.provideTasks();
@@ -132,11 +132,11 @@ describe('Build Task Provider & Execution Engine', () => {
     });
 
     it('should resolve defined task correctly', async () => {
-      const provider = new NovaCppTaskProvider();
+      const provider = new TurboCppTaskProvider();
 
       const taskToResolve: any = {
         definition: {
-          type: 'novacpp',
+          type: 'turbocpp',
           task: 'buildActiveFile',
           file: 'F:/project/main.cpp'
         },

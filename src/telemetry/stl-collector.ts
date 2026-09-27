@@ -9,7 +9,7 @@ export class StlUsageCollector {
   private counts = new Map<string, number>();
 
   /**
-   * Checks whether telemetry is permitted by both VS Code global policy and NovaCpp setting.
+   * Checks whether telemetry is permitted by both VS Code global policy and TurboCpp setting.
    */
   public isTelemetryAllowed(): boolean {
     // 1. VS Code global telemetry check
@@ -23,8 +23,8 @@ export class StlUsageCollector {
       return false;
     }
 
-    // 2. NovaCpp explicit configuration toggle
-    const novacppConfig = vscode.workspace.getConfiguration('novacpp');
+    // 2. TurboCpp explicit configuration toggle
+    const novacppConfig = vscode.workspace.getConfiguration('turbocpp');
     const enabled = novacppConfig.get<boolean>('telemetry.enabled', true);
     return enabled;
   }

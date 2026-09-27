@@ -1,12 +1,12 @@
 import './vscode-mock';
 import * as assert from 'assert';
-import { NovaCppConfigurationTool } from '../src/ai/language-model-tool';
+import { TurboCppConfigurationTool } from '../src/ai/language-model-tool';
 import { CompilerDetector } from '../src/prober/compiler-detector';
 
 describe('Language Model Tools & Copilot Integration (#cpp)', () => {
   it('should build accurate project context', async () => {
     const detector = new CompilerDetector();
-    const tool = new NovaCppConfigurationTool(detector, null);
+    const tool = new TurboCppConfigurationTool(detector, null);
 
     const ctx = await tool.getProjectContext();
     assert.ok(ctx.language);
@@ -19,7 +19,7 @@ describe('Language Model Tools & Copilot Integration (#cpp)', () => {
 
   it('should format context into a structured project summary string', () => {
     const detector = new CompilerDetector();
-    const tool = new NovaCppConfigurationTool(detector, null);
+    const tool = new TurboCppConfigurationTool(detector, null);
 
     const dummyCtx = {
       language: 'C++',
@@ -48,7 +48,7 @@ describe('Language Model Tools & Copilot Integration (#cpp)', () => {
 
   it('should execute invoke() and return valid result structure', async () => {
     const detector = new CompilerDetector();
-    const tool = new NovaCppConfigurationTool(detector, null);
+    const tool = new TurboCppConfigurationTool(detector, null);
 
     const res = await tool.invoke({}, {} as any);
     assert.ok(res);

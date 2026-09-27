@@ -39,7 +39,7 @@ export class ProfileManager implements vscode.Disposable {
       vscode.StatusBarAlignment.Right,
       100
     );
-    this.statusBarItem.command = 'novacpp.selectProfile';
+    this.statusBarItem.command = 'turbocpp.selectProfile';
 
     this.activeProfile = this.getDefaultProfile();
     this.updateStatusBar();
@@ -92,7 +92,7 @@ export class ProfileManager implements vscode.Disposable {
           }
         }
       } catch (err) {
-        console.warn('NovaCpp: Could not update compile_flags.txt on profile reload:', err);
+        console.warn('TurboCpp: Could not update compile_flags.txt on profile reload:', err);
       }
     }
 
@@ -115,12 +115,12 @@ export class ProfileManager implements vscode.Disposable {
 
   private updateStatusBar(): void {
     this.statusBarItem.text = `$(gear) ${this.activeProfile.name}`;
-    this.statusBarItem.tooltip = `NovaCpp Target Profile: ${this.activeProfile.name} (Click to switch)`;
+    this.statusBarItem.tooltip = `TurboCpp Target Profile: ${this.activeProfile.name} (Click to switch)`;
     this.statusBarItem.show();
   }
 
   public getDefaultProfile(): CppProfile {
-    const config = vscode.workspace.getConfiguration('novacpp');
+    const config = vscode.workspace.getConfiguration('turbocpp');
     return {
       name: 'Default',
       cppStandard: config.get<string>('cppStandard', 'c++20'),
@@ -139,7 +139,7 @@ export class ProfileManager implements vscode.Disposable {
     if (!root) return [this.getDefaultProfile()];
 
     const cCppProps = path.join(root, '.vscode', 'c_cpp_properties.json');
-    const novacppProps = path.join(root, '.vscode', 'novacpp.json');
+    const novacppProps = path.join(root, '.vscode', 'turbocpp.json');
 
     for (const filePath of [cCppProps, novacppProps]) {
       if (fs.existsSync(filePath)) {
@@ -149,7 +149,7 @@ export class ProfileManager implements vscode.Disposable {
             return parsed.configurations;
           }
         } catch (err) {
-          console.warn(`NovaCpp: Could not parse configuration profiles from ${filePath}:`, err);
+          console.warn(`TurboCpp: Could not parse configuration profiles from ${filePath}:`, err);
         }
       }
     }
@@ -253,12 +253,12 @@ export class ProfileManager implements vscode.Disposable {
           }
         }
       } catch (err) {
-        console.warn('NovaCpp: Could not update compile_flags.txt on profile change:', err);
+        console.warn('TurboCpp: Could not update compile_flags.txt on profile change:', err);
       }
     }
 
     vscode.window.showInformationMessage(
-      `NovaCpp: Switched active target profile to '${this.activeProfile.name}'.`
+      `TurboCpp: Switched active target profile to '${this.activeProfile.name}'.`
     );
 
     if (this.onReloadCallback) {

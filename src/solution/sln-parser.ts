@@ -507,7 +507,7 @@ export async function parseSolutionFile(filePath: string): Promise<SolutionModel
     }
     return null;
   } catch (err) {
-    console.warn(`NovaCpp: Failed to parse solution file at ${filePath}:`, err);
+    console.warn(`TurboCpp: Failed to parse solution file at ${filePath}:`, err);
     return null;
   }
 }
@@ -521,7 +521,7 @@ export async function loadVcxProject(filePath: string, solutionDir?: string): Pr
     const content = await readFileWithEncoding(filePath);
     return parseVcxproj(content, filePath, solutionDir);
   } catch (err) {
-    console.warn(`NovaCpp: Failed to parse vcxproj at ${filePath}:`, err);
+    console.warn(`TurboCpp: Failed to parse vcxproj at ${filePath}:`, err);
     return null;
   }
 }

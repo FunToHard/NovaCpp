@@ -50,8 +50,8 @@ export class LaunchGenerator {
     }
 
     return {
-      name: 'NovaCpp: Debug Active File',
-      type: 'novacpp-debug',
+      name: 'TurboCpp: Debug Active File',
+      type: 'turbocpp-debug',
       request: 'launch',
       program: programPath,
       args: [],
@@ -67,11 +67,11 @@ export class LaunchGenerator {
    * Generates default attach-to-process configuration using process picker.
    */
   public static createAttachConfiguration(
-    processId: string = '${command:novacpp.pickProcess}'
+    processId: string = '${command:turbocpp.pickProcess}'
   ): DebugLaunchConfiguration {
     return {
-      name: 'NovaCpp: Attach to Process',
-      type: 'novacpp-debug',
+      name: 'TurboCpp: Attach to Process',
+      type: 'turbocpp-debug',
       request: 'attach',
       processId,
       debuggerType: 'auto'

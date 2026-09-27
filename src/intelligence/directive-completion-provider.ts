@@ -177,7 +177,7 @@ export const PREPROCESSOR_DIRECTIVE_TEMPLATES: DirectiveTemplate[] = [
     filterKeywords: ['#error', 'error'],
     detail: 'Preprocessor: Emit compile-time fatal diagnostic',
     documentation:
-      'Emits a fatal compiler diagnostic error message and halts compilation.\n\nExample:\n```cpp\n#if __cplusplus < 202002L\n#error "C++20 or later is required to compile NovaCpp."\n#endif\n```',
+      'Emits a fatal compiler diagnostic error message and halts compilation.\n\nExample:\n```cpp\n#if __cplusplus < 202002L\n#error "C++20 or later is required to compile TurboCpp."\n#endif\n```',
     snippet: '#error "${1:Unsupported compiler configuration}"',
     sortOrder: 60
   },

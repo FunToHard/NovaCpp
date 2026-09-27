@@ -1,5 +1,5 @@
 /**
- * NovaCpp Architectural Performance Micro-Benchmark Harness.
+ * TurboCpp Architectural Performance Micro-Benchmark Harness.
  *
  * This file measures throughput and latency for:
  * 1. Zero-config system compiler discovery.
@@ -26,7 +26,7 @@ import { createBuildExecution } from '../src/tasks/runner';
 
 async function runBenchmarks() {
   console.log('===============================================================');
-  console.log('       NovaCpp vs. vscode-cpptools Architecture Benchmark      ');
+  console.log('       TurboCpp vs. vscode-cpptools Architecture Benchmark      ');
   console.log('===============================================================\n');
 
   const detector = new CompilerDetector();
@@ -88,43 +88,43 @@ async function runBenchmarks() {
     {
       Dimension: 'Parsing & Completion Speed',
       'vscode-cpptools': 'Disk AutoPCH (200 - 1000ms delay)',
-      NovaCpp: '< 30ms (In-memory AST preamble)',
+      TurboCpp: '< 30ms (In-memory AST preamble)',
       Advantage: '10x - 30x faster'
     },
     {
       Dimension: 'Symbol Navigation & Go to Def',
       'vscode-cpptools': 'SQLite token DB (500 - 3000ms)',
-      NovaCpp: '< 50ms (Compacted AST index)',
+      TurboCpp: '< 50ms (Compacted AST index)',
       Advantage: '10x - 60x faster'
     },
     {
       Dimension: 'Find All References',
       'vscode-cpptools': 'SQLite scan (3000 - 60000ms)',
-      NovaCpp: '< 200ms (clangd index shards)',
+      TurboCpp: '< 200ms (clangd index shards)',
       Advantage: '15x - 300x faster'
     },
     {
       Dimension: 'Memory Footprint',
       'vscode-cpptools': '1.2 GB - 4.5 GB (multi-process srv)',
-      NovaCpp: '< 350 MB (single daemon + DAP)',
+      TurboCpp: '< 350 MB (single daemon + DAP)',
       Advantage: '70% - 90% memory reduction'
     },
     {
       Dimension: 'Out-of-the-Box Experience',
       'vscode-cpptools': 'Manual prompts, sluggish probing',
-      NovaCpp: 'Zero-config auto-probing & synthesis',
+      TurboCpp: 'Zero-config auto-probing & synthesis',
       Advantage: 'Instant zero red squiggles'
     },
     {
       Dimension: 'Integrated Debugger',
       'vscode-cpptools': 'cppdbg / cppvsdbg (proprietary)',
-      NovaCpp: 'lldb-dap & GDB DAP (Open standard)',
+      TurboCpp: 'lldb-dap & GDB DAP (Open standard)',
       Advantage: 'No vendor lock-in'
     },
     {
       Dimension: 'VSIX Bundle Size',
       'vscode-cpptools': '~75 MB',
-      NovaCpp: '1.0 MB',
+      TurboCpp: '1.0 MB',
       Advantage: '98.6% smaller bundle'
     }
   ]);

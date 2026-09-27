@@ -207,7 +207,7 @@ export class HierarchyGraphManager implements vscode.Disposable {
   private outputChannel: vscode.OutputChannel;
 
   constructor() {
-    this.outputChannel = vscode.window.createOutputChannel('NovaCpp: Symbol Hierarchy');
+    this.outputChannel = vscode.window.createOutputChannel('TurboCpp: Symbol Hierarchy');
   }
 
   public dispose(): void {
@@ -217,7 +217,7 @@ export class HierarchyGraphManager implements vscode.Disposable {
   public showTypeHierarchy(editor?: vscode.TextEditor): HierarchyGraph | null {
     const active = editor || vscode.window.activeTextEditor;
     if (!active) {
-      vscode.window.showWarningMessage('NovaCpp: Open a C/C++ source file to view type hierarchy.');
+      vscode.window.showWarningMessage('TurboCpp: Open a C/C++ source file to view type hierarchy.');
       return null;
     }
 
@@ -228,7 +228,7 @@ export class HierarchyGraphManager implements vscode.Disposable {
     const symbol = wordRange ? doc.getText(wordRange) : '';
 
     if (!symbol) {
-      vscode.window.showInformationMessage('NovaCpp: Place cursor on a class or struct name.');
+      vscode.window.showInformationMessage('TurboCpp: Place cursor on a class or struct name.');
       return null;
     }
 
@@ -238,7 +238,7 @@ export class HierarchyGraphManager implements vscode.Disposable {
 
     this.outputChannel.clear();
     this.outputChannel.appendLine(`=======================================================`);
-    this.outputChannel.appendLine(`NovaCpp: Semantic Type & Inheritance Hierarchy Graph`);
+    this.outputChannel.appendLine(`TurboCpp: Semantic Type & Inheritance Hierarchy Graph`);
     this.outputChannel.appendLine(`Symbol: ${symbol} (${path.basename(doc.fileName)})`);
     this.outputChannel.appendLine(`=======================================================`);
     this.outputChannel.appendLine(ascii);

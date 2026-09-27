@@ -22,12 +22,12 @@ export class CMakeWatcher implements vscode.Disposable {
       if (fs.existsSync(uri.fsPath)) {
         const stats = fs.statSync(uri.fsPath);
         if (stats.size > 0) {
-          console.log(`NovaCpp: Build database updated at ${uri.fsPath}. Reloading language server...`);
+          console.log(`TurboCpp: Build database updated at ${uri.fsPath}. Reloading language server...`);
           await this.onReload();
         }
       }
     } catch (err) {
-      console.warn(`NovaCpp: Error handling compilation database update:`, err);
+      console.warn(`TurboCpp: Error handling compilation database update:`, err);
     }
   }, 1500);
 

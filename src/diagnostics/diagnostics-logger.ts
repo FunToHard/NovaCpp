@@ -11,7 +11,7 @@ export class DiagnosticsLogger {
 
   public static getChannel(): vscode.OutputChannel {
     if (!this.channel) {
-      this.channel = vscode.window.createOutputChannel('NovaCpp Diagnostics');
+      this.channel = vscode.window.createOutputChannel('TurboCpp Diagnostics');
     }
     return this.channel;
   }
@@ -39,8 +39,8 @@ export class DiagnosticsLogger {
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
     const lines: string[] = [];
 
-    lines.push(`-------- NovaCpp Diagnostics - ${timestamp} --------`);
-    lines.push(`NovaCpp Extension Version : 0.1.0`);
+    lines.push(`-------- TurboCpp Diagnostics - ${timestamp} --------`);
+    lines.push(`TurboCpp Extension Version : 0.1.0`);
     lines.push(`VS Code Version           : ${vscode.version}`);
     lines.push(`Operating System          : ${process.platform} (${process.arch})`);
 

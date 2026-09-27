@@ -190,8 +190,8 @@ export class CppTestController implements vscode.Disposable {
 
   constructor() {
     this.controller = vscode.tests.createTestController(
-      'novacpp-test-controller',
-      'NovaCpp: C/C++ Tests'
+      'turbocpp-test-controller',
+      'TurboCpp: C/C++ Tests'
     );
 
     this.runProfile = this.controller.createRunProfile(
@@ -328,7 +328,7 @@ export class CppTestController implements vscode.Disposable {
     isDebug: boolean = false
   ): Promise<void> {
     vscode.window.showInformationMessage(
-      `NovaCpp: ${isDebug ? 'Debugging' : 'Running'} tests selected in Test Explorer.`
+      `TurboCpp: ${isDebug ? 'Debugging' : 'Running'} tests selected in Test Explorer.`
     );
   }
 }

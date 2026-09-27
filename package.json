@@ -1,9 +1,9 @@
 {
-  "name": "novacpp",
-  "displayName": "NovaCpp",
+  "name": "turbocpp",
+  "displayName": "TurboCpp",
   "description": "High-performance C/C++ language support, debugging, and tooling for Visual Studio Code",
   "version": "0.1.0",
-  "publisher": "novacpp",
+  "publisher": "FunToHard",
   "engines": {
     "vscode": "^1.138.0"
   },
@@ -25,12 +25,12 @@
     "onLanguage:c",
     "onLanguage:cpp",
     "onLanguage:cuda-cpp",
-    "onCommand:novacpp.openSettings",
-    "onCommand:novacpp.restartServer",
-    "onCommand:novacpp.switchSourceHeader",
-    "onCommand:novacpp.installClangd",
-    "onDebugResolve:novacpp-debug",
-    "onTaskType:novacpp",
+    "onCommand:turbocpp.openSettings",
+    "onCommand:turbocpp.restartServer",
+    "onCommand:turbocpp.switchSourceHeader",
+    "onCommand:turbocpp.installClangd",
+    "onDebugResolve:turbocpp-debug",
+    "onTaskType:turbocpp",
     "onTaskType:msbuild",
     "workspaceContains:**/*.sln",
     "workspaceContains:**/*.slnx",
@@ -46,227 +46,227 @@
   "contributes": {
     "commands": [
       {
-        "command": "novacpp.logDiagnostics",
-        "title": "NovaCpp: Log Diagnostics",
+        "command": "turbocpp.logDiagnostics",
+        "title": "TurboCpp: Log Diagnostics",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.resetIndex",
-        "title": "NovaCpp: Reset Clangd Symbol Index",
+        "command": "turbocpp.resetIndex",
+        "title": "TurboCpp: Reset Clangd Symbol Index",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.goToNextDirectiveInGroup",
-        "title": "NovaCpp: Go to Next Directive in Group",
+        "command": "turbocpp.goToNextDirectiveInGroup",
+        "title": "TurboCpp: Go to Next Directive in Group",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.goToPrevDirectiveInGroup",
-        "title": "NovaCpp: Go to Previous Directive in Group",
+        "command": "turbocpp.goToPrevDirectiveInGroup",
+        "title": "TurboCpp: Go to Previous Directive in Group",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.generateDoxygenComment",
-        "title": "NovaCpp: Generate Doxygen Documentation Comment",
+        "command": "turbocpp.generateDoxygenComment",
+        "title": "TurboCpp: Generate Doxygen Documentation Comment",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.runClangTidyOnActiveFile",
-        "title": "NovaCpp: Run Clang-Tidy Analysis on Active File",
+        "command": "turbocpp.runClangTidyOnActiveFile",
+        "title": "TurboCpp: Run Clang-Tidy Analysis on Active File",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.clearCodeAnalysisDiagnostics",
-        "title": "NovaCpp: Clear Clang-Tidy Diagnostics",
+        "command": "turbocpp.clearCodeAnalysisDiagnostics",
+        "title": "TurboCpp: Clear Clang-Tidy Diagnostics",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.setVsDeveloperEnvironment",
-        "title": "NovaCpp: Set Visual Studio Developer Environment",
+        "command": "turbocpp.setVsDeveloperEnvironment",
+        "title": "TurboCpp: Set Visual Studio Developer Environment",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.clearVsDeveloperEnvironment",
-        "title": "NovaCpp: Clear Visual Studio Developer Environment",
+        "command": "turbocpp.clearVsDeveloperEnvironment",
+        "title": "TurboCpp: Clear Visual Studio Developer Environment",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.selectProfile",
-        "title": "NovaCpp: Select Target Configuration Profile",
+        "command": "turbocpp.selectProfile",
+        "title": "TurboCpp: Select Target Configuration Profile",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.pickProcess",
-        "title": "NovaCpp: Pick Process to Attach",
+        "command": "turbocpp.pickProcess",
+        "title": "TurboCpp: Pick Process to Attach",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.solutionMenu",
-        "title": "NovaCpp: Solution Actions Menu",
+        "command": "turbocpp.solutionMenu",
+        "title": "TurboCpp: Solution Actions Menu",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.selectSolution",
-        "title": "NovaCpp: Select Active Solution (.sln / .slnx)",
+        "command": "turbocpp.selectSolution",
+        "title": "TurboCpp: Select Active Solution (.sln / .slnx)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.selectSolutionConfiguration",
-        "title": "NovaCpp: Select Solution Configuration",
+        "command": "turbocpp.selectSolutionConfiguration",
+        "title": "TurboCpp: Select Solution Configuration",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.buildSolution",
-        "title": "NovaCpp: Build Solution (MSBuild)",
+        "command": "turbocpp.buildSolution",
+        "title": "TurboCpp: Build Solution (MSBuild)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.rebuildSolution",
-        "title": "NovaCpp: Rebuild Solution (MSBuild)",
+        "command": "turbocpp.rebuildSolution",
+        "title": "TurboCpp: Rebuild Solution (MSBuild)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.cleanSolution",
-        "title": "NovaCpp: Clean Solution (MSBuild)",
+        "command": "turbocpp.cleanSolution",
+        "title": "TurboCpp: Clean Solution (MSBuild)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.generateCompilationDbFromSolution",
-        "title": "NovaCpp: Generate compile_commands.json from Solution",
+        "command": "turbocpp.generateCompilationDbFromSolution",
+        "title": "TurboCpp: Generate compile_commands.json from Solution",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.cmake.menu",
-        "title": "NovaCpp: CMake Intelligence Menu",
+        "command": "turbocpp.cmake.menu",
+        "title": "TurboCpp: CMake Intelligence Menu",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.cmake.rescan",
-        "title": "NovaCpp: Re-scan CMakeLists.txt Includes",
+        "command": "turbocpp.cmake.rescan",
+        "title": "TurboCpp: Re-scan CMakeLists.txt Includes",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.cmake.generateCompilationDatabase",
-        "title": "NovaCpp: Generate compile_commands.json from CMakeLists.txt",
+        "command": "turbocpp.cmake.generateCompilationDatabase",
+        "title": "TurboCpp: Generate compile_commands.json from CMakeLists.txt",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.openSettings",
-        "title": "NovaCpp: Open Configuration Panel",
+        "command": "turbocpp.openSettings",
+        "title": "TurboCpp: Open Configuration Panel",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.inspectMemoryLayout",
-        "title": "NovaCpp: Inspect Type & Memory Layout (Struct Padding / Alignment)",
+        "command": "turbocpp.inspectMemoryLayout",
+        "title": "TurboCpp: Inspect Type & Memory Layout (Struct Padding / Alignment)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.analyzeIncludes",
-        "title": "NovaCpp: Analyze #include Hierarchy & Dependencies",
+        "command": "turbocpp.analyzeIncludes",
+        "title": "TurboCpp: Analyze #include Hierarchy & Dependencies",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.visualizeTimeTrace",
-        "title": "NovaCpp: Visualize Clang -ftime-trace Build Bottlenecks",
+        "command": "turbocpp.visualizeTimeTrace",
+        "title": "TurboCpp: Visualize Clang -ftime-trace Build Bottlenecks",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.refreshTests",
-        "title": "NovaCpp: Discover & Refresh Unit Tests",
+        "command": "turbocpp.refreshTests",
+        "title": "TurboCpp: Discover & Refresh Unit Tests",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.expandMacro",
-        "title": "NovaCpp: Expand Macro at Cursor (Step-by-Step)",
+        "command": "turbocpp.expandMacro",
+        "title": "TurboCpp: Expand Macro at Cursor (Step-by-Step)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.evaluateConstexpr",
-        "title": "NovaCpp: Evaluate constexpr Expression at Cursor",
+        "command": "turbocpp.evaluateConstexpr",
+        "title": "TurboCpp: Evaluate constexpr Expression at Cursor",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.viewDisassembly",
-        "title": "NovaCpp: Open Inline Compiler Disassembly (Assembly View)",
+        "command": "turbocpp.viewDisassembly",
+        "title": "TurboCpp: Open Inline Compiler Disassembly (Assembly View)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.setDisassemblyOptimizationLevel",
-        "title": "NovaCpp: Set Disassembly Optimization Level",
+        "command": "turbocpp.setDisassemblyOptimizationLevel",
+        "title": "TurboCpp: Set Disassembly Optimization Level",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.showTypeHierarchy",
-        "title": "NovaCpp: Show Visual Type & Inheritance Hierarchy Graph",
+        "command": "turbocpp.showTypeHierarchy",
+        "title": "TurboCpp: Show Visual Type & Inheritance Hierarchy Graph",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.restartServer",
-        "title": "NovaCpp: Restart Language Server",
+        "command": "turbocpp.restartServer",
+        "title": "TurboCpp: Restart Language Server",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.toggleDimInactiveRegions",
-        "title": "NovaCpp: Toggle Inactive Regions Dimming",
+        "command": "turbocpp.toggleDimInactiveRegions",
+        "title": "TurboCpp: Toggle Inactive Regions Dimming",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.switchSourceHeader",
-        "title": "NovaCpp: Switch Header/Source",
+        "command": "turbocpp.switchSourceHeader",
+        "title": "TurboCpp: Switch Header/Source",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.installClangd",
-        "title": "NovaCpp: Download and Install clangd",
+        "command": "turbocpp.installClangd",
+        "title": "TurboCpp: Download and Install clangd",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.detectCompilers",
-        "title": "NovaCpp: Scan for Installed Compilers",
+        "command": "turbocpp.detectCompilers",
+        "title": "TurboCpp: Scan for Installed Compilers",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.generateCompileFlags",
-        "title": "NovaCpp: Generate compile_flags.txt",
+        "command": "turbocpp.generateCompileFlags",
+        "title": "TurboCpp: Generate compile_flags.txt",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.runFile",
+        "command": "turbocpp.runFile",
         "title": "Run C/C++ File",
         "icon": "$(play)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.debugFile",
+        "command": "turbocpp.debugFile",
         "title": "Debug C/C++ File",
         "icon": "$(debug-alt)",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.openDocs",
-        "title": "NovaCpp: Open C++ Reference Documentation",
+        "command": "turbocpp.openDocs",
+        "title": "TurboCpp: Open C++ Reference Documentation",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.inspectTelemetry",
-        "title": "NovaCpp: Inspect Anonymous STL Telemetry Buffer",
+        "command": "turbocpp.inspectTelemetry",
+        "title": "TurboCpp: Inspect Anonymous STL Telemetry Buffer",
         "category": "C/C++"
       },
       {
-        "command": "novacpp.flushTelemetry",
-        "title": "NovaCpp: Flush Telemetry Batch",
+        "command": "turbocpp.flushTelemetry",
+        "title": "TurboCpp: Flush Telemetry Batch",
         "category": "C/C++"
       }
     ],
     "menus": {
       "editor/title/run": [
         {
-          "command": "novacpp.runFile",
+          "command": "turbocpp.runFile",
           "when": "editorLangId == cpp || editorLangId == c",
           "group": "navigation@1"
         },
         {
-          "command": "novacpp.debugFile",
+          "command": "turbocpp.debugFile",
           "when": "editorLangId == cpp || editorLangId == c",
           "group": "navigation@2"
         }
@@ -274,7 +274,7 @@
     },
     "keybindings": [
       {
-        "command": "novacpp.switchSourceHeader",
+        "command": "turbocpp.switchSourceHeader",
         "key": "alt+o",
         "mac": "alt+cmd+o",
         "when": "editorTextFocus && (editorLangId == c || editorLangId == cpp)"
@@ -282,14 +282,14 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "NovaCpp",
+      "title": "TurboCpp",
       "properties": {
-        "novacpp.clangdPath": {
+        "turbocpp.clangdPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the clangd executable. If empty, NovaCpp searches PATH and the auto-installed binary."
+          "description": "Path to the clangd executable. If empty, TurboCpp searches PATH and the auto-installed binary."
         },
-        "novacpp.clangdArgs": {
+        "turbocpp.clangdArgs": {
           "type": "array",
           "items": {
             "type": "string"
@@ -297,12 +297,12 @@
           "default": [],
           "description": "Additional command-line arguments to pass to clangd."
         },
-        "novacpp.debuggerPath": {
+        "turbocpp.debuggerPath": {
           "type": "string",
           "default": "",
-          "description": "Path to lldb-dap or gdb. If empty, NovaCpp will detect it automatically."
+          "description": "Path to lldb-dap or gdb. If empty, TurboCpp will detect it automatically."
         },
-        "novacpp.cppStandard": {
+        "turbocpp.cppStandard": {
           "type": "string",
           "enum": [
             "c++98",
@@ -317,7 +317,7 @@
           "default": "c++20",
           "description": "Default C++ language standard for flag synthesis."
         },
-        "novacpp.cStandard": {
+        "turbocpp.cStandard": {
           "type": "string",
           "enum": [
             "c89",
@@ -329,44 +329,44 @@
           "default": "c17",
           "description": "Default C language standard for flag synthesis."
         },
-        "novacpp.inactiveRegionsDimming": {
+        "turbocpp.inactiveRegionsDimming": {
           "type": "boolean",
           "default": true,
           "description": "Dim inactive #ifdef preprocessor branches using native Clang AST."
         },
-        "novacpp.inactiveRegionForegroundColor": {
+        "turbocpp.inactiveRegionForegroundColor": {
           "type": "string",
           "default": "disabledForeground",
           "description": "Font color applied to inactive preprocessor regions. Accepts a ThemeColor id (e.g. 'disabledForeground', 'descriptionForeground'), a hexadecimal color (e.g. '#808080'), or 'none' to preserve original syntax colors."
         },
-        "novacpp.inactiveRegionOpacity": {
+        "turbocpp.inactiveRegionOpacity": {
           "type": "number",
           "default": 0.6,
           "minimum": 0.1,
           "maximum": 1,
           "description": "Opacity level applied to inactive preprocessor code regions (0.1 to 1.0)."
         },
-        "novacpp.inactiveRegionBackgroundColor": {
+        "turbocpp.inactiveRegionBackgroundColor": {
           "type": "string",
           "default": "",
           "description": "Optional background color applied to inactive preprocessor regions (hex color or ThemeColor id)."
         },
-        "novacpp.postfixCompletions": {
+        "turbocpp.postfixCompletions": {
           "type": "boolean",
           "default": true,
           "description": "Enable C++ Postfix Completion templates (.if, .for, .var, .unique, etc.)."
         },
-        "novacpp.doxygen.generateOnType": {
+        "turbocpp.doxygen.generateOnType": {
           "type": "boolean",
           "default": true,
           "description": "Automatically provide Doxygen completion snippet when typing /** above a C++ declaration."
         },
-        "novacpp.doxygen.generateOnCodeAction": {
+        "turbocpp.doxygen.generateOnCodeAction": {
           "type": "boolean",
           "default": true,
           "description": "Provide a lightbulb Code Action to generate Doxygen documentation comments for C++ declarations."
         },
-        "novacpp.doxygen.generatedStyle": {
+        "turbocpp.doxygen.generatedStyle": {
           "type": "string",
           "enum": [
             "/**",
@@ -377,12 +377,12 @@
           "default": "/**",
           "description": "Comment style syntax used when generating Doxygen comment blocks."
         },
-        "novacpp.codeAnalysis.clangTidy.path": {
+        "turbocpp.codeAnalysis.clangTidy.path": {
           "type": "string",
           "default": "",
-          "description": "Explicit filesystem path to clang-tidy binary. If empty, NovaCpp searches PATH and standard LLVM directories."
+          "description": "Explicit filesystem path to clang-tidy binary. If empty, TurboCpp searches PATH and standard LLVM directories."
         },
-        "novacpp.codeAnalysis.clangTidy.checks.enabled": {
+        "turbocpp.codeAnalysis.clangTidy.checks.enabled": {
           "type": "array",
           "items": {
             "type": "string"
@@ -390,7 +390,7 @@
           "default": [],
           "description": "List of Clang-Tidy checks or families to enable (e.g. ['modernize-*', 'readability-*'])."
         },
-        "novacpp.codeAnalysis.clangTidy.checks.disabled": {
+        "turbocpp.codeAnalysis.clangTidy.checks.disabled": {
           "type": "array",
           "items": {
             "type": "string"
@@ -398,27 +398,27 @@
           "default": [],
           "description": "List of Clang-Tidy checks or families to suppress (e.g. ['modernize-use-trailing-return-type'])."
         },
-        "novacpp.persistVsDeveloperEnvironment": {
+        "turbocpp.persistVsDeveloperEnvironment": {
           "type": "boolean",
           "default": true,
           "description": "Preserve the selected Visual Studio Developer Environment across editor restarts on Windows."
         },
-        "novacpp.vcpkg.enabled": {
+        "turbocpp.vcpkg.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable intelligent header recommendations and Code Actions for vcpkg packages."
         },
-        "novacpp.addNodeAddonIncludePaths": {
+        "turbocpp.addNodeAddonIncludePaths": {
           "type": "boolean",
           "default": true,
           "description": "Auto-detect and inject include paths for nan and node-addon-api if detected in package.json."
         },
-        "novacpp.discovery.detectExternalSdks": {
+        "turbocpp.discovery.detectExternalSdks": {
           "type": "boolean",
           "default": true,
           "description": "Auto-detect common external SDKs (Vulkan SDK, raylib, CUDA Toolkit, Boost, SDL) for fallback IntelliSense flags and flag synthesis."
         },
-        "novacpp.default.forcedInclude": {
+        "turbocpp.default.forcedInclude": {
           "type": "array",
           "items": {
             "type": "string"
@@ -426,32 +426,32 @@
           "default": [],
           "description": "List of header files to force-include before compilation (/FI on MSVC, -include on GCC/Clang)."
         },
-        "novacpp.inlayHints.parameterNames": {
+        "turbocpp.inlayHints.parameterNames": {
           "type": "boolean",
           "default": true,
           "description": "Display parameter name inlay hints in function and method calls."
         },
-        "novacpp.inlayHints.deducedTypes": {
+        "turbocpp.inlayHints.deducedTypes": {
           "type": "boolean",
           "default": true,
           "description": "Display deduced type inlay hints for auto variables."
         },
-        "novacpp.inlayHints.designators": {
+        "turbocpp.inlayHints.designators": {
           "type": "boolean",
           "default": true,
           "description": "Display struct field designators in brace initialization."
         },
-        "novacpp.telemetry.enabled": {
+        "turbocpp.telemetry.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable anonymous C++ Standard Library (STL) symbol frequency collection to boost autocomplete suggestion accuracy. Zero user code or PII is ever collected."
         },
-        "novacpp.telemetry.endpoint": {
+        "turbocpp.telemetry.endpoint": {
           "type": "string",
-          "default": "https://telemetry.novacpp.dev/v1/telemetry/stl-usage",
+          "default": "https://telemetry.turbocpp.dev/v1/telemetry/stl-usage",
           "description": "Ingestion endpoint URL for anonymous STL usage telemetry batches. Must use the secure HTTPS protocol."
         },
-        "novacpp.cmake.autoScan": {
+        "turbocpp.cmake.autoScan": {
           "type": "boolean",
           "default": true,
           "description": "Automatically parse CMakeLists.txt and include discovered directories into IntelliSense."
@@ -460,8 +460,8 @@
     },
     "debuggers": [
       {
-        "type": "novacpp-debug",
-        "label": "NovaCpp: C/C++ Debugger (lldb-dap / GDB)",
+        "type": "turbocpp-debug",
+        "label": "TurboCpp: C/C++ Debugger (lldb-dap / GDB)",
         "languages": [
           "c",
           "cpp",
@@ -533,14 +533,14 @@
     ],
     "taskDefinitions": [
       {
-        "type": "novacpp",
+        "type": "turbocpp",
         "required": [
           "task"
         ],
         "properties": {
           "task": {
             "type": "string",
-            "description": "NovaCpp task action name (e.g. buildActiveFile, buildWorkspace)"
+            "description": "TurboCpp task action name (e.g. buildActiveFile, buildWorkspace)"
           },
           "file": {
             "type": "string",
@@ -614,7 +614,7 @@
     ],
     "languageModelTools": [
       {
-        "name": "novacpp_configuration",
+        "name": "turbocpp_configuration",
         "toolReferenceName": "cpp",
         "displayName": "C/C++ Project Configuration",
         "canBeReferencedInPrompt": true,
@@ -624,7 +624,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/FunToHard/NovaCpp"
+    "url": "https://github.com/FunToHard/TurboCpp"
   },
   "license": "MIT",
   "scripts": {

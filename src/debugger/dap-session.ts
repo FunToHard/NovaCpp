@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { LldbDapLocator, DebuggerExecutable } from './lldb-dap';
 import { LaunchGenerator, DebugLaunchConfiguration } from './launch-generator';
 
-export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   provideDebugConfigurations(
     _folder: vscode.WorkspaceFolder | undefined,
     _token?: vscode.CancellationToken
@@ -20,7 +20,7 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
     _token?: vscode.CancellationToken
   ): Promise<vscode.DebugConfiguration | null | undefined> {
     if (!vscode.workspace.isTrusted) {
-      vscode.window.showErrorMessage('NovaCpp: Debugging is disabled in untrusted workspaces.');
+      vscode.window.showErrorMessage('TurboCpp: Debugging is disabled in untrusted workspaces.');
       return undefined;
     }
 
@@ -31,7 +31,7 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
     // If config is completely empty (e.g. F5 on loose file without launch.json)
     if (!config.type && !config.request && !config.name) {
       if (!activeEditor) {
-        vscode.window.showErrorMessage('NovaCpp: Select a C/C++ source file to debug.');
+        vscode.window.showErrorMessage('TurboCpp: Select a C/C++ source file to debug.');
         return null;
       }
       const generated = LaunchGenerator.createDefaultConfiguration(activeFile, workspaceRoot);
@@ -63,9 +63,9 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
     // Handle Attach mode
     if (config.request === 'attach') {
       if (!config.processId) {
-        config.processId = '${command:novacpp.pickProcess}';
-      } else if (config.processId === '${command:novacpp.pickProcess}') {
-        const picked = await vscode.commands.executeCommand<number | string | undefined>('novacpp.pickProcess');
+        config.processId = '${command:turbocpp.pickProcess}';
+      } else if (config.processId === '${command:turbocpp.pickProcess}') {
+        const picked = await vscode.commands.executeCommand<number | string | undefined>('turbocpp.pickProcess');
         if (picked !== undefined && picked !== null) {
           config.processId = typeof picked === 'number' ? picked : parseInt(String(picked).trim(), 10);
         }
@@ -77,7 +77,7 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
 
     if (!config.program) {
       vscode.window.showErrorMessage(
-        'NovaCpp Debug: Missing "program" property in launch configuration.'
+        'TurboCpp Debug: Missing "program" property in launch configuration.'
       );
       return null;
     }
@@ -85,7 +85,7 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
     // Check if binary exists
     if (!fs.existsSync(config.program)) {
       const choice = await vscode.window.showWarningMessage(
-        `NovaCpp: Target executable not found at "${config.program}". Would you like to build active file first?`,
+        `TurboCpp: Target executable not found at "${config.program}". Would you like to build active file first?`,
         'Build and Debug',
         'Cancel'
       );
@@ -124,7 +124,7 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
         });
 
         if (!fs.existsSync(config.program)) {
-          vscode.window.showErrorMessage(`NovaCpp: Build completed but executable still not found.`);
+          vscode.window.showErrorMessage(`TurboCpp: Build completed but executable still not found.`);
           return null;
         }
       } else {
@@ -136,7 +136,7 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
   }
 }
 
-export class NovaCppDebugAdapterDescriptorFactory
+export class TurboCppDebugAdapterDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory {
   createDebugAdapterDescriptor(
     session: vscode.DebugSession,
@@ -144,7 +144,7 @@ export class NovaCppDebugAdapterDescriptorFactory
   ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
     const config = session.configuration as DebugLaunchConfiguration;
 
-    const globalSettings = vscode.workspace.getConfiguration('novacpp');
+    const globalSettings = vscode.workspace.getConfiguration('turbocpp');
     const customPath = config.debuggerPath || globalSettings.get<string>('debuggerPath');
     const preference = config.debuggerType ?? 'auto';
 
@@ -155,7 +155,7 @@ export class NovaCppDebugAdapterDescriptorFactory
 
     if (!resolved) {
       const message =
-        'NovaCpp: No debugger backend found (lldb-dap or gdb). Please install LLVM or MinGW GDB or configure "novacpp.debuggerPath".';
+        'TurboCpp: No debugger backend found (lldb-dap or gdb). Please install LLVM or MinGW GDB or configure "turbocpp.debuggerPath".';
       vscode.window.showErrorMessage(message);
       throw new Error(message);
     }

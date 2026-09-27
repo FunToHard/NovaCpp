@@ -2,7 +2,7 @@ import './vscode-mock';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { ClangTidyManager } from '../src/analysis/clang-tidy-manager';
-import { NovaCppCodeActionProvider, extractMacros } from '../src/intelligence/code-actions';
+import { TurboCppCodeActionProvider, extractMacros } from '../src/intelligence/code-actions';
 
 describe('Clang-Tidy & Static Analysis Actions', () => {
   describe('ClangTidyManager.extractCheckName', () => {
@@ -59,7 +59,7 @@ describe('Clang-Tidy & Static Analysis Actions', () => {
     it('should generate doc link, NOLINTNEXTLINE, and NOLINT actions', () => {
       const manager = ClangTidyManager.getInstance();
       const mockDoc = {
-        uri: vscode.Uri.file('F:/DEV/projects/NovaCpp/src/sample.cpp'),
+        uri: vscode.Uri.file('F:/DEV/projects/TurboCpp/src/sample.cpp'),
         lineAt: () => ({ text: '    virtual void run();' })
       } as any;
 
@@ -109,7 +109,7 @@ int x = 10;
     it('should provide inline macro Code Action for function-like macros', () => {
       const docText = '#define SQUARE(x) ((x) * (x))\nint val = SQUARE(5);';
       const mockDoc = {
-        uri: vscode.Uri.file('F:/DEV/projects/NovaCpp/src/math.cpp'),
+        uri: vscode.Uri.file('F:/DEV/projects/TurboCpp/src/math.cpp'),
         getText: () => docText,
         lineCount: 2,
         lineAt: (line: number) => ({
@@ -118,7 +118,7 @@ int x = 10;
         })
       } as any;
 
-      const provider = new NovaCppCodeActionProvider();
+      const provider = new TurboCppCodeActionProvider();
       const actions = provider.provideCodeActions(
         mockDoc,
         new vscode.Range(1, 10, 1, 16),

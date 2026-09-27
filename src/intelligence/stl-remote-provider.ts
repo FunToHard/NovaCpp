@@ -223,7 +223,7 @@ export class StlRemoteProvider {
   private memoryCache: Map<string, StlDocEntry> = new Map();
   private cacheDir: string | null = null;
   private remoteBaseUrl: string =
-    'https://raw.githubusercontent.com/FunToHard/NovaCpp-Docs/main/system-headers';
+    'https://raw.githubusercontent.com/FunToHard/TurboCpp-Docs/main/system-headers';
 
   private constructor() {
     // Populate offline fallback docs into memory

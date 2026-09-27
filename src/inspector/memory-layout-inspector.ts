@@ -375,7 +375,7 @@ export class MemoryLayoutInspector implements vscode.Disposable {
   private outputChannel: vscode.OutputChannel;
 
   constructor() {
-    this.outputChannel = vscode.window.createOutputChannel('NovaCpp: Memory Layout');
+    this.outputChannel = vscode.window.createOutputChannel('TurboCpp: Memory Layout');
   }
 
   public dispose(): void {
@@ -385,7 +385,7 @@ export class MemoryLayoutInspector implements vscode.Disposable {
   public inspectCurrentStruct(editor?: vscode.TextEditor): StructLayout | null {
     const activeEditor = editor || vscode.window.activeTextEditor;
     if (!activeEditor) {
-      vscode.window.showWarningMessage('NovaCpp: No active C/C++ editor.');
+      vscode.window.showWarningMessage('TurboCpp: No active C/C++ editor.');
       return null;
     }
 
@@ -395,7 +395,7 @@ export class MemoryLayoutInspector implements vscode.Disposable {
 
     const parsed = extractStructAtPosition(text, cursorOffset);
     if (!parsed) {
-      vscode.window.showInformationMessage('NovaCpp: Place cursor inside a struct or class to inspect memory layout.');
+      vscode.window.showInformationMessage('TurboCpp: Place cursor inside a struct or class to inspect memory layout.');
       return null;
     }
 

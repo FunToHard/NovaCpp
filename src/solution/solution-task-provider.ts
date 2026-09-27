@@ -124,7 +124,7 @@ export class SolutionTaskProvider implements vscode.TaskProvider {
       definition,
       task.scope ?? vscode.TaskScope.Workspace,
       task.name || `MSBuild: ${target}`,
-      'NovaCpp',
+      'TurboCpp',
       execution,
       ['$msvc']
     );
@@ -156,7 +156,7 @@ export class SolutionTaskProvider implements vscode.TaskProvider {
       taskDefinition,
       workspaceFolder ?? vscode.TaskScope.Workspace,
       `MSBuild: ${target} Solution (${solution.name} [${configuration}|${platform}])`,
-      'NovaCpp',
+      'TurboCpp',
       execution,
       ['$msvc']
     );
@@ -198,7 +198,7 @@ export class SolutionTaskProvider implements vscode.TaskProvider {
       taskDefinition,
       workspaceFolder ?? vscode.TaskScope.Workspace,
       `MSBuild: Build Project (${project.name} [${configuration}|${platform}])`,
-      'NovaCpp',
+      'TurboCpp',
       execution,
       ['$msvc']
     );

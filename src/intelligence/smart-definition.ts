@@ -224,7 +224,7 @@ export class SmartDefinitionManager {
     }
 
     vscode.window.showInformationMessage(
-      `NovaCpp: No matching counterpart file found for ${path.basename(currentPath)}`
+      `TurboCpp: No matching counterpart file found for ${path.basename(currentPath)}`
     );
     return false;
   }

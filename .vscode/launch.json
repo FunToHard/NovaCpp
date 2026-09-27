@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "NovaCpp: Run Extension",
+      "name": "TurboCpp: Run Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -14,7 +14,7 @@
       "preLaunchTask": "npm: build"
     },
     {
-      "name": "NovaCpp: Extension Tests",
+      "name": "TurboCpp: Extension Tests",
       "type": "extensionHost",
       "request": "launch",
       "args": [

@@ -75,13 +75,13 @@ export class DaemonManager implements vscode.Disposable {
     private readonly installer: ClangdInstaller,
     private readonly rankingTable: StlRankingTable = new StlRankingTable()
   ) {
-    this.outputChannel = vscode.window.createOutputChannel('NovaCpp Language Server', { log: true });
+    this.outputChannel = vscode.window.createOutputChannel('TurboCpp Language Server', { log: true });
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Right,
       100
     );
-    this.statusBarItem.name = 'NovaCpp Status';
-    this.statusBarItem.command = 'novacpp.restartServer';
+    this.statusBarItem.name = 'TurboCpp Status';
+    this.statusBarItem.command = 'turbocpp.restartServer';
 
     this.disposables.push(
       this.outputChannel,
@@ -137,29 +137,29 @@ export class DaemonManager implements vscode.Disposable {
   }
 
   private async doStart(): Promise<void> {
-    this.updateStatusBar('$(sync~spin) NovaCpp: Resolving clangd...', 'Searching for clangd binary');
+    this.updateStatusBar('$(sync~spin) TurboCpp: Resolving clangd...', 'Searching for clangd binary');
     this.statusBarItem.show();
 
     const clangdPath = await this.installer.resolveClangdPath();
     if (!clangdPath) {
-      this.updateStatusBar('$(error) NovaCpp: clangd missing', 'Click to install clangd');
-      this.statusBarItem.command = 'novacpp.installClangd';
+      this.updateStatusBar('$(error) TurboCpp: clangd missing', 'Click to install clangd');
+      this.statusBarItem.command = 'turbocpp.installClangd';
       const action = await vscode.window.showErrorMessage(
-        'NovaCpp: clangd executable not found. Would you like to install it now?',
+        'TurboCpp: clangd executable not found. Would you like to install it now?',
         'Install clangd',
         'Configure Path'
       );
       if (action === 'Install clangd') {
-        await vscode.commands.executeCommand('novacpp.installClangd');
+        await vscode.commands.executeCommand('turbocpp.installClangd');
       } else if (action === 'Configure Path') {
-        await vscode.commands.executeCommand('workbench.action.openSettings', 'novacpp.clangdPath');
+        await vscode.commands.executeCommand('workbench.action.openSettings', 'turbocpp.clangdPath');
       }
       return;
     }
 
-    this.updateStatusBar('$(sync~spin) NovaCpp: Starting...', `Launching ${clangdPath}`);
+    this.updateStatusBar('$(sync~spin) TurboCpp: Starting...', `Launching ${clangdPath}`);
 
-    const config = vscode.workspace.getConfiguration('novacpp');
+    const config = vscode.workspace.getConfiguration('turbocpp');
     const userArgs = config.get<string[]>('clangdArgs') ?? [];
 
     // Combine default and user arguments uniquely
@@ -180,7 +180,7 @@ export class DaemonManager implements vscode.Disposable {
 
     // Ensure --offset-encoding=utf-16 is present. Clangd defaults to utf-8, but vscode-languageclient v9
     // strictly expects UTF-16 position encoding and will reject initialization with:
-    // "Unsupported position encoding (utf-8) received from server NovaCpp Language Server"
+    // "Unsupported position encoding (utf-8) received from server TurboCpp Language Server"
     if (!finalArgs.some((arg) => arg.startsWith('--offset-encoding'))) {
       finalArgs.push('--offset-encoding=utf-16');
     }
@@ -284,9 +284,9 @@ export class DaemonManager implements vscode.Disposable {
           } else {
             this.crashCount++;
             vscode.window.showErrorMessage(
-              'NovaCpp: clangd daemon crashed repeatedly. Auto-restart aborted.'
+              'TurboCpp: clangd daemon crashed repeatedly. Auto-restart aborted.'
             );
-            this.updateStatusBar('$(error) NovaCpp: Crashed', 'Click to restart language server');
+            this.updateStatusBar('$(error) TurboCpp: Crashed', 'Click to restart language server');
             return { action: CloseAction.DoNotRestart, handled: true };
           }
         }
@@ -294,8 +294,8 @@ export class DaemonManager implements vscode.Disposable {
     };
 
     this.client = new LanguageClient(
-      'novacpp.clangd',
-      'NovaCpp Language Server',
+      'turbocpp.clangd',
+      'TurboCpp Language Server',
       serverOptions,
       clientOptions
     );
@@ -303,7 +303,7 @@ export class DaemonManager implements vscode.Disposable {
     this.clientDisposables.push(
       this.client.onDidChangeState((event) => {
         if (event.newState === State.Running) {
-          this.updateStatusBar('$(check) NovaCpp: Ready', 'clangd is active and ready');
+          this.updateStatusBar('$(check) TurboCpp: Ready', 'clangd is active and ready');
           this.registerCustomProtocolHandlers();
           if (this.stabilityTimeout) {
             clearTimeout(this.stabilityTimeout);
@@ -317,7 +317,7 @@ export class DaemonManager implements vscode.Disposable {
             clearTimeout(this.stabilityTimeout);
             this.stabilityTimeout = null;
           }
-          this.updateStatusBar('$(circle-slash) NovaCpp: Stopped', 'Click to start language server');
+          this.updateStatusBar('$(circle-slash) TurboCpp: Stopped', 'Click to start language server');
         }
       })
     );
@@ -327,8 +327,8 @@ export class DaemonManager implements vscode.Disposable {
       this.outputChannel.appendLine(`[Info] clangd daemon started successfully from ${clangdPath}`);
     } catch (err: any) {
       this.outputChannel.appendLine(`[Fatal] Failed to start clangd: ${err.message ?? err}`);
-      this.updateStatusBar('$(error) NovaCpp: Launch Failed', 'Click to inspect logs');
-      vscode.window.showErrorMessage(`NovaCpp: Failed to start clangd: ${err.message ?? err}`);
+      this.updateStatusBar('$(error) TurboCpp: Launch Failed', 'Click to inspect logs');
+      vscode.window.showErrorMessage(`TurboCpp: Failed to start clangd: ${err.message ?? err}`);
     }
   }
 
@@ -345,9 +345,9 @@ export class DaemonManager implements vscode.Disposable {
       'textDocument/clangd.fileStatus',
       (status: { uri: string; state: string }) => {
         if (status.state.includes('idle')) {
-          this.updateStatusBar('$(check) NovaCpp: Idle', `Idle on ${status.uri}`);
+          this.updateStatusBar('$(check) TurboCpp: Idle', `Idle on ${status.uri}`);
         } else {
-          this.updateStatusBar(`$(sync~spin) NovaCpp: ${status.state}`, status.state);
+          this.updateStatusBar(`$(sync~spin) TurboCpp: ${status.state}`, status.state);
         }
       }
     );
@@ -356,7 +356,7 @@ export class DaemonManager implements vscode.Disposable {
   public async switchSourceHeader(): Promise<void> {
     const activeEditor = vscode.window.activeTextEditor;
     if (!activeEditor || !this.client || !this.client.isRunning()) {
-      vscode.window.showWarningMessage('NovaCpp: No active C/C++ file or clangd is not running');
+      vscode.window.showWarningMessage('TurboCpp: No active C/C++ file or clangd is not running');
       return;
     }
 
@@ -371,10 +371,10 @@ export class DaemonManager implements vscode.Disposable {
         const doc = await vscode.workspace.openTextDocument(targetUri);
         await vscode.window.showTextDocument(doc, { preview: false });
       } else {
-        vscode.window.showInformationMessage('NovaCpp: Corresponding source/header not found');
+        vscode.window.showInformationMessage('TurboCpp: Corresponding source/header not found');
       }
     } catch (err: any) {
-      vscode.window.showErrorMessage(`NovaCpp: Failed to switch source/header: ${err.message ?? err}`);
+      vscode.window.showErrorMessage(`TurboCpp: Failed to switch source/header: ${err.message ?? err}`);
     }
   }
 
@@ -387,7 +387,7 @@ export class DaemonManager implements vscode.Disposable {
 
     this.restartPromise = this.runSerialized(async () => {
       try {
-        this.outputChannel.appendLine('[Info] Restarting NovaCpp Language Server...');
+        this.outputChannel.appendLine('[Info] Restarting TurboCpp Language Server...');
         await this.doStop();
         await this.doStart();
       } finally {
@@ -454,7 +454,7 @@ export class DaemonManager implements vscode.Disposable {
   private updateStatusBar(text: string, tooltip: string): void {
     this.statusBarItem.text = text;
     this.statusBarItem.tooltip = tooltip;
-    this.statusBarItem.command = 'novacpp.restartServer';
+    this.statusBarItem.command = 'turbocpp.restartServer';
   }
 
   public getClient(): LanguageClient | null {

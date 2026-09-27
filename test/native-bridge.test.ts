@@ -9,7 +9,7 @@ describe('Native Rust Bridge & TypeScript Fallback Subsystem', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-bridge-test-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-bridge-test-'));
   });
 
   afterEach(() => {
@@ -22,13 +22,13 @@ describe('Native Rust Bridge & TypeScript Fallback Subsystem', () => {
 
   describe('Graceful Fallback Mode', () => {
     it('should initialize bridge and fallback to pure TypeScript when addon is absent', () => {
-      const fallbackBridge = new NativeBridgeImpl('/non/existent/path/novacpp_native.node');
+      const fallbackBridge = new NativeBridgeImpl('/non/existent/path/turbocpp_native.node');
       assert.strictEqual(fallbackBridge.isAccelerated, false);
       assert.strictEqual(fallbackBridge.nativeVersion, null);
     });
 
     it('should compute struct layout accurately via TypeScript fallback', () => {
-      const bridge = new NativeBridgeImpl('/non/existent/path/novacpp_native.node');
+      const bridge = new NativeBridgeImpl('/non/existent/path/turbocpp_native.node');
       const layout = bridge.calculateStructLayout('TestStruct', [
         { type: 'char', name: 'c' },
         { type: 'int', name: 'i' }
@@ -41,7 +41,7 @@ describe('Native Rust Bridge & TypeScript Fallback Subsystem', () => {
     });
 
     it('should parse time-trace string content accurately via TypeScript fallback', () => {
-      const bridge = new NativeBridgeImpl('/non/existent/path/novacpp_native.node');
+      const bridge = new NativeBridgeImpl('/non/existent/path/turbocpp_native.node');
       const sampleTrace = JSON.stringify({
         traceEvents: [
           { name: 'ExecuteCompiler', ph: 'X', ts: 0, dur: 200000 },
@@ -57,7 +57,7 @@ describe('Native Rust Bridge & TypeScript Fallback Subsystem', () => {
     });
 
     it('should parse time-trace file from disk accurately via TypeScript fallback', async () => {
-      const bridge = new NativeBridgeImpl('/non/existent/path/novacpp_native.node');
+      const bridge = new NativeBridgeImpl('/non/existent/path/turbocpp_native.node');
       const traceFile = path.join(tempDir, 'trace.json');
       fs.writeFileSync(
         traceFile,

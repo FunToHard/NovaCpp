@@ -21,7 +21,7 @@ export class CMakeManager implements vscode.Disposable {
       vscode.StatusBarAlignment.Left,
       66
     );
-    this.statusBarItem.command = 'novacpp.cmake.menu';
+    this.statusBarItem.command = 'turbocpp.cmake.menu';
     this.disposables.push(this.statusBarItem);
   }
 
@@ -220,10 +220,10 @@ export class CMakeManager implements vscode.Disposable {
       try {
         await fs.promises.mkdir(path.dirname(targetFile), { recursive: true });
         await fs.promises.writeFile(targetFile, JSON.stringify(entries, null, 2), 'utf8');
-        console.log(`NovaCpp: Statically generated compilation database with ${entries.length} files from CMakeLists.txt`);
+        console.log(`TurboCpp: Statically generated compilation database with ${entries.length} files from CMakeLists.txt`);
         return targetFile;
       } catch (err) {
-        console.warn('NovaCpp: Failed to write CMake compile_commands.json:', err);
+        console.warn('TurboCpp: Failed to write CMake compile_commands.json:', err);
       }
     }
 
@@ -299,7 +299,7 @@ export class CMakeManager implements vscode.Disposable {
     ];
 
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: `NovaCpp CMake Intelligence — ${path.basename(this.activeProject.workspaceRoot)}`
+      placeHolder: `TurboCpp CMake Intelligence — ${path.basename(this.activeProject.workspaceRoot)}`
     });
 
     if (!selected) return;
@@ -339,7 +339,7 @@ export class CMakeManager implements vscode.Disposable {
       case 'rescan': {
         await this.refresh();
         vscode.window.showInformationMessage(
-          `NovaCpp: Successfully re-parsed CMakeLists.txt. Discovered ${this.activeProject.includeDirectories.length} include directory(ies).`
+          `TurboCpp: Successfully re-parsed CMakeLists.txt. Discovered ${this.activeProject.includeDirectories.length} include directory(ies).`
         );
         break;
       }
@@ -348,10 +348,10 @@ export class CMakeManager implements vscode.Disposable {
         const generated = await this.synthesizeCompilationDatabase();
         if (generated) {
           vscode.window.showInformationMessage(
-            `NovaCpp: Generated compile_commands.json from CMakeLists.txt at ${generated}`
+            `TurboCpp: Generated compile_commands.json from CMakeLists.txt at ${generated}`
           );
         } else {
-          vscode.window.showWarningMessage('NovaCpp: Could not generate compile_commands.json.');
+          vscode.window.showWarningMessage('TurboCpp: Could not generate compile_commands.json.');
         }
         break;
       }
@@ -367,7 +367,7 @@ export class CMakeManager implements vscode.Disposable {
     const incCount = this.activeProject.includeDirectories.length;
     this.statusBarItem.text = `$(tools) CMake: [${incCount} include${incCount === 1 ? '' : 's'}]`;
     this.statusBarItem.tooltip = [
-      'NovaCpp CMake Intelligence (Direct Static Parser):',
+      'TurboCpp CMake Intelligence (Direct Static Parser):',
       `CMakeLists: ${this.activeProject.cmakeListsPath}`,
       `Discovered Includes: ${incCount}`,
       ...this.activeProject.includeDirectories.map((d) => `  - ${d}`),

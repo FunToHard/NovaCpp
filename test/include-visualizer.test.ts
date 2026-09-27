@@ -45,7 +45,7 @@ describe('Include Tree & Build Time Bottleneck Visualizer', () => {
     let tempDir: string;
 
     beforeEach(() => {
-      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-inc-test-'));
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-inc-test-'));
     });
 
     afterEach(() => {

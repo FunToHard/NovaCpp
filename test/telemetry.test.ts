@@ -194,7 +194,7 @@ describe('STL Usage Telemetry & Adaptive Ranking Subsystem', () => {
     let dispatcher: BatchDispatcher;
 
     beforeEach(() => {
-      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-telemetry-'));
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-telemetry-'));
       collector = new StlUsageCollector();
       dispatcher = new BatchDispatcher(
         collector,

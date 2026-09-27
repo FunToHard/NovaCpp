@@ -528,7 +528,7 @@ export class HoverTransformer {
 
         md.appendMarkdown('---\n');
         md.appendMarkdown(
-          `[cppreference: ${typeStlDoc.symbol}](${typeStlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+          `[cppreference: ${typeStlDoc.symbol}](${typeStlDoc.docUrl}) | [Switch Header/Source](command:turbocpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
         );
         return new vscode.Hover(md, hover.range);
       }
@@ -546,7 +546,7 @@ export class HoverTransformer {
         }
         md.appendMarkdown('\n---\n');
         md.appendMarkdown(
-          '[Find References](command:editor.action.findReferences) | [Switch Header/Source](command:novacpp.switchSourceHeader)'
+          '[Find References](command:editor.action.findReferences) | [Switch Header/Source](command:turbocpp.switchSourceHeader)'
         );
         return new vscode.Hover(md, hover.range);
       }
@@ -663,7 +663,7 @@ export class HoverTransformer {
       // Documentation & Action links
       md.appendMarkdown('---\n');
       md.appendMarkdown(
-        `[cppreference: ${stlDoc.symbol}](${stlDoc.docUrl}) | [Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+        `[cppreference: ${stlDoc.symbol}](${stlDoc.docUrl}) | [Switch Header/Source](command:turbocpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
       );
     } else {
       // --- User-Defined Function AST Card ---
@@ -740,7 +740,7 @@ export class HoverTransformer {
       // Interactive Action Links
       md.appendMarkdown('---\n');
       md.appendMarkdown(
-        '[Switch Header/Source](command:novacpp.switchSourceHeader) | [Find References](command:editor.action.findReferences) | [Open Docs (cppreference)](command:novacpp.openDocs)'
+        '[Switch Header/Source](command:turbocpp.switchSourceHeader) | [Find References](command:editor.action.findReferences) | [Open Docs (cppreference)](command:turbocpp.openDocs)'
       );
     }
 

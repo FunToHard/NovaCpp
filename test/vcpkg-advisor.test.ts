@@ -51,7 +51,7 @@ describe('vcpkg Package Advisor & Ecosystem Integration', () => {
     it('should offer copy, terminal run, and doc actions for matched headers', () => {
       const advisor = new VcpkgAdvisor();
       const mockDoc = {
-        uri: vscode.Uri.file('F:/DEV/projects/NovaCpp/src/app.cpp'),
+        uri: vscode.Uri.file('F:/DEV/projects/TurboCpp/src/app.cpp'),
         lineAt: () => ({ text: '#include <fmt/format.h>' })
       } as any;
 
@@ -80,7 +80,7 @@ describe('vcpkg Package Advisor & Ecosystem Integration', () => {
 
   describe('VcpkgAdvisor.findNodeAddonIncludePaths', () => {
     it('should detect node-addon-api or nan dependencies in package.json', async () => {
-      const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'novacpp-node-test-'));
+      const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'turbocpp-node-test-'));
       try {
         const pkg = {
           dependencies: {

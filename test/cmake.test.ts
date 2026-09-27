@@ -15,7 +15,7 @@ describe('CMake Static Include Extraction & IntelliSense Integration', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-cmake-static-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-cmake-static-'));
   });
 
   afterEach(() => {

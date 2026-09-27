@@ -281,7 +281,7 @@ export const CONTAINERS_ENTRIES: Record<string, StlDocEntry> = {
       "time": "Linear in count O(K)"
     },
     "exceptionSafety": "Strong guarantee: throws std::out_of_range if pos > size().",
-    "example": "std::string s = \"NovaCpp Engine\";\nstd::string sub = s.substr(0, 7); // \"NovaCpp\"",
+    "example": "std::string s = \"TurboCpp Engine\";\nstd::string sub = s.substr(0, 7); // \"TurboCpp\"",
     "seeAlso": [
       "std::string_view::substr"
     ]

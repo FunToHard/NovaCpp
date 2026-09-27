@@ -45,13 +45,15 @@ export class NativeBridgeImpl implements INativeBridge {
     const candidatePaths: string[] = customPath
       ? [customPath]
       : [
+          path.join(__dirname, '../native/turbocpp_native.node'),
           path.join(__dirname, '../native/novacpp_native.node'),
-          ...(extensionPath ? [path.join(extensionPath, 'native/novacpp_native.node')] : []),
+          ...(extensionPath ? [path.join(extensionPath, 'native/turbocpp_native.node'), path.join(extensionPath, 'native/novacpp_native.node')] : []),
+          path.resolve(__dirname, '../../native/turbocpp_native.node'),
           path.resolve(__dirname, '../../native/novacpp_native.node'),
-          path.resolve(__dirname, '../../../native/novacpp_native.node'),
-          path.resolve(__dirname, '../../crates/novacpp-native/target/release/novacpp_native.node'),
-          path.resolve(__dirname, '../../../target/release/novacpp_native.node'),
-          path.resolve(__dirname, '../../../target/release/novacpp_native.dll')
+          path.resolve(__dirname, '../../../native/turbocpp_native.node'),
+          path.resolve(__dirname, '../../crates/turbocpp-native/target/release/turbocpp_native.node'),
+          path.resolve(__dirname, '../../../target/release/turbocpp_native.node'),
+          path.resolve(__dirname, '../../../target/release/turbocpp_native.dll')
         ];
 
     for (const cand of candidatePaths) {
@@ -80,7 +82,7 @@ export class NativeBridgeImpl implements INativeBridge {
           return nativeResult;
         }
       } catch (err) {
-        console.warn('NovaCpp: Native time-trace analyzer failed, falling back to TypeScript:', err);
+        console.warn('TurboCpp: Native time-trace analyzer failed, falling back to TypeScript:', err);
       }
     }
 
@@ -97,7 +99,7 @@ export class NativeBridgeImpl implements INativeBridge {
           return nativeResult;
         }
       } catch (err) {
-        console.warn('NovaCpp: Native time-trace parser failed, falling back to TypeScript:', err);
+        console.warn('TurboCpp: Native time-trace parser failed, falling back to TypeScript:', err);
       }
     }
 
@@ -116,7 +118,7 @@ export class NativeBridgeImpl implements INativeBridge {
           return nativeLayout;
         }
       } catch (err) {
-        console.warn('NovaCpp: Native struct layout calculator failed, falling back to TypeScript:', err);
+        console.warn('TurboCpp: Native struct layout calculator failed, falling back to TypeScript:', err);
       }
     }
 
@@ -131,7 +133,7 @@ export class NativeBridgeImpl implements INativeBridge {
           return nativeProject;
         }
       } catch (err) {
-        console.warn('NovaCpp: Native CMake parser failed, falling back to TypeScript:', err);
+        console.warn('TurboCpp: Native CMake parser failed, falling back to TypeScript:', err);
       }
     }
 
@@ -150,7 +152,7 @@ export class NativeBridgeImpl implements INativeBridge {
           return this.nativeBinding.parseSlnContentNative(content, filePath);
         }
       } catch (err) {
-        console.warn('NovaCpp: Native solution parser failed, falling back to TypeScript:', err);
+        console.warn('TurboCpp: Native solution parser failed, falling back to TypeScript:', err);
       }
     }
 
@@ -176,7 +178,7 @@ export class NativeBridgeImpl implements INativeBridge {
           };
         }
       } catch (err) {
-        console.warn('NovaCpp: Native vcxproj parser failed, falling back to TypeScript:', err);
+        console.warn('TurboCpp: Native vcxproj parser failed, falling back to TypeScript:', err);
       }
     }
 
@@ -234,7 +236,7 @@ export class NativeBridgeImpl implements INativeBridge {
           return entries;
         }
       } catch (err) {
-        console.warn('NovaCpp: Native compile commands generator failed, falling back to TypeScript:', err);
+        console.warn('TurboCpp: Native compile commands generator failed, falling back to TypeScript:', err);
       }
     }
 

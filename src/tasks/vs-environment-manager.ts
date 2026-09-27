@@ -8,7 +8,7 @@ import { CompilerDetector, CompilerInfo } from '../prober/compiler-detector';
 const execFileAsync = promisify(execFile);
 
 export class VsEnvironmentManager {
-  private static readonly STORAGE_KEY = 'novacpp.activeVsEnvironment';
+  private static readonly STORAGE_KEY = 'turbocpp.activeVsEnvironment';
   private static readonly envCache = new Map<string, Record<string, string>>();
 
   /**
@@ -142,7 +142,7 @@ export class VsEnvironmentManager {
     const msvcCompilers = compilers.filter((c) => c.type === 'msvc');
 
     if (msvcCompilers.length === 0) {
-      vscode.window.showErrorMessage('NovaCpp: No Visual Studio / MSVC installation found on this system.');
+      vscode.window.showErrorMessage('TurboCpp: No Visual Studio / MSVC installation found on this system.');
       return false;
     }
 
@@ -173,7 +173,7 @@ export class VsEnvironmentManager {
 
     const vcvars = this.findVcvarsall(selectedCompiler);
     if (!vcvars) {
-      vscode.window.showErrorMessage('NovaCpp: Could not locate vcvarsall.bat for selected compiler.');
+      vscode.window.showErrorMessage('TurboCpp: Could not locate vcvarsall.bat for selected compiler.');
       return false;
     }
 
@@ -181,17 +181,17 @@ export class VsEnvironmentManager {
       const env = await this.extractEnvironment(vcvars, arch);
       this.applyEnvironment(context, env, `${selectedCompiler.name} (${arch})`);
 
-      const config = vscode.workspace.getConfiguration('novacpp');
+      const config = vscode.workspace.getConfiguration('turbocpp');
       if (config.get<boolean>('persistVsDeveloperEnvironment', true)) {
         await context.workspaceState.update(this.STORAGE_KEY, { vcvars, arch, name: selectedCompiler.name });
       }
 
       vscode.window.showInformationMessage(
-        `NovaCpp: Visual Studio Developer Environment [${selectedCompiler.name} (${arch})] activated for all integrated terminals and build tasks.`
+        `TurboCpp: Visual Studio Developer Environment [${selectedCompiler.name} (${arch})] activated for all integrated terminals and build tasks.`
       );
       return true;
     } catch (err: any) {
-      vscode.window.showErrorMessage(`NovaCpp: Failed to activate developer environment: ${err.message ?? err}`);
+      vscode.window.showErrorMessage(`TurboCpp: Failed to activate developer environment: ${err.message ?? err}`);
       return false;
     }
   }
@@ -202,7 +202,7 @@ export class VsEnvironmentManager {
   public static clearVsDeveloperEnvironment(context: vscode.ExtensionContext): void {
     context.environmentVariableCollection.clear();
     context.workspaceState.update(this.STORAGE_KEY, undefined);
-    vscode.window.showInformationMessage('NovaCpp: Visual Studio Developer Environment cleared.');
+    vscode.window.showInformationMessage('TurboCpp: Visual Studio Developer Environment cleared.');
   }
 
   /**
@@ -271,7 +271,7 @@ export class VsEnvironmentManager {
    * Restores saved developer environment on extension activation if enabled.
    */
   public static async restoreSavedEnvironment(context: vscode.ExtensionContext): Promise<void> {
-    const config = vscode.workspace.getConfiguration('novacpp');
+    const config = vscode.workspace.getConfiguration('turbocpp');
     if (!config.get<boolean>('persistVsDeveloperEnvironment', true)) return;
 
     const saved = context.workspaceState.get<{ vcvars: string; arch: 'x64' | 'x86'; name: string }>(
@@ -281,9 +281,9 @@ export class VsEnvironmentManager {
       try {
         const env = await this.extractEnvironment(saved.vcvars, saved.arch);
         this.applyEnvironment(context, env, `${saved.name} (${saved.arch})`);
-        console.log(`NovaCpp: Restored Visual Studio Developer Environment for ${saved.name}`);
+        console.log(`TurboCpp: Restored Visual Studio Developer Environment for ${saved.name}`);
       } catch (err) {
-        console.warn('NovaCpp: Could not restore saved developer environment:', err);
+        console.warn('TurboCpp: Could not restore saved developer environment:', err);
       }
     }
   }

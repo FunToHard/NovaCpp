@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import {
   findEnclosingClassName,
   buildDefinitionStub,
-  NovaCppCodeActionProvider
+  TurboCppCodeActionProvider
 } from '../src/intelligence/code-actions';
 
 describe('Code Actions & Refactoring Assists', () => {
@@ -64,9 +64,9 @@ describe('Code Actions & Refactoring Assists', () => {
     });
   });
 
-  describe('NovaCppCodeActionProvider', () => {
+  describe('TurboCppCodeActionProvider', () => {
     it('should provide Generate Definition code action when in header file', () => {
-      const provider = new NovaCppCodeActionProvider();
+      const provider = new TurboCppCodeActionProvider();
       const mockDoc = {
         uri: vscode.Uri.file('F:/project/Entity.hpp'),
         lineAt: (idx: number) => {
@@ -95,7 +95,7 @@ describe('Code Actions & Refactoring Assists', () => {
     });
 
     it('should provide Add Missing Include quick-fix for standard types', () => {
-      const provider = new NovaCppCodeActionProvider();
+      const provider = new TurboCppCodeActionProvider();
       const mockDoc = {
         uri: vscode.Uri.file('F:/project/main.cpp'),
         lineCount: 3,
@@ -119,13 +119,13 @@ describe('Code Actions & Refactoring Assists', () => {
       ) as vscode.CodeAction[];
 
       assert.ok(Array.isArray(actions));
-      const includeVector = actions.find((a) => a.title === 'NovaCpp: Add #include <vector>');
+      const includeVector = actions.find((a) => a.title === 'TurboCpp: Add #include <vector>');
       assert.ok(includeVector);
       assert.strictEqual(includeVector.kind, vscode.CodeActionKind.QuickFix);
     });
 
     it('should provide Generate Exhaustive Enum Switch Cases using SnippetTextEdit', () => {
-      const provider = new NovaCppCodeActionProvider();
+      const provider = new TurboCppCodeActionProvider();
       const mockDoc = {
         uri: vscode.Uri.file('F:/project/main.cpp'),
         lineCount: 3,

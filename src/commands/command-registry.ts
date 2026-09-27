@@ -49,7 +49,7 @@ export interface CommandRegistryContext {
 }
 
 /**
- * Registers all 40 NovaCpp user-facing commands and returns their disposables.
+ * Registers all 40 TurboCpp user-facing commands and returns their disposables.
  */
 export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposable[] {
   const {
@@ -75,7 +75,7 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
   } = ctx;
 
   return [
-    vscode.commands.registerCommand('novacpp.openSettings', () => {
+    vscode.commands.registerCommand('turbocpp.openSettings', () => {
       if (!detector || !synthesizer) return;
       ConfigPanel.render(
         context.extensionUri,
@@ -86,67 +86,67 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
         }
       );
     }),
-    vscode.commands.registerCommand('novacpp.inspectMemoryLayout', () => {
+    vscode.commands.registerCommand('turbocpp.inspectMemoryLayout', () => {
       memoryLayoutInspector.inspectCurrentStruct();
     }),
-    vscode.commands.registerCommand('novacpp.analyzeIncludes', () => {
+    vscode.commands.registerCommand('turbocpp.analyzeIncludes', () => {
       includeVisualizer.analyzeActiveDocument();
     }),
-    vscode.commands.registerCommand('novacpp.visualizeTimeTrace', async (uri?: vscode.Uri) => {
+    vscode.commands.registerCommand('turbocpp.visualizeTimeTrace', async (uri?: vscode.Uri) => {
       await includeVisualizer.visualizeTimeTraceFile(uri);
     }),
-    vscode.commands.registerCommand('novacpp.refreshTests', async () => {
+    vscode.commands.registerCommand('turbocpp.refreshTests', async () => {
       const count = await testController.refreshAll();
-      vscode.window.showInformationMessage(`NovaCpp: Discovered ${count} C/C++ unit test(s).`);
+      vscode.window.showInformationMessage(`TurboCpp: Discovered ${count} C/C++ unit test(s).`);
     }),
-    vscode.commands.registerCommand('novacpp.expandMacro', () => {
+    vscode.commands.registerCommand('turbocpp.expandMacro', () => {
       macroEvaluator.expandMacroAtCursor();
     }),
-    vscode.commands.registerCommand('novacpp.evaluateConstexpr', () => {
+    vscode.commands.registerCommand('turbocpp.evaluateConstexpr', () => {
       macroEvaluator.evaluateConstexprAtCursor();
     }),
-    vscode.commands.registerCommand('novacpp.viewDisassembly', async () => {
+    vscode.commands.registerCommand('turbocpp.viewDisassembly', async () => {
       await disasmProvider.openDisassemblyForActiveEditor();
     }),
-    vscode.commands.registerCommand('novacpp.setDisassemblyOptimizationLevel', async () => {
+    vscode.commands.registerCommand('turbocpp.setDisassemblyOptimizationLevel', async () => {
       const selected = await vscode.window.showQuickPick(['O0', 'O1', 'O2', 'O3', 'Os', 'Ofast'], {
         placeHolder: 'Select compiler optimization level for disassembly'
       });
       if (selected) {
         disasmProvider.setOptimizationLevel(selected as any);
-        vscode.window.showInformationMessage(`NovaCpp: Disassembly optimization set to -${selected}.`);
+        vscode.window.showInformationMessage(`TurboCpp: Disassembly optimization set to -${selected}.`);
       }
     }),
-    vscode.commands.registerCommand('novacpp.showTypeHierarchy', () => {
+    vscode.commands.registerCommand('turbocpp.showTypeHierarchy', () => {
       hierarchyManager.showTypeHierarchy();
     }),
-    vscode.commands.registerCommand('novacpp.restartServer', async () => {
+    vscode.commands.registerCommand('turbocpp.restartServer', async () => {
       await daemonManager?.restart();
     }),
-    vscode.commands.registerCommand('novacpp.toggleDimInactiveRegions', async () => {
-      const config = vscode.workspace.getConfiguration('novacpp');
+    vscode.commands.registerCommand('turbocpp.toggleDimInactiveRegions', async () => {
+      const config = vscode.workspace.getConfiguration('turbocpp');
       const current = config.get<boolean>('inactiveRegionsDimming', true);
       await config.update('inactiveRegionsDimming', !current, vscode.ConfigurationTarget.Global);
       vscode.window.showInformationMessage(
-        `NovaCpp: Inactive regions dimming ${!current ? 'enabled' : 'disabled'}.`
+        `TurboCpp: Inactive regions dimming ${!current ? 'enabled' : 'disabled'}.`
       );
     }),
-    vscode.commands.registerCommand('novacpp.switchSourceHeader', async () => {
+    vscode.commands.registerCommand('turbocpp.switchSourceHeader', async () => {
       const switched = await SmartDefinitionManager.switchSourceHeader();
       if (!switched && daemonManager) {
         await daemonManager.switchSourceHeader();
       }
     }),
-    vscode.commands.registerCommand('novacpp.installClangd', async () => {
+    vscode.commands.registerCommand('turbocpp.installClangd', async () => {
       try {
         await installer?.installLatest();
-        vscode.window.showInformationMessage('NovaCpp: clangd installed successfully. Restarting server...');
+        vscode.window.showInformationMessage('TurboCpp: clangd installed successfully. Restarting server...');
         await daemonManager?.restart();
       } catch (err: any) {
-        vscode.window.showErrorMessage(`NovaCpp: Installation failed: ${err.message ?? err}`);
+        vscode.window.showErrorMessage(`TurboCpp: Installation failed: ${err.message ?? err}`);
       }
     }),
-    vscode.commands.registerCommand('novacpp.detectCompilers', async () => {
+    vscode.commands.registerCommand('turbocpp.detectCompilers', async () => {
       if (!detector) return;
       const compilers = await detector.detectAllCompilers(true);
       const items = compilers.map((c) => ({
@@ -158,11 +158,11 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
         placeHolder: `Detected ${compilers.length} C/C++ Compilers`
       });
     }),
-    vscode.commands.registerCommand('novacpp.generateCompileFlags', async () => {
+    vscode.commands.registerCommand('turbocpp.generateCompileFlags', async () => {
       if (!synthesizer) return;
       const folders = vscode.workspace.workspaceFolders;
       if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('NovaCpp: No workspace folder open.');
+        vscode.window.showErrorMessage('TurboCpp: No workspace folder open.');
         return;
       }
       try {
@@ -170,24 +170,24 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
           forceOverwrite: true
         });
         vscode.window.showInformationMessage(
-          `NovaCpp: Generated compile_flags.txt at ${generated}`
+          `TurboCpp: Generated compile_flags.txt at ${generated}`
         );
         await daemonManager?.restart();
       } catch (err: any) {
-        vscode.window.showErrorMessage(`NovaCpp: Error generating flags: ${err.message ?? err}`);
+        vscode.window.showErrorMessage(`TurboCpp: Error generating flags: ${err.message ?? err}`);
       }
     }),
-    vscode.commands.registerCommand('novacpp.runFile', async () => {
+    vscode.commands.registerCommand('turbocpp.runFile', async () => {
       await runController?.runFile();
     }),
-    vscode.commands.registerCommand('novacpp.debugFile', async () => {
+    vscode.commands.registerCommand('turbocpp.debugFile', async () => {
       await runController?.debugFile();
     }),
-    vscode.commands.registerCommand('novacpp.openDocs', async (urlOrSymbol?: string) => {
+    vscode.commands.registerCommand('turbocpp.openDocs', async (urlOrSymbol?: string) => {
       await SmartDefinitionManager.openDocumentation(urlOrSymbol);
     }),
     vscode.commands.registerCommand(
-      'novacpp.onStlItemAccepted',
+      'turbocpp.onStlItemAccepted',
       async (symbolKey: string, chainedCommand?: vscode.Command) => {
         stlCollector?.recordCompletionAccepted({ label: symbolKey });
         if (chainedCommand) {
@@ -195,13 +195,13 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
         }
       }
     ),
-    vscode.commands.registerCommand('novacpp.inspectTelemetry', () => {
+    vscode.commands.registerCommand('turbocpp.inspectTelemetry', () => {
       const counts = stlCollector?.getPendingCounts() ?? {};
       const totalSymbols = Object.keys(counts).length;
       const totalInvocations = Object.values(counts).reduce((a, b) => a + b, 0);
       const channel = getTelemetryOutputChannel();
       channel.clear();
-      channel.appendLine('=== NovaCpp Anonymous STL Telemetry Buffer ===');
+      channel.appendLine('=== TurboCpp Anonymous STL Telemetry Buffer ===');
       channel.appendLine(`Tracked Distinct Symbols : ${totalSymbols}`);
       channel.appendLine(`Total Recorded Calls     : ${totalInvocations}`);
       channel.appendLine('Privacy Policy           : ISO C++ Standard Library Allowlist (Zero Code / Zero PII)');
@@ -209,45 +209,45 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
       channel.appendLine(JSON.stringify(counts, null, 2));
       channel.show();
     }),
-    vscode.commands.registerCommand('novacpp.flushTelemetry', async () => {
+    vscode.commands.registerCommand('turbocpp.flushTelemetry', async () => {
       const success = await batchDispatcher?.flushNow(1);
       vscode.window.showInformationMessage(
-        `NovaCpp: Telemetry batch ${success ? 'transmitted to server' : 'saved to offline queue'}.`
+        `TurboCpp: Telemetry batch ${success ? 'transmitted to server' : 'saved to offline queue'}.`
       );
     }),
-    vscode.commands.registerCommand('novacpp.solutionMenu', async () => {
+    vscode.commands.registerCommand('turbocpp.solutionMenu', async () => {
       await solutionManager?.showSolutionMenu();
     }),
-    vscode.commands.registerCommand('novacpp.selectSolution', async () => {
+    vscode.commands.registerCommand('turbocpp.selectSolution', async () => {
       await solutionManager?.selectSolution();
     }),
-    vscode.commands.registerCommand('novacpp.selectSolutionConfiguration', async () => {
+    vscode.commands.registerCommand('turbocpp.selectSolutionConfiguration', async () => {
       await solutionManager?.selectConfiguration();
     }),
-    vscode.commands.registerCommand('novacpp.buildSolution', async () => {
+    vscode.commands.registerCommand('turbocpp.buildSolution', async () => {
       await solutionManager?.runMSBuildTask('Build');
     }),
-    vscode.commands.registerCommand('novacpp.rebuildSolution', async () => {
+    vscode.commands.registerCommand('turbocpp.rebuildSolution', async () => {
       await solutionManager?.runMSBuildTask('Rebuild');
     }),
-    vscode.commands.registerCommand('novacpp.cleanSolution', async () => {
+    vscode.commands.registerCommand('turbocpp.cleanSolution', async () => {
       await solutionManager?.runMSBuildTask('Clean');
     }),
-    vscode.commands.registerCommand('novacpp.generateCompilationDbFromSolution', async () => {
+    vscode.commands.registerCommand('turbocpp.generateCompilationDbFromSolution', async () => {
       const generated = await solutionManager?.synthesizeCompilationDatabase();
       if (generated) {
-        vscode.window.showInformationMessage(`NovaCpp: Generated compile_commands.json at ${generated}`);
+        vscode.window.showInformationMessage(`TurboCpp: Generated compile_commands.json at ${generated}`);
       } else {
         vscode.window.showWarningMessage(
-          'NovaCpp: No solution or project files found to generate compile_commands.json.'
+          'TurboCpp: No solution or project files found to generate compile_commands.json.'
         );
       }
     }),
-    vscode.commands.registerCommand('novacpp.logDiagnostics', async () => {
+    vscode.commands.registerCommand('turbocpp.logDiagnostics', async () => {
       if (!detector || !extractor) return;
       await DiagnosticsLogger.logDiagnostics(detector, extractor, solutionManager, stlCollector);
     }),
-    vscode.commands.registerCommand('novacpp.resetIndex', async () => {
+    vscode.commands.registerCommand('turbocpp.resetIndex', async () => {
       await IndexManager.resetIndex(
         undefined,
         async () => {
@@ -258,75 +258,75 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
         }
       );
     }),
-    vscode.commands.registerCommand('novacpp.goToNextDirectiveInGroup', async () => {
+    vscode.commands.registerCommand('turbocpp.goToNextDirectiveInGroup', async () => {
       await DirectiveNavigator.goToNextDirective();
     }),
-    vscode.commands.registerCommand('novacpp.goToPrevDirectiveInGroup', async () => {
+    vscode.commands.registerCommand('turbocpp.goToPrevDirectiveInGroup', async () => {
       await DirectiveNavigator.goToPrevDirective();
     }),
-    vscode.commands.registerCommand('novacpp.generateDoxygenComment', async () => {
+    vscode.commands.registerCommand('turbocpp.generateDoxygenComment', async () => {
       await DoxygenGenerator.generateForActiveEditor();
     }),
-    vscode.commands.registerCommand('novacpp.runClangTidyOnActiveFile', async () => {
+    vscode.commands.registerCommand('turbocpp.runClangTidyOnActiveFile', async () => {
       await ClangTidyManager.getInstance().runOnActiveFile();
     }),
-    vscode.commands.registerCommand('novacpp.clearCodeAnalysisDiagnostics', () => {
+    vscode.commands.registerCommand('turbocpp.clearCodeAnalysisDiagnostics', () => {
       ClangTidyManager.getInstance().clearDiagnostics();
     }),
-    vscode.commands.registerCommand('novacpp.setVsDeveloperEnvironment', async () => {
+    vscode.commands.registerCommand('turbocpp.setVsDeveloperEnvironment', async () => {
       if (!detector) return;
       await VsEnvironmentManager.setVsDeveloperEnvironment(context, detector);
     }),
-    vscode.commands.registerCommand('novacpp.clearVsDeveloperEnvironment', () => {
+    vscode.commands.registerCommand('turbocpp.clearVsDeveloperEnvironment', () => {
       VsEnvironmentManager.clearVsDeveloperEnvironment(context);
     }),
-    vscode.commands.registerCommand('novacpp.copyToClipboard', async (text: string) => {
+    vscode.commands.registerCommand('turbocpp.copyToClipboard', async (text: string) => {
       await vscode.env.clipboard.writeText(text);
-      vscode.window.showInformationMessage(`NovaCpp: Copied "${text}" to clipboard.`);
+      vscode.window.showInformationMessage(`TurboCpp: Copied "${text}" to clipboard.`);
     }),
-    vscode.commands.registerCommand('novacpp.runInTerminal', (command: string) => {
+    vscode.commands.registerCommand('turbocpp.runInTerminal', (command: string) => {
       if (typeof command !== 'string' || !command.trim()) {
-        vscode.window.showWarningMessage('NovaCpp: Cannot execute empty terminal command.');
+        vscode.window.showWarningMessage('TurboCpp: Cannot execute empty terminal command.');
         return;
       }
       const trimmed = command.trim();
       if (/[\r\n]/.test(trimmed)) {
-        vscode.window.showErrorMessage('NovaCpp: Multiline commands are not permitted.');
+        vscode.window.showErrorMessage('TurboCpp: Multiline commands are not permitted.');
         return;
       }
       const allowedPrefixes = ['vcpkg ', 'conan ', 'vcpkg.exe ', 'conan.exe '];
       const isAllowedPrefix = allowedPrefixes.some((prefix) => trimmed.startsWith(prefix));
       if (!isAllowedPrefix) {
-        vscode.window.showErrorMessage(`NovaCpp: Command '${trimmed}' is not an authorized package manager command.`);
+        vscode.window.showErrorMessage(`TurboCpp: Command '${trimmed}' is not an authorized package manager command.`);
         return;
       }
       if (/[;&|`$]/.test(trimmed)) {
-        vscode.window.showErrorMessage('NovaCpp: Command contains disallowed shell metacharacters.');
+        vscode.window.showErrorMessage('TurboCpp: Command contains disallowed shell metacharacters.');
         return;
       }
-      const term = vscode.window.createTerminal('NovaCpp Package Manager');
+      const term = vscode.window.createTerminal('TurboCpp Package Manager');
       term.show();
       term.sendText(trimmed);
     }),
-    vscode.commands.registerCommand('novacpp.selectProfile', async () => {
+    vscode.commands.registerCommand('turbocpp.selectProfile', async () => {
       await profileManager?.selectProfile();
     }),
-    vscode.commands.registerCommand('novacpp.pickProcess', async () => {
+    vscode.commands.registerCommand('turbocpp.pickProcess', async () => {
       return await ProcessPicker.pickProcess();
     }),
-    vscode.commands.registerCommand('novacpp.cmake.menu', async () => {
+    vscode.commands.registerCommand('turbocpp.cmake.menu', async () => {
       await cmakeManager?.openMenu();
     }),
-    vscode.commands.registerCommand('novacpp.cmake.rescan', async () => {
+    vscode.commands.registerCommand('turbocpp.cmake.rescan', async () => {
       await cmakeManager?.refresh();
-      vscode.window.showInformationMessage('NovaCpp: Re-scanned CMakeLists.txt and updated include paths.');
+      vscode.window.showInformationMessage('TurboCpp: Re-scanned CMakeLists.txt and updated include paths.');
     }),
-    vscode.commands.registerCommand('novacpp.cmake.generateCompilationDatabase', async () => {
+    vscode.commands.registerCommand('turbocpp.cmake.generateCompilationDatabase', async () => {
       const target = await cmakeManager?.synthesizeCompilationDatabase();
       if (target) {
-        vscode.window.showInformationMessage(`NovaCpp: Generated compile_commands.json from CMakeLists.txt at ${target}`);
+        vscode.window.showInformationMessage(`TurboCpp: Generated compile_commands.json from CMakeLists.txt at ${target}`);
       } else {
-        vscode.window.showWarningMessage('NovaCpp: Could not generate compile_commands.json.');
+        vscode.window.showWarningMessage('TurboCpp: Could not generate compile_commands.json.');
       }
     })
   ];

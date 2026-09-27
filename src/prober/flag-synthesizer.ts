@@ -139,7 +139,7 @@ export class FlagSynthesizer {
 
     const compiler = await this.detector.getPreferredCompiler();
     if (!compiler) {
-      throw new Error('NovaCpp: No suitable C/C++ compiler found on the system.');
+      throw new Error('TurboCpp: No suitable C/C++ compiler found on the system.');
     }
 
     const effectiveOptions: SynthesisOptions = {

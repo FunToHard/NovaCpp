@@ -3,7 +3,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { extractExpressionAtColumn, CppEvaluatableExpressionProvider } from '../src/debugger/process-picker';
 import { LaunchGenerator } from '../src/debugger/launch-generator';
-import { NovaCppDebugConfigurationProvider } from '../src/debugger/dap-session';
+import { TurboCppDebugConfigurationProvider } from '../src/debugger/dap-session';
 
 describe('Debugger Enhancements: Process Picker & Evaluatable Expressions', () => {
   describe('extractExpressionAtColumn', () => {
@@ -72,39 +72,39 @@ describe('Debugger Enhancements: Process Picker & Evaluatable Expressions', () =
     it('should generate attach configuration with pickProcess command', () => {
       const attachConfig = LaunchGenerator.createAttachConfiguration();
       assert.strictEqual(attachConfig.request, 'attach');
-      assert.strictEqual(attachConfig.type, 'novacpp-debug');
-      assert.strictEqual(attachConfig.processId, '${command:novacpp.pickProcess}');
+      assert.strictEqual(attachConfig.type, 'turbocpp-debug');
+      assert.strictEqual(attachConfig.processId, '${command:turbocpp.pickProcess}');
     });
   });
 
-  describe('NovaCppDebugConfigurationProvider Attach & Remapping', () => {
+  describe('TurboCppDebugConfigurationProvider Attach & Remapping', () => {
     it('should resolve attach configuration without requiring program binary', async () => {
-      const provider = new NovaCppDebugConfigurationProvider();
+      const provider = new TurboCppDebugConfigurationProvider();
       const config: vscode.DebugConfiguration = {
         name: 'Attach Test',
-        type: 'novacpp-debug',
+        type: 'turbocpp-debug',
         request: 'attach'
       };
 
       const resolved = await provider.resolveDebugConfiguration(undefined, config);
       assert.ok(resolved);
       assert.strictEqual(resolved.request, 'attach');
-      assert.strictEqual(resolved.processId, '${command:novacpp.pickProcess}');
+      assert.strictEqual(resolved.processId, '${command:turbocpp.pickProcess}');
     });
 
-    it('should dynamically execute novacpp.pickProcess when processId is command placeholder', async () => {
-      const provider = new NovaCppDebugConfigurationProvider();
+    it('should dynamically execute turbocpp.pickProcess when processId is command placeholder', async () => {
+      const provider = new TurboCppDebugConfigurationProvider();
       const config: vscode.DebugConfiguration = {
         name: 'Attach Pick Process Test',
-        type: 'novacpp-debug',
+        type: 'turbocpp-debug',
         request: 'attach',
-        processId: '${command:novacpp.pickProcess}'
+        processId: '${command:turbocpp.pickProcess}'
       };
 
       const origExecuteCommand = vscode.commands.executeCommand;
       try {
         (vscode.commands as any).executeCommand = async (cmd: string) => {
-          if (cmd === 'novacpp.pickProcess') {
+          if (cmd === 'turbocpp.pickProcess') {
             return 4567;
           }
           return undefined;
@@ -119,10 +119,10 @@ describe('Debugger Enhancements: Process Picker & Evaluatable Expressions', () =
     });
 
     it('should resolve sourceFileMap variables in launch configuration', async () => {
-      const provider = new NovaCppDebugConfigurationProvider();
+      const provider = new TurboCppDebugConfigurationProvider();
       const config: any = {
         name: 'Launch Test',
-        type: 'novacpp-debug',
+        type: 'turbocpp-debug',
         request: 'launch',
         program: __filename,
         sourceFileMap: {

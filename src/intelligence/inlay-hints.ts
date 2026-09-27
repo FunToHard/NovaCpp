@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 /**
- * Manages configuration and lifecycle of C/C++ Inlay Hints for NovaCpp.
+ * Manages configuration and lifecycle of C/C++ Inlay Hints for TurboCpp.
  */
 export class InlayHintManager implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
@@ -10,7 +10,7 @@ export class InlayHintManager implements vscode.Disposable {
     this.ensureInlayHintsConfigured();
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('novacpp.inlayHints')) {
+        if (e.affectsConfiguration('turbocpp.inlayHints')) {
           this.ensureInlayHintsConfigured();
         }
       })
@@ -18,10 +18,10 @@ export class InlayHintManager implements vscode.Disposable {
   }
 
   /**
-   * Evaluates the scoped NovaCpp inlay hint setting without mutating global editor configurations.
+   * Evaluates the scoped TurboCpp inlay hint setting without mutating global editor configurations.
    */
   public async ensureInlayHintsConfigured(): Promise<void> {
-    const novacppConfig = vscode.workspace.getConfiguration('novacpp.inlayHints');
+    const novacppConfig = vscode.workspace.getConfiguration('turbocpp.inlayHints');
     const enabled = novacppConfig.get<boolean>('enabled', true);
 
     if (!enabled) {
@@ -31,10 +31,10 @@ export class InlayHintManager implements vscode.Disposable {
   }
 
   /**
-   * Returns whether NovaCpp inlay hints are enabled via scoped novacpp.inlayHints.enabled.
+   * Returns whether TurboCpp inlay hints are enabled via scoped turbocpp.inlayHints.enabled.
    */
   public isEnabled(): boolean {
-    return vscode.workspace.getConfiguration('novacpp.inlayHints').get<boolean>('enabled', true);
+    return vscode.workspace.getConfiguration('turbocpp.inlayHints').get<boolean>('enabled', true);
   }
 
   public dispose(): void {

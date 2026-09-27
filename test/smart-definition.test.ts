@@ -15,7 +15,7 @@ describe('Smart Definition & Navigation', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-smart-def-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-smart-def-'));
   });
 
   afterEach(() => {

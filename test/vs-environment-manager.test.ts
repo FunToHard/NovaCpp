@@ -90,12 +90,12 @@ describe('Visual Studio Developer Environment Injection', () => {
     it('should clear environmentVariableCollection and saved workspace state', () => {
       const mockContext = createMockContext();
       mockContext._envReplacements.set('INCLUDE', 'some_path');
-      mockContext._state.set('novacpp.activeVsEnvironment', { vcvars: 'foo', arch: 'x64' });
+      mockContext._state.set('turbocpp.activeVsEnvironment', { vcvars: 'foo', arch: 'x64' });
 
       VsEnvironmentManager.clearVsDeveloperEnvironment(mockContext as any);
 
       assert.strictEqual(mockContext._envReplacements.size, 0);
-      assert.strictEqual(mockContext._state.get('novacpp.activeVsEnvironment'), undefined);
+      assert.strictEqual(mockContext._state.get('turbocpp.activeVsEnvironment'), undefined);
     });
   });
 });

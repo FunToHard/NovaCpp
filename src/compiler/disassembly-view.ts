@@ -89,10 +89,10 @@ export function filterAssembly(rawAsm: string, options: { filterDirectives?: boo
 }
 
 /**
- * TextDocumentContentProvider for the virtual scheme "novacpp-disasm".
+ * TextDocumentContentProvider for the virtual scheme "turbocpp-disasm".
  */
 export class DisassemblyContentProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
-  public static readonly scheme = 'novacpp-disasm';
+  public static readonly scheme = 'turbocpp-disasm';
   private onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
   public readonly onDidChange = this.onDidChangeEmitter.event;
 
@@ -120,7 +120,7 @@ export class DisassemblyContentProvider implements vscode.TextDocumentContentPro
 
     const compiler = await this.detector.getPreferredCompiler();
     if (!compiler) {
-      return '; NovaCpp: No C/C++ compiler detected on your system to generate assembly.';
+      return '; TurboCpp: No C/C++ compiler detected on your system to generate assembly.';
     }
 
     const tempAsm = path.join(os.tmpdir(), `novacpp_disasm_${Date.now()}.asm`);
@@ -142,7 +142,7 @@ export class DisassemblyContentProvider implements vscode.TextDocumentContentPro
 
         const header = [
           `; =======================================================`,
-          `; NovaCpp: Compiler Explorer Inline Disassembly`,
+          `; TurboCpp: Compiler Explorer Inline Disassembly`,
           `; Source: ${path.basename(sourceFilePath)}`,
           `; Compiler: ${compiler.name} (${compiler.path})`,
           `; Optimization: -${this.currentOptLevel} (Intel Syntax)`,
@@ -154,17 +154,17 @@ export class DisassemblyContentProvider implements vscode.TextDocumentContentPro
         this.cachedAsm.set(cacheKey, content);
         return content;
       } else {
-        return '; NovaCpp: Compiler did not produce assembly output file.';
+        return '; TurboCpp: Compiler did not produce assembly output file.';
       }
     } catch (err: any) {
-      return `; NovaCpp: Disassembly failed:\n; ${err.message ?? err}`;
+      return `; TurboCpp: Disassembly failed:\n; ${err.message ?? err}`;
     }
   }
 
   public async openDisassemblyForActiveEditor(editor?: vscode.TextEditor): Promise<void> {
     const active = editor || vscode.window.activeTextEditor;
     if (!active) {
-      vscode.window.showWarningMessage('NovaCpp: Open a C/C++ source file to view disassembly.');
+      vscode.window.showWarningMessage('TurboCpp: Open a C/C++ source file to view disassembly.');
       return;
     }
 

@@ -11,16 +11,16 @@
       <ReadOnly>true</ReadOnly>
     </MappedFolder>
 
-    <!-- Map NovaCpp Project Directory (Read/Write) -->
+    <!-- Map TurboCpp Project Directory (Read/Write) -->
     <MappedFolder>
-      <HostFolder>F:\DEV\projects\NovaCpp</HostFolder>
-      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\NovaCpp</SandboxFolder>
+      <HostFolder>F:\DEV\projects\TurboCpp</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\TurboCpp</SandboxFolder>
       <ReadOnly>false</ReadOnly>
     </MappedFolder>
   </MappedFolders>
 
-  <!-- Automated Logon Command: Installs VS Code and opens NovaCpp workspace -->
+  <!-- Automated Logon Command: Installs VS Code and opens TurboCpp workspace -->
   <LogonCommand>
-    <Command>powershell.exe -ExecutionPolicy Bypass -NoProfile -File C:\Users\WDAGUtilityAccount\Desktop\NovaCpp\scripts\sandbox-setup.ps1</Command>
+    <Command>powershell.exe -ExecutionPolicy Bypass -NoProfile -File C:\Users\WDAGUtilityAccount\Desktop\TurboCpp\scripts\sandbox-setup.ps1</Command>
   </LogonCommand>
 </Configuration>

@@ -34,7 +34,7 @@ CONFIG_MODULES=m
     let tempDir: string;
 
     beforeEach(async () => {
-      tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'novacpp-profile-test-'));
+      tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'turbocpp-profile-test-'));
     });
 
     afterEach(async () => {

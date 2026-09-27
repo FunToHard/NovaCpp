@@ -208,7 +208,7 @@ export function createClangdMiddleware(
         if (symbolKey) {
           item.command = {
             title: 'Record STL Usage',
-            command: 'novacpp.onStlItemAccepted',
+            command: 'turbocpp.onStlItemAccepted',
             arguments: [symbolKey, baseCommand]
           };
         } else if (baseCommand) {

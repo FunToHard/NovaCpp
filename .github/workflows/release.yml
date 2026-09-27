@@ -40,22 +40,22 @@ jobs:
           - os: windows-latest
             target: win32-x64
             rust_target: x86_64-pc-windows-msvc
-            binary_name: novacpp_native.dll
+            binary_name: turbocpp_native.dll
 
           - os: ubuntu-latest
             target: linux-x64
             rust_target: x86_64-unknown-linux-gnu
-            binary_name: libnovacpp_native.so
+            binary_name: libturbocpp_native.so
 
           - os: macos-latest
             target: darwin-arm64
             rust_target: aarch64-apple-darwin
-            binary_name: libnovacpp_native.dylib
+            binary_name: libturbocpp_native.dylib
 
           - os: macos-15-intel
             target: darwin-x64
             rust_target: x86_64-apple-darwin
-            binary_name: libnovacpp_native.dylib
+            binary_name: libturbocpp_native.dylib
 
     steps:
       - name: Checkout repository
@@ -104,11 +104,11 @@ jobs:
         run: npm run check-types
 
       - name: Build Rust native addon (${{ matrix.rust_target }})
-        working-directory: crates/novacpp-native
+        working-directory: crates/turbocpp-native
         run: cargo build --release --target ${{ matrix.rust_target }}
 
       - name: Test Rust native addon
-        working-directory: crates/novacpp-native
+        working-directory: crates/turbocpp-native
         run: cargo test
 
       - name: Deploy native binary into extension bundle
@@ -117,9 +117,9 @@ jobs:
           mkdir -p native
           CANDIDATES=(
             "target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
-            "crates/novacpp-native/target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
+            "crates/turbocpp-native/target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
             "target/release/${{ matrix.binary_name }}"
-            "crates/novacpp-native/target/release/${{ matrix.binary_name }}"
+            "crates/turbocpp-native/target/release/${{ matrix.binary_name }}"
           )
           FOUND=""
           for p in "${CANDIDATES[@]}"; do
@@ -130,14 +130,15 @@ jobs:
           done
 
           if [ -n "$FOUND" ]; then
-            cp "$FOUND" native/novacpp_native.node
-            echo "Successfully staged native binary: $FOUND -> native/novacpp_native.node"
-            ls -lh native/novacpp_native.node
+            cp "$FOUND" native/turbocpp_native.node
+            cp "$FOUND" native/novacpp_native.node || true
+            echo "Successfully staged native binary: $FOUND -> native/turbocpp_native.node"
+            ls -lh native/turbocpp_native.node
           else
             echo "Error: Native binary not found. Searched in:"
             printf '  %s\n' "${CANDIDATES[@]}"
             echo "Searching filesystem for compiled native binary:"
-            find target crates/novacpp-native/target -name "*novacpp_native*" || true
+            find target crates/turbocpp-native/target -name "*turbocpp_native*" || true
             exit 1
           fi
 
@@ -159,7 +160,7 @@ jobs:
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: novacpp-${{ matrix.target }}
+          name: turbocpp-${{ matrix.target }}
           path: '*.vsix'
           retention-days: 14
 

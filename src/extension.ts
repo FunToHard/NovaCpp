@@ -8,16 +8,16 @@ import { SystemIncludeExtractor } from './prober/system-includes';
 import { FlagSynthesizer } from './prober/flag-synthesizer';
 import { ExternalSdkDetector } from './prober/external-sdk-detector';
 import {
-  NovaCppDebugConfigurationProvider,
-  NovaCppDebugAdapterDescriptorFactory
+  TurboCppDebugConfigurationProvider,
+  TurboCppDebugAdapterDescriptorFactory
 } from './debugger/dap-session';
 import { CppEvaluatableExpressionProvider } from './debugger/process-picker';
-import { NovaCppTaskProvider } from './tasks/task-provider';
+import { TurboCppTaskProvider } from './tasks/task-provider';
 import { CMakeWatcher } from './bridge/cmake-watcher';
 import { InactiveRegionsManager } from './bridge/inactive-regions';
 import { PostfixCompletionProvider } from './intelligence/postfix-provider';
 import { PreprocessorDirectiveCompletionProvider } from './intelligence/directive-completion-provider';
-import { NovaCppCodeActionProvider } from './intelligence/code-actions';
+import { TurboCppCodeActionProvider } from './intelligence/code-actions';
 import { InlayHintManager } from './intelligence/inlay-hints';
 import { RunController } from './tasks/run-controller';
 import { StlUsageCollector } from './telemetry/stl-collector';
@@ -30,7 +30,7 @@ import { DoxygenCompletionProvider } from './documentation/doxygen-generator';
 import { ClangTidyManager } from './analysis/clang-tidy-manager';
 import { VsEnvironmentManager } from './tasks/vs-environment-manager';
 import { VcpkgAdvisor } from './ecosystem/vcpkg-advisor';
-import { NovaCppConfigurationTool } from './ai/language-model-tool';
+import { TurboCppConfigurationTool } from './ai/language-model-tool';
 import { ProfileManager } from './config/profile-manager';
 import { MemoryLayoutInspector } from './inspector/memory-layout-inspector';
 import { IncludeVisualizerManager } from './analysis/include-visualizer';
@@ -46,7 +46,7 @@ let installer: ClangdInstaller | null = null;
 let detector: CompilerDetector | null = null;
 let extractor: SystemIncludeExtractor | null = null;
 let synthesizer: FlagSynthesizer | null = null;
-let taskProvider: NovaCppTaskProvider | null = null;
+let taskProvider: TurboCppTaskProvider | null = null;
 let cmakeWatcher: CMakeWatcher | null = null;
 let inactiveRegionsManager: InactiveRegionsManager | null = null;
 let runController: RunController | null = null;
@@ -60,7 +60,7 @@ let cmakeManager: CMakeManager | null = null;
 let telemetryOutputChannel: vscode.OutputChannel | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  console.log('Activating NovaCpp extension...');
+  console.log('Activating TurboCpp extension...');
 
   stlCollector = new StlUsageCollector();
   rankingTable = new StlRankingTable();
@@ -76,7 +76,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   detector = new CompilerDetector();
   extractor = new SystemIncludeExtractor();
   synthesizer = new FlagSynthesizer(detector, extractor);
-  taskProvider = new NovaCppTaskProvider(detector);
+  taskProvider = new TurboCppTaskProvider(detector);
   inactiveRegionsManager = new InactiveRegionsManager();
   runController = new RunController(detector);
 
@@ -126,17 +126,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   // Register Debugger Subsystem
-  const debugConfigProvider = new NovaCppDebugConfigurationProvider();
-  const debugAdapterFactory = new NovaCppDebugAdapterDescriptorFactory();
+  const debugConfigProvider = new TurboCppDebugConfigurationProvider();
+  const debugAdapterFactory = new TurboCppDebugAdapterDescriptorFactory();
 
   context.subscriptions.push(
-    vscode.debug.registerDebugConfigurationProvider('novacpp-debug', debugConfigProvider),
-    vscode.debug.registerDebugAdapterDescriptorFactory('novacpp-debug', debugAdapterFactory)
+    vscode.debug.registerDebugConfigurationProvider('turbocpp-debug', debugConfigProvider),
+    vscode.debug.registerDebugAdapterDescriptorFactory('turbocpp-debug', debugAdapterFactory)
   );
 
   // Register Build Task Provider
   context.subscriptions.push(
-    vscode.tasks.registerTaskProvider(NovaCppTaskProvider.taskType, taskProvider)
+    vscode.tasks.registerTaskProvider(TurboCppTaskProvider.taskType, taskProvider)
   );
 
   // Initialize Visual Studio Solution (.sln & .slnx) Subsystem
@@ -163,9 +163,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Register Language Model Tool (#cpp) for Copilot Chat
   if (typeof (vscode as any).lm?.registerTool === 'function') {
-    const configTool = new NovaCppConfigurationTool(detector, solutionManager);
+    const configTool = new TurboCppConfigurationTool(detector, solutionManager);
     context.subscriptions.push(
-      (vscode as any).lm.registerTool('novacpp_configuration', configTool)
+      (vscode as any).lm.registerTool('turbocpp_configuration', configTool)
     );
   }
 
@@ -177,7 +177,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   ];
 
   const postfixProvider = new PostfixCompletionProvider();
-  const codeActionProvider = new NovaCppCodeActionProvider();
+  const codeActionProvider = new TurboCppCodeActionProvider();
   const inlayHintManager = new InlayHintManager();
 
   context.subscriptions.push(
@@ -200,7 +200,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       cppSelector,
       codeActionProvider,
       {
-        providedCodeActionKinds: NovaCppCodeActionProvider.providedCodeActionKinds
+        providedCodeActionKinds: TurboCppCodeActionProvider.providedCodeActionKinds
       }
     ),
     vscode.languages.registerCodeActionsProvider(
@@ -228,7 +228,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
     const rootPath = workspaceFolders[0].uri.fsPath;
-    const config = vscode.workspace.getConfiguration('novacpp');
+    const config = vscode.workspace.getConfiguration('turbocpp');
     if (config.get<boolean>('discovery.detectExternalSdks', true)) {
       ExternalSdkDetector.syncWorkspaceClangdConfig(rootPath);
     }
@@ -274,7 +274,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       hierarchyManager,
       getTelemetryOutputChannel: () => {
         if (!telemetryOutputChannel) {
-          telemetryOutputChannel = vscode.window.createOutputChannel("NovaCpp Telemetry Buffer");
+          telemetryOutputChannel = vscode.window.createOutputChannel("TurboCpp Telemetry Buffer");
           context.subscriptions.push(telemetryOutputChannel);
         }
         return telemetryOutputChannel;

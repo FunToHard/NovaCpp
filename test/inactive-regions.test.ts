@@ -19,7 +19,7 @@ describe('Build System Bridge & Inactive Regions', () => {
       assert.ok(watcher);
 
       // Create a temporary file with content
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-watch-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-watch-'));
       const dbFile = path.join(tmpDir, 'compile_commands.json');
       fs.writeFileSync(dbFile, '[{"directory":".","file":"main.cpp","command":"g++ main.cpp"}]', 'utf8');
 
@@ -45,7 +45,7 @@ describe('Build System Bridge & Inactive Regions', () => {
       };
 
       const watcher = new CMakeWatcher(onReload);
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp-empty-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-empty-'));
       const emptyFile = path.join(tmpDir, 'compile_commands.json');
       fs.writeFileSync(emptyFile, '', 'utf8');
 
@@ -135,9 +135,9 @@ describe('Build System Bridge & Inactive Regions', () => {
     it('should recreate decoration type with custom hex color and opacity', () => {
       const manager = new InactiveRegionsManager();
       (mockVscode.workspace as any)._config = {
-        'novacpp.inactiveRegionForegroundColor': '#888888',
-        'novacpp.inactiveRegionOpacity': 0.45,
-        'novacpp.inactiveRegionBackgroundColor': '#222222'
+        'turbocpp.inactiveRegionForegroundColor': '#888888',
+        'turbocpp.inactiveRegionOpacity': 0.45,
+        'turbocpp.inactiveRegionBackgroundColor': '#222222'
       };
 
       manager.recreateDecorationType();
@@ -155,7 +155,7 @@ describe('Build System Bridge & Inactive Regions', () => {
     it('should allow omitting color when foreground is set to none', () => {
       const manager = new InactiveRegionsManager();
       (mockVscode.workspace as any)._config = {
-        'novacpp.inactiveRegionForegroundColor': 'none'
+        'turbocpp.inactiveRegionForegroundColor': 'none'
       };
 
       manager.recreateDecorationType();
