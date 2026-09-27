@@ -83,10 +83,24 @@ fn normalize_slash(p: &str) -> String {
     p.replace('\\', "/")
 }
 
+fn is_path_absolute(p: &str) -> bool {
+    let p_norm = normalize_slash(p);
+    let bytes = p_norm.as_bytes();
+    if bytes.first() == Some(&b'/') {
+        return true;
+    }
+    if bytes.len() >= 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' && (bytes[2] == b'/' || bytes[2] == b'\\') {
+        return true;
+    }
+    if bytes.len() >= 2 && bytes[0] == b'/' && bytes[1] == b'/' {
+        return true;
+    }
+    Path::new(&p_norm).is_absolute()
+}
+
 fn resolve_path(base_dir: &str, rel_path: &str) -> String {
     let rel_norm = normalize_slash(rel_path);
-    let p = Path::new(&rel_norm);
-    if p.is_absolute() {
+    if is_path_absolute(&rel_norm) {
         return rel_norm;
     }
     let base_norm = normalize_slash(base_dir);

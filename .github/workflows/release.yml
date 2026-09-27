@@ -25,6 +25,10 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: "node24"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-package:
     name: Build & Package (${{ matrix.target }})
@@ -92,8 +96,6 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: crates/novacpp-native
 
       - name: Install Node dependencies
         run: npm ci
@@ -113,12 +115,29 @@ jobs:
         shell: bash
         run: |
           mkdir -p native
-          BIN_PATH="crates/novacpp-native/target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
-          if [ -f "$BIN_PATH" ]; then
-            cp "$BIN_PATH" native/novacpp_native.node
-            echo "Successfully staged native binary: $BIN_PATH -> native/novacpp_native.node"
+          CANDIDATES=(
+            "target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
+            "crates/novacpp-native/target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
+            "target/release/${{ matrix.binary_name }}"
+            "crates/novacpp-native/target/release/${{ matrix.binary_name }}"
+          )
+          FOUND=""
+          for p in "${CANDIDATES[@]}"; do
+            if [ -f "$p" ]; then
+              FOUND="$p"
+              break
+            fi
+          done
+
+          if [ -n "$FOUND" ]; then
+            cp "$FOUND" native/novacpp_native.node
+            echo "Successfully staged native binary: $FOUND -> native/novacpp_native.node"
+            ls -lh native/novacpp_native.node
           else
-            echo "Error: Native binary not found at $BIN_PATH"
+            echo "Error: Native binary not found. Searched in:"
+            printf '  %s\n' "${CANDIDATES[@]}"
+            echo "Searching filesystem for compiled native binary:"
+            find target crates/novacpp-native/target -name "*novacpp_native*" || true
             exit 1
           fi
 
@@ -150,11 +169,15 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         shell: bash
         run: |
-          PRE_FLAG=""
-          if [ "${{ steps.release_mode.outputs.is_pre_release }}" = "true" ]; then
-            PRE_FLAG="--pre-release"
+          if [ -z "$VSCE_PAT" ]; then
+            echo "VSCE_PAT secret is not configured. Skipping marketplace publication."
+          else
+            PRE_FLAG=""
+            if [ "${{ steps.release_mode.outputs.is_pre_release }}" = "true" ]; then
+              PRE_FLAG="--pre-release"
+            fi
+            npx @vscode/vsce publish --target ${{ matrix.target }} $PRE_FLAG --packagePath *.vsix --pat "$VSCE_PAT"
           fi
-          npx @vscode/vsce publish --target ${{ matrix.target }} $PRE_FLAG --packagePath *.vsix --pat "$VSCE_PAT"
 
   github-release:
     name: Create GitHub Release
