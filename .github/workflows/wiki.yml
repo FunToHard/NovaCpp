@@ -1,0 +1,67 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wiki/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: "node24"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  sync-wiki:
+    name: Sync Wiki to GitHub Wiki Repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Synchronize to Wiki Repository
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.WIKI_TOKEN || secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          WIKI_URL="https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git"
+
+          echo "Cloning GitHub Wiki repository..."
+          if ! git clone "$WIKI_URL" wiki-temp; then
+            echo "::error::Could not clone the wiki repository. Note: The GitHub Wiki must be initialized first. Please navigate to https://github.com/${{ github.repository }}/wiki and click 'Create the first page' to initialize the repository."
+            exit 1
+          fi
+
+          echo "Copying wiki pages..."
+          # Remove existing files without deleting .git
+          find wiki-temp -maxdepth 1 ! -name '.git' ! -name 'wiki-temp' -exec rm -rf {} +
+          cp -r wiki/* wiki-temp/
+
+          cd wiki-temp
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes detected in wiki content. Skipping push."
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "docs(wiki): sync wiki pages from main repository"
+
+          WIKI_BRANCH=$(git branch --show-current 2>/dev/null || echo "master")
+          if [ -z "$WIKI_BRANCH" ]; then
+            WIKI_BRANCH="master"
+          fi
+
+          echo "Pushing changes to branch '$WIKI_BRANCH'..."
+          git push origin "$WIKI_BRANCH"
+          echo "Wiki synchronized successfully."
