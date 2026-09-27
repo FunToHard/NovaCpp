@@ -25,3 +25,4 @@ crates/**
 temp/**
 Cargo.lock
 Cargo.toml
+wiki/**
