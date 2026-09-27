@@ -1,4 +1,4 @@
-name: Pre-Release & Multi-Platform Native CI
+name: Release & Multi-Platform Native CI
 
 on:
   push:
@@ -7,16 +7,16 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
-      publish:
+      publish_marketplace:
         description: 'Publish to Visual Studio Code Marketplace'
         required: true
         type: boolean
         default: false
       pre_release:
-        description: 'Publish as Pre-Release version'
+        description: 'Publish as Pre-Release version (uncheck for Stable)'
         required: true
         type: boolean
-        default: true
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -57,6 +57,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Determine Release Mode (Pre-Release vs Stable)
+        id: release_mode
+        shell: bash
+        run: |
+          IS_PRE="false"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.pre_release }}" = "true" ]; then
+              IS_PRE="true"
+            fi
+          elif [[ "${{ github.ref }}" == *"-pre"* ]]; then
+            IS_PRE="true"
+          else
+            # VS Code Marketplace SemVer convention: odd minor version = pre-release, even = stable
+            VERSION=$(node -p "require('./package.json').version")
+            MINOR=$(echo "$VERSION" | cut -d. -f2)
+            if [ $((MINOR % 2)) -ne 0 ]; then
+              IS_PRE="true"
+            fi
+          fi
+          echo "is_pre_release=$IS_PRE" >> "$GITHUB_OUTPUT"
+          echo "Release Channel: $([ "$IS_PRE" = "true" ] && echo "Pre-Release" || echo "Stable Release")"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -85,7 +107,6 @@ jobs:
 
       - name: Test Rust native addon
         working-directory: crates/novacpp-native
-        # Run tests on host target
         run: cargo test
 
       - name: Deploy native binary into extension bundle
@@ -111,7 +132,7 @@ jobs:
         shell: bash
         run: |
           PRE_FLAG=""
-          if [ "${{ inputs.pre_release }}" = "true" ] || [[ "${{ github.ref }}" == *"-pre"* ]]; then
+          if [ "${{ steps.release_mode.outputs.is_pre_release }}" = "true" ]; then
             PRE_FLAG="--pre-release"
           fi
           npx @vscode/vsce package --target ${{ matrix.target }} $PRE_FLAG --no-dependencies
@@ -124,13 +145,41 @@ jobs:
           retention-days: 14
 
       - name: Publish to Visual Studio Code Marketplace
-        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || inputs.publish }}
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || inputs.publish_marketplace }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         shell: bash
         run: |
           PRE_FLAG=""
-          if [ "${{ inputs.pre_release }}" = "true" ] || [[ "${{ github.ref }}" == *"-pre"* ]]; then
+          if [ "${{ steps.release_mode.outputs.is_pre_release }}" = "true" ]; then
             PRE_FLAG="--pre-release"
           fi
           npx @vscode/vsce publish --target ${{ matrix.target }} $PRE_FLAG --packagePath *.vsix --pat "$VSCE_PAT"
+
+  github-release:
+    name: Create GitHub Release
+    needs: build-and-package
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all packaged VSIX artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Consolidate VSIX files
+        shell: bash
+        run: |
+          mkdir -p release-vsix
+          find artifacts -type f -name "*.vsix" -exec cp {} release-vsix/ \;
+          ls -la release-vsix/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-vsix/*.vsix
+          prerelease: ${{ contains(github.ref, '-pre') }}
+          generate_release_notes: true
