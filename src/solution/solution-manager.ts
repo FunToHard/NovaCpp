@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { SolutionModel, SolutionConfiguration, VcxProjectModel } from './solution-models';
-import { parseSolutionFile, loadVcxProject } from './sln-parser';
 import { CompilationDatabaseGenerator } from './compilation-database-generator';
+import { NativeBridge } from '../native/native-bridge';
 import { CompilerDetector } from '../prober/compiler-detector';
 import { SystemIncludeExtractor } from '../prober/system-includes';
 import { debounce } from '../substrate/protocol-filter';
@@ -89,7 +89,7 @@ export class SolutionManager implements vscode.Disposable {
     );
 
     for (const file of files) {
-      const parsed = await parseSolutionFile(file.fsPath);
+      const parsed = await NativeBridge.parseSolution(file.fsPath);
       if (parsed) {
         discovered.push(parsed);
       }
@@ -148,7 +148,7 @@ export class SolutionManager implements vscode.Disposable {
     const solutionDir = path.dirname(this.activeSolution.filePath);
     const projectModels: VcxProjectModel[] = [];
     for (const proj of this.activeSolution.projects) {
-      const model = await loadVcxProject(proj.fullPath, solutionDir);
+      const model = await NativeBridge.parseVcxproj(proj.fullPath, solutionDir);
       if (model) {
         projectModels.push(model);
       }
@@ -159,10 +159,11 @@ export class SolutionManager implements vscode.Disposable {
     }
 
     const systemIncludes = await this.extractor.extractSystemIncludes(compiler);
-    const entries = this.compDbGenerator.generateEntries(
+    const entries = NativeBridge.generateCompileCommands(
       this.activeSolution,
       projectModels,
-      compiler,
+      compiler.path,
+      compiler.type,
       systemIncludes,
       this.activeConfiguration.key
     );

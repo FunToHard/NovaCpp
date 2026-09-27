@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { NativeBridge } from '../native/native-bridge';
 
 export interface FieldLayout {
   name: string;
@@ -399,7 +400,7 @@ export class MemoryLayoutInspector implements vscode.Disposable {
     }
 
     const dataModel: DataModel = process.platform === 'win32' ? 'LLP64' : 'LP64';
-    const layout = calculateStructLayout(parsed.name, parsed.fields, {
+    const layout = NativeBridge.calculateStructLayout(parsed.name, parsed.fields, {
       isPacked: parsed.isPacked,
       maxPackAlignment: parsed.maxPackAlignment,
       dataModel

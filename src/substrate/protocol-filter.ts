@@ -170,7 +170,7 @@ export function createClangdMiddleware(
         items = rawItems;
       }
 
-      const MAX_DIRECT_ENRICH = 100;
+      const MAX_DIRECT_ENRICH = 25;
       const itemCount = items.length;
 
       for (let i = 0; i < itemCount; i++) {
@@ -347,54 +347,4 @@ export function createClangdMiddleware(
       return prioritizeDefinitionLocations(defs as any);
     }
   };
-}
-
-/**
- * Event debouncer controller for editor viewport and cursor selection events.
- * Viewport / visible range events debounced by 150 ms.
- * Cursor selection events debounced by 75 ms.
- */
-export class EditorEventDebouncer implements vscode.Disposable {
-  private disposables: vscode.Disposable[] = [];
-
-  private debouncedVisibleRanges = debounce(
-    (editor: vscode.TextEditor, ranges: readonly vscode.Range[]) => {
-      this.onVisibleRangesDebouncedEmitter.fire({ editor, ranges });
-    },
-    150
-  );
-
-  private debouncedSelection = debounce(
-    (editor: vscode.TextEditor, selections: readonly vscode.Selection[]) => {
-      this.onSelectionDebouncedEmitter.fire({ editor, selections });
-    },
-    75
-  );
-
-  private onVisibleRangesDebouncedEmitter = new vscode.EventEmitter<{
-    editor: vscode.TextEditor;
-    ranges: readonly vscode.Range[];
-  }>();
-  public readonly onVisibleRangesDebounced = this.onVisibleRangesDebouncedEmitter.event;
-
-  private onSelectionDebouncedEmitter = new vscode.EventEmitter<{
-    editor: vscode.TextEditor;
-    selections: readonly vscode.Selection[];
-  }>();
-  public readonly onSelectionDebounced = this.onSelectionDebouncedEmitter.event;
-
-  constructor() {
-    // Unused window event subscriptions removed to eliminate unnecessary event loop churn
-  }
-
-  dispose(): void {
-    this.debouncedVisibleRanges.cancel();
-    this.debouncedSelection.cancel();
-    this.onVisibleRangesDebouncedEmitter.dispose();
-    this.onSelectionDebouncedEmitter.dispose();
-    for (const d of this.disposables) {
-      d.dispose();
-    }
-    this.disposables = [];
-  }
 }

@@ -449,7 +449,7 @@
         "novacpp.telemetry.endpoint": {
           "type": "string",
           "default": "https://telemetry.novacpp.dev/v1/telemetry/stl-usage",
-          "description": "Ingestion endpoint URL for anonymous STL usage telemetry batches."
+          "description": "Ingestion endpoint URL for anonymous STL usage telemetry batches. Must use the secure HTTPS protocol."
         },
         "novacpp.cmake.autoScan": {
           "type": "boolean",
@@ -631,9 +631,11 @@
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
+    "clean": "node -e \"const fs = require('fs'); ['dist', 'out'].forEach(d => fs.rmSync(d, { recursive: true, force: true })); fs.readdirSync('.').filter(f => f.endsWith('.vsix') || f.endsWith('.obj') || f.endsWith('.pdb') || f.endsWith('.ilk')).forEach(f => fs.rmSync(f, { force: true }));\"",
+    "benchmark": "tsx test/benchmark.ts",
     "check-types": "tsc --noEmit",
     "test": "npm run check-types && mocha",
-    "package": "vsce package --no-dependencies --skip-license"
+    "package": "npm run clean && vsce package --no-dependencies --skip-license"
   },
   "dependencies": {
     "@clangd/install": "^0.1.20",

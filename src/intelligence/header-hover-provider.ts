@@ -858,6 +858,19 @@ export function clearHeaderHoverCache(): void {
   headerContentCache.clear();
 }
 
+const RESERVED_CPP_KEYWORDS = new Set([
+  'if',
+  'while',
+  'for',
+  'switch',
+  'return',
+  'catch',
+  'case',
+  'sizeof',
+  'alignof',
+  'decltype'
+]);
+
 /**
  * Statically parses C++ header source text to extract declared classes, structs, concepts, and functions.
  */
@@ -867,10 +880,8 @@ export function parseHeaderContent(content: string): LocalHeaderSymbol[] {
     // Limit parsing to 500KB to maintain sub-millisecond response
     const truncated = content.length > 500000 ? content.slice(0, 500000) : content;
 
-    // Strip comments to avoid false matches
-    const cleanContent = truncated
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    // Strip comments in a single pass to avoid duplicate large buffer allocations
+    const cleanContent = truncated.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
 
     const lines = cleanContent.split(/\r?\n/);
     const seenNames = new Set<string>();
@@ -935,19 +946,7 @@ export function parseHeaderContent(content: string): LocalHeaderSymbol[] {
       );
       if (funcMatch && funcMatch[2]) {
         const name = funcMatch[2];
-        const reserved = new Set([
-          'if',
-          'while',
-          'for',
-          'switch',
-          'return',
-          'catch',
-          'case',
-          'sizeof',
-          'alignof',
-          'decltype'
-        ]);
-        if (!reserved.has(name) && !seenNames.has(name)) {
+        if (!RESERVED_CPP_KEYWORDS.has(name) && !seenNames.has(name)) {
           seenNames.add(name);
           symbols.push({
             name,

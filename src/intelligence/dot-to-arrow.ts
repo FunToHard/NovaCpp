@@ -297,6 +297,8 @@ export function parseMembersFromCode(code: string, typeName: string): ParsedMemb
 /**
  * Discovers accessible members of a given type name by inspecting the document and local headers.
  */
+const headerMembersCache = new Map<string, { mtimeMs: number; members: Map<string, ParsedMember[]> }>();
+
 export async function findMembersForType(
   document: vscode.TextDocument,
   typeName: string
@@ -318,10 +320,22 @@ export async function findMembersForType(
     const candidatePath = path.isAbsolute(incPath) ? incPath : path.join(docDir, incPath);
     if (fs.existsSync(candidatePath)) {
       try {
-        const headerText = fs.readFileSync(candidatePath, 'utf8');
-        members = parseMembersFromCode(headerText, typeName);
-        if (members.length > 0) {
-          return members;
+        const stat = await fs.promises.stat(candidatePath);
+        const cached = headerMembersCache.get(candidatePath);
+        if (cached && cached.mtimeMs === stat.mtimeMs) {
+          const typeMembers = cached.members.get(typeName);
+          if (typeMembers && typeMembers.length > 0) {
+            return typeMembers;
+          }
+        } else {
+          const headerText = await fs.promises.readFile(candidatePath, 'utf8');
+          members = parseMembersFromCode(headerText, typeName);
+          const typeMap = cached?.members ?? new Map<string, ParsedMember[]>();
+          typeMap.set(typeName, members);
+          headerMembersCache.set(candidatePath, { mtimeMs: stat.mtimeMs, members: typeMap });
+          if (members.length > 0) {
+            return members;
+          }
         }
       } catch {
         // Skip read errors
@@ -403,8 +417,20 @@ export class DotToArrowController {
     }
 
     // 2. Discover pointee type via static scope scan or hover
-    const docText = typeof document.getText === 'function' ? document.getText() : '';
-    let pointeeType = findVariablePointeeType(docText, receiver, position.line);
+    let docText = '';
+    let scanLine = position.line;
+    if (typeof document.getText === 'function') {
+      if (typeof (document as any).lineAt === 'function') {
+        const startLine = Math.max(0, position.line - 200);
+        const startPos = new vscode.Position(startLine, 0);
+        const endPos = new vscode.Position(position.line, position.character);
+        docText = document.getText(new vscode.Range(startPos, endPos));
+        scanLine = position.line - startLine;
+      } else {
+        docText = document.getText();
+      }
+    }
+    let pointeeType = findVariablePointeeType(docText, receiver, scanLine);
 
     if (!pointeeType) {
       try {

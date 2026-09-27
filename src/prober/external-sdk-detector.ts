@@ -35,7 +35,7 @@ export function compareSemverDesc(a: string, b: string): number {
     const diff = (pb[i] || 0) - (pa[i] || 0);
     if (diff !== 0) return diff;
   }
-  return b.localeCompare(a);
+  return b.localeCompare(a, 'en');
 }
 
 export class ExternalSdkDetector {
@@ -559,31 +559,18 @@ export class ExternalSdkDetector {
       return false;
     }
 
-    const ignoredDirs = new Set([
-      'node_modules',
-      '.git',
-      '.vscode',
-      '.clangd',
-      'dist',
-      'build',
-      'out',
-      '.cache',
-      'bin',
-      'obj',
-      'target'
-    ]);
+    return ExternalSdkDetector.getUsedSdksInWorkspace(workspaceRoot, [sdkName]).has(sdkName);
+  }
 
-    const sourceExts = new Set([
-      '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.hxx', '.inl', '.ipp', '.ixx', '.cu', '.cuh'
-    ]);
-
-    const buildFileNames = new Set([
-      'cmakelists.txt',
-      'makefile',
-      'vcpkg.json',
-      'conanfile.txt',
-      'meson.build'
-    ]);
+  /**
+   * Scans workspace in a single unified pass to determine which SDKs are referenced.
+   */
+  public static getUsedSdksInWorkspace(
+    workspaceRoot: string,
+    candidateSdkNames?: string[]
+  ): Set<string> {
+    const usedSdks = new Set<string>();
+    if (!fs.existsSync(workspaceRoot)) return usedSdks;
 
     const sdkPatterns: Record<string, RegExp[]> = {
       Vulkan: [
@@ -618,14 +605,43 @@ export class ExternalSdkDetector {
       ]
     };
 
-    const patterns = sdkPatterns[sdkName];
-    if (!patterns) return false;
+    const targetSdkNames = candidateSdkNames
+      ? new Set(candidateSdkNames)
+      : new Set(Object.keys(sdkPatterns));
+
+    if (targetSdkNames.size === 0) return usedSdks;
+
+    const ignoredDirs = new Set([
+      'node_modules',
+      '.git',
+      '.vscode',
+      '.clangd',
+      'dist',
+      'build',
+      'out',
+      '.cache',
+      'bin',
+      'obj',
+      'target'
+    ]);
+
+    const sourceExts = new Set([
+      '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.hxx', '.inl', '.ipp', '.ixx', '.cu', '.cuh'
+    ]);
+
+    const buildFileNames = new Set([
+      'cmakelists.txt',
+      'makefile',
+      'vcpkg.json',
+      'conanfile.txt',
+      'meson.build'
+    ]);
 
     const queue = [workspaceRoot];
     const maxFiles = 250;
     let filesChecked = 0;
 
-    while (queue.length > 0 && filesChecked < maxFiles) {
+    while (queue.length > 0 && filesChecked < maxFiles && usedSdks.size < targetSdkNames.size) {
       const currentDir = queue.shift()!;
       let entries: fs.Dirent[] = [];
       try {
@@ -643,8 +659,8 @@ export class ExternalSdkDetector {
           const ext = path.extname(entry.name).toLowerCase();
           const lowerName = entry.name.toLowerCase();
 
-          if (sdkName === 'CUDA' && (ext === '.cu' || ext === '.cuh')) {
-            return true;
+          if (targetSdkNames.has('CUDA') && (ext === '.cu' || ext === '.cuh')) {
+            usedSdks.add('CUDA');
           }
 
           if (sourceExts.has(ext) || buildFileNames.has(lowerName) || lowerName.endsWith('.vcxproj')) {
@@ -663,10 +679,22 @@ export class ExternalSdkDetector {
                 fs.closeSync(fd);
               }
 
-              for (const pattern of patterns) {
-                if (pattern.test(text)) {
-                  return true;
+              for (const sdk of targetSdkNames) {
+                if (!usedSdks.has(sdk)) {
+                  const patterns = sdkPatterns[sdk];
+                  if (patterns) {
+                    for (const pattern of patterns) {
+                      if (pattern.test(text)) {
+                        usedSdks.add(sdk);
+                        break;
+                      }
+                    }
+                  }
                 }
+              }
+
+              if (usedSdks.size >= targetSdkNames.size) {
+                return usedSdks;
               }
             } catch {
               // Ignore read errors
@@ -676,7 +704,7 @@ export class ExternalSdkDetector {
       }
     }
 
-    return false;
+    return usedSdks;
   }
 
   /**
@@ -687,11 +715,15 @@ export class ExternalSdkDetector {
     options: ExternalSdkDetectorOptions = {}
   ): string[] {
     const sdks = ExternalSdkDetector.detectAll(options);
+    const usedSdkNames = ExternalSdkDetector.getUsedSdksInWorkspace(
+      workspaceRoot,
+      sdks.map((s) => s.name)
+    );
     const seen = new Set<string>();
     const includePaths: string[] = [];
 
     for (const sdk of sdks) {
-      if (ExternalSdkDetector.isSdkUsedInWorkspace(workspaceRoot, sdk.name)) {
+      if (usedSdkNames.has(sdk.name)) {
         for (const inc of sdk.includePaths) {
           const normalized = inc.replace(/\\/g, '/');
           if (!seen.has(normalized)) {

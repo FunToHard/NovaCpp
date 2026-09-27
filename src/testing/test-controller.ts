@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 
 export type CppTestFramework = 'gtest' | 'catch2' | 'doctest' | 'boost';
 
@@ -262,31 +263,31 @@ export class CppTestController implements vscode.Disposable {
     return this.controller;
   }
 
-  public discoverTestsInDocument(document: vscode.TextDocument): CppTestCase[] {
-    const fileName = document.fileName.toLowerCase();
+  public discoverTestsInSource(content: string, uri: vscode.Uri, fileNameHint?: string): CppTestCase[] {
+    const rawPath = fileNameHint || uri.fsPath || uri.path || uri.toString();
+    const fileName = rawPath.toLowerCase();
     if (!fileName.endsWith('.cpp') && !fileName.endsWith('.cc') && !fileName.endsWith('.cxx')) {
       return [];
     }
 
-    const content = document.getText();
-    const discovered = extractTestsFromSource(content, document.uri);
+    const discovered = extractTestsFromSource(content, uri);
     const fileItem = this.controller.createTestItem(
-      document.uri.toString(),
-      path.basename(document.fileName),
-      document.uri
+      uri.toString(),
+      path.basename(rawPath),
+      uri
     );
 
     if (discovered.length === 0) {
-      this.controller.items.delete(document.uri.toString());
+      this.controller.items.delete(uri.toString());
       return [];
     }
 
     // Populate child test items
     for (const test of discovered) {
       const testItem = this.controller.createTestItem(
-        `${document.uri.toString()}::${test.id}`,
+        `${uri.toString()}::${test.id}`,
         test.label,
-        document.uri
+        uri
       );
       testItem.range = new vscode.Range(test.line, test.column, test.line, test.column + test.label.length);
       fileItem.children.add(testItem);
@@ -296,14 +297,24 @@ export class CppTestController implements vscode.Disposable {
     return discovered;
   }
 
+  public discoverTestsInDocument(document: vscode.TextDocument): CppTestCase[] {
+    return this.discoverTestsInSource(document.getText(), document.uri, document.fileName);
+  }
+
   public async refreshAll(): Promise<number> {
     let total = 0;
     const docs = await vscode.workspace.findFiles('**/*.{cpp,cc,cxx}', '**/node_modules/**');
     for (const uri of docs) {
       try {
-        const doc = await vscode.workspace.openTextDocument(uri);
-        const found = this.discoverTestsInDocument(doc);
-        total += found.length;
+        const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
+        if (openDoc) {
+          const found = this.discoverTestsInDocument(openDoc);
+          total += found.length;
+        } else {
+          const content = await fs.promises.readFile(uri.fsPath, 'utf8');
+          const found = this.discoverTestsInSource(content, uri);
+          total += found.length;
+        }
       } catch {
         // Skip unreadable files
       }

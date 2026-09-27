@@ -28,13 +28,22 @@ export class DirectiveNavigator {
   public static extractDirectives(
     input: string[] | { lineCount: number; lineAt(i: number): { text: string } }
   ): PreprocessorDirective[] {
-    const lines = this.toLines(input);
+    const isArray = Array.isArray(input);
+    const count = isArray
+      ? input.length
+      : input && typeof (input as any).lineCount === 'number'
+      ? (input as any).lineCount
+      : 0;
+    const getLine: (idx: number) => string = isArray
+      ? (idx: number) => input[idx]
+      : (idx: number) => (input as any).lineAt(idx).text;
+
     const directives: PreprocessorDirective[] = [];
     let depth = 0;
     let inBlockComment = false;
 
-    for (let i = 0; i < lines.length; i++) {
-      const rawLine = lines[i];
+    for (let i = 0; i < count; i++) {
+      const rawLine = getLine(i);
       const trimmed = rawLine.trim();
 
       // Handle multi-line block comments

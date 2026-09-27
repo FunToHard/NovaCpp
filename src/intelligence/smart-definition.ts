@@ -177,28 +177,24 @@ export function prioritizeDefinitionLocations(
 
   if (isLocationLink) {
     const links = locations as vscode.LocationLink[];
-    const sorted = [...links].sort((a, b) => {
-      const aPath = a.targetUri.fsPath;
-      const bPath = b.targetUri.fsPath;
-      const aExt = path.extname(aPath).toLowerCase();
-      const bExt = path.extname(bPath).toLowerCase();
-      const aIsSource = SOURCE_EXTENSIONS.includes(aExt) && !isSystemHeader(aPath) ? 1 : 0;
-      const bIsSource = SOURCE_EXTENSIONS.includes(bExt) && !isSystemHeader(bPath) ? 1 : 0;
-      return bIsSource - aIsSource;
+    const scored = links.map((link) => {
+      const p = link.targetUri.fsPath;
+      const ext = path.extname(p).toLowerCase();
+      const isSource = SOURCE_EXTENSIONS.includes(ext) && !isSystemHeader(p);
+      return { item: link, score: isSource ? 1 : 0 };
     });
-    return sorted;
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map((s) => s.item);
   } else {
     const locs = locations as vscode.Location[];
-    const sorted = [...locs].sort((a, b) => {
-      const aPath = a.uri.fsPath;
-      const bPath = b.uri.fsPath;
-      const aExt = path.extname(aPath).toLowerCase();
-      const bExt = path.extname(bPath).toLowerCase();
-      const aIsSource = SOURCE_EXTENSIONS.includes(aExt) && !isSystemHeader(aPath) ? 1 : 0;
-      const bIsSource = SOURCE_EXTENSIONS.includes(bExt) && !isSystemHeader(bPath) ? 1 : 0;
-      return bIsSource - aIsSource;
+    const scored = locs.map((loc) => {
+      const p = loc.uri.fsPath;
+      const ext = path.extname(p).toLowerCase();
+      const isSource = SOURCE_EXTENSIONS.includes(ext) && !isSystemHeader(p);
+      return { item: loc, score: isSource ? 1 : 0 };
     });
-    return sorted;
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map((s) => s.item);
   }
 }
 

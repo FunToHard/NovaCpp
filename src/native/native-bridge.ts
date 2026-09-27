@@ -4,8 +4,9 @@ import { TimeTraceSummary, parseFTimeTrace } from '../analysis/include-visualize
 import { StructLayout, calculateStructLayout, StructLayoutOptions } from '../inspector/memory-layout-inspector';
 import { CMakeProjectInfo } from '../cmake/cmake-models';
 import { CMakeParser } from '../cmake/cmake-parser';
-import { SolutionModel, VcxProjectModel, ProjectCompileOptions } from '../solution/solution-models';
+import { SolutionModel, VcxProjectModel, ProjectCompileOptions, CompileCommandEntry } from '../solution/solution-models';
 import { parseSolutionFile, loadVcxProject, readFileWithEncoding } from '../solution/sln-parser';
+import { CompilationDatabaseGenerator } from '../solution/compilation-database-generator';
 
 export interface INativeBridge {
   readonly isAccelerated: boolean;
@@ -20,6 +21,15 @@ export interface INativeBridge {
   parseCMakeWorkspace(workspaceRoot: string): Promise<CMakeProjectInfo | null>;
   parseSolution(filePath: string): Promise<SolutionModel | null>;
   parseVcxproj(filePath: string, solutionDir?: string): Promise<VcxProjectModel | null>;
+  generateCompileCommands(
+    solution: SolutionModel,
+    projects: VcxProjectModel[],
+    compilerPath: string,
+    compilerType: string,
+    systemIncludes: string[],
+    activeConfiguration?: string,
+    includeHeaders?: boolean
+  ): CompileCommandEntry[];
 }
 
 export class NativeBridgeImpl implements INativeBridge {
@@ -171,6 +181,72 @@ export class NativeBridgeImpl implements INativeBridge {
     }
 
     return loadVcxProject(filePath, solutionDir);
+  }
+
+  public generateCompileCommands(
+    solution: SolutionModel,
+    projects: VcxProjectModel[],
+    compilerPath: string,
+    compilerType: string,
+    systemIncludes: string[],
+    activeConfiguration?: string,
+    includeHeaders?: boolean
+  ): CompileCommandEntry[] {
+    if (this.isAccelerated && this.nativeBinding?.generateCompileCommandsNative) {
+      try {
+        const nativeSolution = {
+          format: solution.format,
+          filePath: solution.filePath,
+          name: solution.name,
+          configurations: solution.configurations,
+          projects: solution.projects
+        };
+        const nativeProjects = projects.map((p) => {
+          const compileOptionsByConfig: Record<string, any> = {};
+          for (const [k, v] of p.compileOptionsByConfig.entries()) {
+            compileOptionsByConfig[k] = v;
+          }
+          return {
+            filePath: p.filePath,
+            name: p.name,
+            guid: p.guid,
+            configurationType: p.configurationType || 'Application',
+            configurations: p.configurations,
+            compileOptionsByConfig,
+            defaultCompileOptions: p.defaultCompileOptions,
+            sourceFiles: p.sourceFiles,
+            headerFiles: p.headerFiles,
+            targetName: p.targetName,
+            outDir: p.outDir
+          };
+        });
+
+        const entries = this.nativeBinding.generateCompileCommandsNative(
+          nativeSolution,
+          nativeProjects,
+          compilerPath,
+          compilerType,
+          systemIncludes,
+          activeConfiguration,
+          includeHeaders
+        );
+        if (entries && Array.isArray(entries)) {
+          return entries;
+        }
+      } catch (err) {
+        console.warn('NovaCpp: Native compile commands generator failed, falling back to TypeScript:', err);
+      }
+    }
+
+    const generator = new CompilationDatabaseGenerator();
+    return generator.generateEntries(
+      solution,
+      projects,
+      { name: compilerPath, type: compilerType as any, path: compilerPath },
+      systemIncludes,
+      activeConfiguration,
+      { includeHeaders }
+    );
   }
 }
 

@@ -268,6 +268,7 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
 
   // Extract ClCompile sources
   const sourceFiles: string[] = [];
+  const seenSourceFiles = new Set<string>();
   const clCompileRegex = /<ClCompile\s+Include="([^"]+)"/g;
   let clMatch: RegExpExecArray | null;
   while ((clMatch = clCompileRegex.exec(cleanContent)) !== null) {
@@ -276,13 +277,15 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
       rawFile = rawFile.slice(1, -1).trim();
     }
     const fullPath = path.resolve(projectDir, rawFile.replace(/\\/g, '/'));
-    if (!sourceFiles.includes(fullPath)) {
+    if (!seenSourceFiles.has(fullPath)) {
+      seenSourceFiles.add(fullPath);
       sourceFiles.push(fullPath);
     }
   }
 
   // Extract ClInclude headers
   const headerFiles: string[] = [];
+  const seenHeaderFiles = new Set<string>();
   const clIncludeRegex = /<ClInclude\s+Include="([^"]+)"/g;
   let hMatch: RegExpExecArray | null;
   while ((hMatch = clIncludeRegex.exec(cleanContent)) !== null) {
@@ -291,7 +294,8 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
       rawFile = rawFile.slice(1, -1).trim();
     }
     const fullPath = path.resolve(projectDir, rawFile.replace(/\\/g, '/'));
-    if (!headerFiles.includes(fullPath)) {
+    if (!seenHeaderFiles.has(fullPath)) {
+      seenHeaderFiles.add(fullPath);
       headerFiles.push(fullPath);
     }
   }

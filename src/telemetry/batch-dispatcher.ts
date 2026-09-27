@@ -115,8 +115,13 @@ export class BatchDispatcher implements vscode.Disposable {
     return new Promise((resolve) => {
       try {
         const url = new URL(this.endpointUrl);
-        const data = JSON.stringify(payload);
+        if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+          console.warn(`NovaCpp: Insecure telemetry endpoint '${this.endpointUrl}' rejected. HTTPS is required for remote endpoints.`);
+          resolve(false);
+          return;
+        }
 
+        const data = JSON.stringify(payload);
         const client = url.protocol === 'http:' ? http : https;
         const req = client.request(
           url,

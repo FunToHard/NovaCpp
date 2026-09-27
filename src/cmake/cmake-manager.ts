@@ -3,9 +3,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { CMakeProjectInfo } from './cmake-models';
 import { CMakeDetector } from './cmake-detector';
-import { CMakeParser } from './cmake-parser';
 import { CompilerDetector } from '../prober/compiler-detector';
 import { SystemIncludeExtractor } from '../prober/system-includes';
+import { NativeBridge } from '../native/native-bridge';
 
 export class CMakeManager implements vscode.Disposable {
   private statusBarItem: vscode.StatusBarItem;
@@ -69,7 +69,7 @@ export class CMakeManager implements vscode.Disposable {
     }
 
     const rootPath = folders[0].uri.fsPath;
-    const project = CMakeParser.parseWorkspace(rootPath);
+    const project = await NativeBridge.parseCMakeWorkspace(rootPath);
     if (!project) {
       this.activeProject = null;
       this.statusBarItem.hide();

@@ -1,3 +1,22 @@
+/**
+ * NovaCpp Architectural Performance Micro-Benchmark Harness.
+ *
+ * This file measures throughput and latency for:
+ * 1. Zero-config system compiler discovery.
+ * 2. System include path extraction.
+ * 3. compile_flags.txt synthesis.
+ * 4. Debug launch configuration generation (1,000 iterations).
+ * 5. Build task execution spec creation (1,000 iterations).
+ *
+ * Usage:
+ *   npm run benchmark
+ *   or:
+ *   npx tsx test/benchmark.ts
+ *
+ * Note: This benchmark is a manual profiling tool and is intentionally excluded
+ * from the automated CI test suite (.mocharc.json) to keep CI fast.
+ */
+
 import './vscode-mock';
 import { CompilerDetector } from '../src/prober/compiler-detector';
 import { SystemIncludeExtractor } from '../src/prober/system-includes';

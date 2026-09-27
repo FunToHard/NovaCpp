@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { NativeBridge } from '../native/native-bridge';
 
 export interface IncludeNode {
   path: string;
@@ -467,8 +468,7 @@ export class IncludeVisualizerManager implements vscode.Disposable {
     }
 
     try {
-      const raw = fs.readFileSync(targetPath, 'utf-8');
-      const summary = parseFTimeTrace(raw);
+      const summary = await NativeBridge.parseTimeTrace(targetPath);
 
       this.outputChannel.clear();
       this.outputChannel.appendLine(`=======================================================`);

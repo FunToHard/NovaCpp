@@ -74,22 +74,30 @@ export function findLaunchVsDevShell(compiler?: CompilerInfo): string | null {
     }
   }
 
-  const commonVsRoots = [
-    'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise',
-    'C:\\Program Files\\Microsoft Visual Studio\\18\\Professional',
-    'C:\\Program Files\\Microsoft Visual Studio\\18\\Community',
-    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise',
-    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional',
-    'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community',
-    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise',
-    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional',
-    'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community'
-  ];
-
-  for (const vsRoot of commonVsRoots) {
-    const script = path.join(vsRoot, 'Common7', 'Tools', 'Launch-VsDevShell.ps1');
+  // 1. Check active environment variable VSINSTALLDIR
+  if (process.env.VSINSTALLDIR) {
+    const script = path.join(process.env.VSINSTALLDIR, 'Common7', 'Tools', 'Launch-VsDevShell.ps1');
     if (fs.existsSync(script)) {
       return script;
+    }
+  }
+
+  // 2. Discover via dynamic drive scan and standard directories
+  const drives = ['C:', 'D:', 'E:'];
+  const progDirs = ['Program Files', 'Program Files (x86)'];
+  const years = ['18', '2022', '2019', '2017'];
+  const editions = ['Enterprise', 'Professional', 'Community', 'BuildTools', 'Preview'];
+
+  for (const drive of drives) {
+    for (const prog of progDirs) {
+      for (const year of years) {
+        for (const ed of editions) {
+          const script = path.join(drive, prog, 'Microsoft Visual Studio', year, ed, 'Common7', 'Tools', 'Launch-VsDevShell.ps1');
+          if (fs.existsSync(script)) {
+            return script;
+          }
+        }
+      }
     }
   }
 

@@ -12,7 +12,7 @@ import {
   ErrorAction
 } from 'vscode-languageclient/node';
 import { ClangdInstaller } from './installer';
-import { createClangdMiddleware, EditorEventDebouncer, debounce } from './protocol-filter';
+import { createClangdMiddleware, debounce } from './protocol-filter';
 import { StlRankingTable } from '../telemetry/ranking-table';
 import { ExternalSdkDetector } from '../prober/external-sdk-detector';
 import { CMakeParser } from '../cmake/cmake-parser';
@@ -48,7 +48,6 @@ export class DaemonManager implements vscode.Disposable {
   private client: LanguageClient | null = null;
   private statusBarItem: vscode.StatusBarItem;
   private outputChannel: vscode.LogOutputChannel;
-  private eventDebouncer: EditorEventDebouncer;
   private disposables: vscode.Disposable[] = [];
   private clientDisposables: vscode.Disposable[] = [];
   private onInactiveRegionsEmitter = new vscode.EventEmitter<InactiveRegionsParams>();
@@ -77,7 +76,6 @@ export class DaemonManager implements vscode.Disposable {
     private readonly rankingTable: StlRankingTable = new StlRankingTable()
   ) {
     this.outputChannel = vscode.window.createOutputChannel('NovaCpp Language Server', { log: true });
-    this.eventDebouncer = new EditorEventDebouncer();
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Right,
       100
@@ -87,7 +85,6 @@ export class DaemonManager implements vscode.Disposable {
 
     this.disposables.push(
       this.outputChannel,
-      this.eventDebouncer,
       this.statusBarItem,
       this.onInactiveRegionsEmitter
     );

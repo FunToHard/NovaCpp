@@ -35,17 +35,15 @@ export class CompilerDetector {
 
     const compilers: CompilerInfo[] = [];
 
-    // Run detections
-    if (process.platform === 'win32') {
-      compilers.push(...(await this.detectMSVC()));
-    }
+    // Run detections concurrently
+    const [msvcCompilers, clangCompilers, gccCompilers, wslCompilers] = await Promise.all([
+      process.platform === 'win32' ? this.detectMSVC() : Promise.resolve([]),
+      this.detectClang(),
+      this.detectGCC(),
+      process.platform === 'win32' ? this.detectWSL() : Promise.resolve([])
+    ]);
 
-    compilers.push(...this.detectClang());
-    compilers.push(...this.detectGCC());
-
-    if (process.platform === 'win32') {
-      compilers.push(...(await this.detectWSL()));
-    }
+    compilers.push(...msvcCompilers, ...clangCompilers, ...gccCompilers, ...wslCompilers);
 
     // Deduplicate by normalized path
     const seen = new Set<string>();
@@ -194,46 +192,53 @@ export class CompilerDetector {
     return null;
   }
 
-  public detectClang(): CompilerInfo[] {
+  public async detectClang(): Promise<CompilerInfo[]> {
     const results: CompilerInfo[] = [];
     const binaryNames =
       process.platform === 'win32'
         ? ['clang++.exe', 'clang.exe', 'clang-cl.exe']
         : ['clang++', 'clang'];
 
+    const validBins: { binPath: string; isClangCl: boolean }[] = [];
     for (const bin of binaryNames) {
       try {
         const binPath = which.sync(bin);
         if (binPath && fs.existsSync(binPath)) {
-          const isClangCl = bin.includes('clang-cl');
-          let version = '';
-          try {
-            const out = cp.execFileSync(binPath, ['--version'], {
-              encoding: 'utf8',
-              timeout: 2000
-            });
-            const m = out.match(/clang version ([0-9.]+)/i);
-            if (m) version = m[1];
-          } catch {
-            // Ignored
-          }
-
-          results.push({
-            name: `${isClangCl ? 'Clang-CL' : 'Clang'} ${version ? `(${version})` : ''} - ${binPath}`,
-            type: isClangCl ? 'clang-cl' : 'clang',
-            path: binPath,
-            version
-          });
+          validBins.push({ binPath, isClangCl: bin.includes('clang-cl') });
         }
       } catch {
         // Not found in PATH
       }
     }
 
+    const probes = await Promise.all(
+      validBins.map(async ({ binPath, isClangCl }) => {
+        let version = '';
+        try {
+          const { stdout } = await execFileAsync(binPath, ['--version'], {
+            encoding: 'utf8',
+            timeout: 2000
+          });
+          const m = stdout.match(/clang version ([0-9.]+)/i);
+          if (m) version = m[1];
+        } catch {
+          // Ignored
+        }
+
+        return {
+          name: `${isClangCl ? 'Clang-CL' : 'Clang'} ${version ? `(${version})` : ''} - ${binPath}`,
+          type: (isClangCl ? 'clang-cl' : 'clang') as CompilerType,
+          path: binPath,
+          version
+        };
+      })
+    );
+
+    results.push(...probes);
     return results;
   }
 
-  public detectGCC(): CompilerInfo[] {
+  public async detectGCC(): Promise<CompilerInfo[]> {
     const results: CompilerInfo[] = [];
     const candidates: string[] = [];
 
@@ -279,27 +284,30 @@ export class CompilerDetector {
 
     const uniqueCandidates = Array.from(new Set(candidates));
 
-    for (const cPath of uniqueCandidates) {
-      let version = '';
-      try {
-        const out = cp.execFileSync(cPath, ['--version'], {
-          encoding: 'utf8',
-          timeout: 2000
-        });
-        const m = out.match(/gcc(?:\.exe)?\s+\(.*?\) ([0-9.]+)/i) || out.match(/([0-9]+\.[0-9]+\.[0-9]+)/);
-        if (m) version = m[1];
-      } catch {
-        // Ignored
-      }
+    const probes = await Promise.all(
+      uniqueCandidates.map(async (cPath) => {
+        let version = '';
+        try {
+          const { stdout } = await execFileAsync(cPath, ['--version'], {
+            encoding: 'utf8',
+            timeout: 2000
+          });
+          const m = stdout.match(/gcc(?:\.exe)?\s+\(.*?\) ([0-9.]+)/i) || stdout.match(/([0-9]+\.[0-9]+\.[0-9]+)/);
+          if (m) version = m[1];
+        } catch {
+          // Ignored
+        }
 
-      results.push({
-        name: `GCC / G++ ${version ? `(${version})` : ''} - ${cPath}`,
-        type: 'gcc',
-        path: cPath,
-        version
-      });
-    }
+        return {
+          name: `GCC / G++ ${version ? `(${version})` : ''} - ${cPath}`,
+          type: 'gcc' as CompilerType,
+          path: cPath,
+          version
+        };
+      })
+    );
 
+    results.push(...probes);
     return results;
   }
 
