@@ -2,8 +2,9 @@
   "name": "c-cpp-pro",
   "displayName": "C/C++ Pro",
   "description": "High-performance C/C++ language support, debugging, and tooling for Visual Studio Code",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "FunToHard",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.138.0"
   },
