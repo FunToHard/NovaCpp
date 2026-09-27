@@ -18,7 +18,8 @@ out/
 Thumbs.db
 
 # Rapid testing / scratch playground
-playground/
+playground/*
+!playground/.gitkeep
 
 # Synthesized compilation databases & Clangd cache
 compile_flags.txt

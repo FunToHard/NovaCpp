@@ -90,6 +90,13 @@ Adhere strictly to these constraints when modifying the codebase:
 - Never stage or commit local handover or context files (e.g., `context.md`, `context*.md`).
 - Ensure all created test files and temporary artifacts clean up after execution.
 
+### Playground Directory Isolation
+- **Never traverse, list, or search the `playground/` directory**:
+  - Do not run `ls`, `dir`, `Get-ChildItem`, `find`, or recursive glob searches targeting `playground/`.
+  - Do not read, edit, or commit files within `playground/` unless the user explicitly targets a specific sub-path in a prompt.
+  - Keep `playground/` strictly isolated as an external manual verification sandbox to prevent context window saturation from third-party codebases.
+  - The `playground/` directory itself is tracked via `.gitkeep`, but all repository contents inside it are ignored by git.
+
 ### Strict No Emojis Rule
 - Do not use emojis in source code, user-facing UI messages, diagnostics, comments, documentation, commit messages, or agent communication unless absolutely necessary. Maintain a clean, professional, and technical tone throughout.
 
