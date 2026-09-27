@@ -114,6 +114,7 @@ jobs:
       - name: Deploy native binary into extension bundle
         shell: bash
         run: |
+          mkdir -p native/${{ matrix.target }}
           mkdir -p native
           CANDIDATES=(
             "target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
@@ -131,9 +132,9 @@ jobs:
 
           if [ -n "$FOUND" ]; then
             cp "$FOUND" native/c_cpp_pro_native.node
-            cp "$FOUND" native/c_cpp_pro_native.node || true
-            echo "Successfully staged native binary: $FOUND -> native/c_cpp_pro_native.node"
-            ls -lh native/c_cpp_pro_native.node
+            cp "$FOUND" native/${{ matrix.target }}/c_cpp_pro_native.node
+            echo "Successfully staged native binary: $FOUND -> native/c_cpp_pro_native.node and native/${{ matrix.target }}/c_cpp_pro_native.node"
+            ls -lh native/c_cpp_pro_native.node native/${{ matrix.target }}/c_cpp_pro_native.node
           else
             echo "Error: Native binary not found. Searched in:"
             printf '  %s\n' "${CANDIDATES[@]}"
@@ -143,6 +144,8 @@ jobs:
           fi
 
       - name: Build extension bundle (esbuild)
+        env:
+          SKIP_NATIVE_BUILD: "1"
         run: npm run build
 
       - name: Run unit test suite
