@@ -46,6 +46,11 @@
   "contributes": {
     "commands": [
       {
+        "command": "c-cpp-pro.createProject",
+        "title": "C/C++ Pro: Create New C/C++ Project",
+        "category": "C/C++"
+      },
+      {
         "command": "c-cpp-pro.logDiagnostics",
         "title": "C/C++ Pro: Log Diagnostics",
         "category": "C/C++"

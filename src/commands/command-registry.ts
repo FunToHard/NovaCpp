@@ -25,6 +25,7 @@ import { DoxygenGenerator } from '../documentation/doxygen-generator';
 import { ClangTidyManager } from '../analysis/clang-tidy-manager';
 import { VsEnvironmentManager } from '../tasks/vs-environment-manager';
 import { ProcessPicker } from '../debugger/process-picker';
+import { ProjectCreator } from '../project/project-creator';
 
 export interface CommandRegistryContext {
   extensionContext: vscode.ExtensionContext;
@@ -75,6 +76,9 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
   } = ctx;
 
   return [
+    vscode.commands.registerCommand('c-cpp-pro.createProject', async () => {
+      await ProjectCreator.promptAndCreate(context, detector);
+    }),
     vscode.commands.registerCommand('c-cpp-pro.openSettings', () => {
       if (!detector || !synthesizer) return;
       ConfigPanel.render(

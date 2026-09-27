@@ -6,7 +6,8 @@ Welcome to the **C/C++ Pro** documentation wiki. This wiki provides user manuals
 
 ## Documentation Sections
 
-- **[Command Palette Reference](Command-Palette)**: Complete catalog of all 42 commands with descriptions, shortcuts, and behaviors.
+- **[Project Creation Guide](Project-Creation)**: Turnkey project scaffolding wizard for Windows, Linux, and macOS.
+- **[Command Palette Reference](Command-Palette)**: Complete catalog of all 43 commands with descriptions, shortcuts, and behaviors.
 - **[Compiler & Toolchain Setup](https://github.com/FunToHard/c-cpp-pro#2-zero-configuration-compiler--sdk-discovery)**: Automatic discovery of MSVC, Clang, GCC, and WSL compilers.
 - **[Visual Studio Solution Support](https://github.com/FunToHard/c-cpp-pro#3-visual-studio-solution--project-integration)**: Working with `.sln`, `.slnx`, and `.vcxproj` files without launching Visual Studio.
 - **[Static CMake Integration](https://github.com/FunToHard/c-cpp-pro#cmake-intelligence)**: Parsing `CMakeLists.txt` statically to build `compile_commands.json`.

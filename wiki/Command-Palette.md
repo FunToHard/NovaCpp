@@ -40,6 +40,7 @@ Commands for configuring active compilers, profiles, environment variables, and 
 
 | Command Title | Command Identifier | Shortcut | Description |
 | :--- | :--- | :--- | :--- |
+| **C/C++ Pro: Create New C/C++ Project** | `c-cpp-pro.createProject` | None | Launches the project scaffolding wizard to generate CMake, Visual Studio Solution, Makefile, or Lightweight C/C++ projects across Windows, Linux, and macOS. |
 | **C/C++ Pro: Open Configuration Panel** | `c-cpp-pro.openSettings` | None | Opens the interactive Webview configuration panel to edit language standards, include paths, defines, and compiler flags. |
 | **C/C++ Pro: Scan for Installed Compilers** | `c-cpp-pro.detectCompilers` | None | Probes the local operating system for MSVC, Clang, GCC, and MinGW installations and displays them in a quick pick list. |
 | **C/C++ Pro: Generate compile_flags.txt** | `c-cpp-pro.generateCompileFlags` | None | Synthesizes a clean `compile_flags.txt` in the workspace root based on detected compiler paths and installed SDKs. |
