@@ -9,6 +9,8 @@ C/C++ Pro combines the blazing index and AST completion speed of LLVM's **`clang
 
 ---
 
+[Wiki](https://github.com/FunToHard/c-cpp-pro/wiki) | [Issues](https://github.com/FunToHard/c-cpp-pro/issues)
+
 ## Why C/C++ Pro?
 
 | Feature | Microsoft `vscode-cpptools` | Official `vscode-clangd` | **C/C++ Pro** |
