@@ -166,17 +166,15 @@ jobs:
       - name: Publish to Visual Studio Code Marketplace
         if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || inputs.publish_marketplace }}
         env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT || secrets.VSCODE_MARKETPLACE_TOKEN || secrets.MARKETPLACE_PAT || secrets.VSCE_TOKEN }}
         shell: bash
         run: |
           if [ -z "$VSCE_PAT" ]; then
             echo "VSCE_PAT secret is not configured. Skipping marketplace publication."
           else
-            PRE_FLAG=""
-            if [ "${{ steps.release_mode.outputs.is_pre_release }}" = "true" ]; then
-              PRE_FLAG="--pre-release"
-            fi
-            npx @vscode/vsce publish --target ${{ matrix.target }} $PRE_FLAG --packagePath *.vsix --pat "$VSCE_PAT"
+            VSIX_FILE=$(ls *.vsix | head -n 1)
+            echo "Publishing platform package $VSIX_FILE to Visual Studio Code Marketplace..."
+            npx @vscode/vsce publish --packagePath "$VSIX_FILE" --pat "$VSCE_PAT" --skip-duplicate
           fi
 
   github-release:
