@@ -1,0 +1,106 @@
+name: Bug Report
+description: Create a report to help us improve C/C++ Pro
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please search existing issues first to avoid duplicates.
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Provide a clear and concise description of what the bug is.
+      placeholder: Describe the unexpected behavior...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Provide detailed steps to reproduce the behavior.
+      placeholder: |
+        1. Open folder '...'
+        2. Execute command '...'
+        3. Observe error '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: Provide a clear explanation of what you expected to happen.
+      placeholder: Expected behavior...
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: Explain what actually happened instead.
+      placeholder: Actual behavior...
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: Which operating system are you using?
+      options:
+        - Windows 11 / 10 (x64)
+        - Windows (ARM64)
+        - macOS (Apple Silicon - ARM64)
+        - macOS (Intel - x64)
+        - Linux (Ubuntu / Debian)
+        - Linux (Arch / Fedora / Other)
+        - Windows Subsystem for Linux (WSL)
+    validations:
+      required: true
+  - type: dropdown
+    id: build_system
+    attributes:
+      label: Build System
+      description: Which build system or project model are you using?
+      options:
+        - CMake
+        - Visual Studio Solution (.sln / .slnx / .vcxproj)
+        - Makefile
+        - Lightweight (compile_flags.txt / tasks.json)
+        - Single File / None
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: extension_version
+    attributes:
+      label: Extension Version
+      description: Which version of C/C++ Pro are you running?
+      placeholder: e.g. 0.1.1
+    validations:
+      required: true
+  - type: input
+    id: compiler_info
+    attributes:
+      label: Compiler & Version
+      description: Which compiler are you targeting?
+      placeholder: e.g. MSVC 19.40, GCC 14.2, Clang 18.1, Apple Clang 16.0
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics_logs
+    attributes:
+      label: Extension Diagnostics & Logs
+      description: Output from the Command Palette command `C/C++ Pro: Log Diagnostics` or terminal logs.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: I am using the latest release of C/C++ Pro.
+          required: false

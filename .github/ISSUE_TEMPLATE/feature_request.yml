@@ -1,0 +1,60 @@
+name: Feature Request
+description: Suggest an idea or architectural improvement for C/C++ Pro
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please provide as much detail as possible to help us evaluate the request.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement or Use Case
+      description: Is your feature request related to a specific problem or developer workflow?
+      placeholder: A clear and concise description of the problem or limitation...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you would like to see implemented.
+      placeholder: Explain what the feature should do and how it should work...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or workarounds you have considered.
+      placeholder: Any other tools, scripts, or configurations...
+    validations:
+      required: false
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: Affected Subsystem
+      description: Which area of C/C++ Pro does this feature primarily relate to?
+      options:
+        - Language Server Substrate & Clangd
+        - Compiler & SDK Discovery
+        - CMake Intelligence
+        - Visual Studio Solution Integration
+        - DAP Debugging & Process Attachment
+        - Memory Layout Inspector
+        - Build Bottlenecks & Include Analyzer
+        - Project Scaffolding & Templates
+        - Test Explorer Integration
+        - Configuration Panel & Webview
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context, code snippets, documentation references, or examples.
+      placeholder: Extra details...
+    validations:
+      required: false
