@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import { buildRunCommand, findLaunchVsDevShell, RunController, escapePwshDoubleQuoted } from '../src/tasks/run-controller';
+import { createBuildExecution } from '../src/tasks/runner';
 import { CompilerInfo, CompilerDetector } from '../src/prober/compiler-detector';
 
 describe('Run & Debug Controller (Title Bar Actions)', () => {
@@ -55,6 +56,24 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
       const cmd = buildRunCommand(clang, '/app/main.cpp', '/app/main', 'c++20', false);
       assert.ok(cmd.includes('/usr/bin/clang++'));
       assert.ok(cmd.includes('&& "/app/main"'));
+    });
+
+    it('should invoke and run WSL compilers inside their Linux distribution', () => {
+      const wslGcc: CompilerInfo = {
+        name: 'WSL GCC',
+        type: 'wsl-gcc',
+        path: 'C:\\Windows\\System32\\wsl.exe',
+        argsPrefix: ['g++']
+      };
+      const command = buildRunCommand(wslGcc, 'F:\\project\\main.cpp', 'F:\\project\\main', 'c++20', true);
+      assert.ok(command.includes('wsl.exe'));
+      assert.ok(command.includes('-- g++'));
+      assert.ok(command.includes('/mnt/f/project/main.cpp'));
+      assert.ok(command.includes('/mnt/f/project/main'));
+
+      const execution = createBuildExecution(wslGcc, 'F:\\project\\main.cpp', 'F:\\project\\main');
+      assert.deepStrictEqual(execution.args.slice(0, 2), ['--', 'g++']);
+      assert.ok(execution.args.includes('/mnt/f/project/main.cpp'));
     });
   });
 

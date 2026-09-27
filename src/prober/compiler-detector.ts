@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as which from 'which';
 import { promisify } from 'util';
+import { getPathIdentity } from '../platform/path-identity';
 
 const execFileAsync = promisify(cp.execFile);
 
@@ -48,7 +49,7 @@ export class CompilerDetector {
     // Deduplicate by normalized path
     const seen = new Set<string>();
     const deduplicated = compilers.filter((c) => {
-      const normalized = path.normalize(c.path).toLowerCase();
+      const normalized = getPathIdentity(c.path);
       if (seen.has(normalized)) return false;
       seen.add(normalized);
       return true;
@@ -495,4 +496,3 @@ export class CompilerDetector {
     return null;
   }
 }
-

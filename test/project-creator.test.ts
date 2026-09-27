@@ -129,6 +129,22 @@ describe('Project Creator & Template Scaffolding', () => {
       assert.ok(makefile!.content.includes('clean:'));
     });
 
+    it('should generate a macOS-compatible shared library Makefile', () => {
+      const files = generateProjectFiles({
+        projectName: 'MacLibrary',
+        targetDirectory: tmpDir,
+        language: 'cpp',
+        standard: 'c++20',
+        templateType: 'shared-lib',
+        buildSystem: 'makefile',
+        isWindows: false,
+        platform: 'darwin'
+      });
+      const makefile = files.find((f) => f.relativePath === 'Makefile');
+      assert.ok(makefile?.content.includes('-dynamiclib'));
+      assert.ok(makefile?.content.includes('libMacLibrary.dylib'));
+    });
+
     it('should generate Shared Library with export headers', () => {
       const opts: ProjectCreationOptions = {
         projectName: 'MyMathLib',

@@ -28,6 +28,7 @@ export interface ProjectCreationOptions {
   testFramework?: TestFramework;
   compilerPath?: string;
   isWindows?: boolean;
+  platform?: NodeJS.Platform;
 }
 
 export interface GeneratedFile {

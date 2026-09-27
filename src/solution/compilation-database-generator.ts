@@ -4,6 +4,8 @@ import { SolutionModel, VcxProjectModel, CompileCommandEntry } from './solution-
 import { CompilerInfo } from '../prober/compiler-detector';
 import { ExternalSdkDetector } from '../prober/external-sdk-detector';
 import { resolveProjectReferenceDAG } from './sln-parser';
+import { getPathIdentity } from '../platform/path-identity';
+import { getWslCompilerArgs, isWslCompiler, toWslPath } from '../platform/wsl';
 
 export class CompilationDatabaseGenerator {
   /**
@@ -28,7 +30,9 @@ export class CompilationDatabaseGenerator {
     const externalSdkIncludes = ExternalSdkDetector.getWorkspaceIncludePaths(solutionDir);
 
     for (const project of projects) {
-      const projectDir = path.dirname(project.filePath).replace(/\\/g, '/');
+      const projectDir = isWslCompiler(compiler)
+        ? toWslPath(path.dirname(project.filePath))
+        : path.dirname(project.filePath).replace(/\\/g, '/');
       const projectOpts =
         project.compileOptionsByConfig.get(targetConfig) || project.defaultCompileOptions;
 
@@ -68,11 +72,13 @@ export class CompilationDatabaseGenerator {
       ];
 
       for (const { filePath: targetFile, isHeader } of projectFiles) {
-        const normalizedFile = targetFile.replace(/\\/g, '/');
-        if (seenFiles.has(normalizedFile.toLowerCase())) {
+        const normalizedFile = isWslCompiler(compiler)
+          ? toWslPath(targetFile)
+          : targetFile.replace(/\\/g, '/');
+        if (seenFiles.has(getPathIdentity(normalizedFile))) {
           continue;
         }
-        seenFiles.add(normalizedFile.toLowerCase());
+        seenFiles.add(getPathIdentity(normalizedFile));
 
         const compilerBin = compiler.path.replace(/\\/g, '/');
         const commandParts: string[] = [];
@@ -107,9 +113,11 @@ export class CompilationDatabaseGenerator {
           args.push('/c', normalizedFile);
           commandParts.push('/c', `"${normalizedFile}"`);
         } else {
-          args.push(compilerBin, isHeader ? '-xc++-header' : '-xc++', `-std=${standard}`, '-Wall');
+          const wslPrefix = isWslCompiler(compiler) ? getWslCompilerArgs(compiler) : [];
+          args.push(compilerBin, ...wslPrefix, isHeader ? '-xc++-header' : '-xc++', `-std=${standard}`, '-Wall');
           commandParts.push(
             `"${compilerBin}"`,
+            ...wslPrefix,
             isHeader ? '-xc++-header' : '-xc++',
             `-std=${standard}`,
             '-Wall'

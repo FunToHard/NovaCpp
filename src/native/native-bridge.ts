@@ -42,18 +42,19 @@ export class NativeBridgeImpl implements INativeBridge {
   }
 
   private loadNativeBinding(customPath?: string, extensionPath?: string): void {
+    const platformArtifact = path.join('native', `${process.platform}-${process.arch}`, 'c_cpp_pro_native.node');
     const candidatePaths: string[] = customPath
       ? [customPath]
       : [
+          ...(extensionPath ? [path.join(extensionPath, platformArtifact)] : []),
+          path.resolve(__dirname, '../../', platformArtifact),
+          path.resolve(__dirname, '../../../', platformArtifact),
           path.join(__dirname, '../native/c_cpp_pro_native.node'),
-          path.join(__dirname, '../native/c_cpp_pro_native.node'),
-          ...(extensionPath ? [path.join(extensionPath, 'native/c_cpp_pro_native.node'), path.join(extensionPath, 'native/c_cpp_pro_native.node')] : []),
-          path.resolve(__dirname, '../../native/c_cpp_pro_native.node'),
+          ...(extensionPath ? [path.join(extensionPath, 'native/c_cpp_pro_native.node')] : []),
           path.resolve(__dirname, '../../native/c_cpp_pro_native.node'),
           path.resolve(__dirname, '../../../native/c_cpp_pro_native.node'),
           path.resolve(__dirname, '../../crates/c-cpp-pro-native/target/release/c_cpp_pro_native.node'),
-          path.resolve(__dirname, '../../../target/release/c_cpp_pro_native.node'),
-          path.resolve(__dirname, '../../../target/release/c_cpp_pro_native.dll')
+          path.resolve(__dirname, '../../../target/release/c_cpp_pro_native.node')
         ];
 
     for (const cand of candidatePaths) {

@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as which from 'which';
+import { execFileSync } from 'child_process';
 
 export interface DebuggerExecutable {
   type: 'lldb-dap' | 'gdb';
@@ -92,6 +93,20 @@ export class LldbDapLocator {
           }
         }
       }
+
+      if (process.platform === 'darwin') {
+        try {
+          const xcodeLldb = execFileSync('xcrun', ['--find', 'lldb-dap'], {
+            encoding: 'utf8',
+            timeout: 2000
+          }).trim();
+          if (xcodeLldb && fs.existsSync(xcodeLldb)) {
+            return xcodeLldb;
+          }
+        } catch {
+          // Xcode command-line tools are not installed or do not provide lldb-dap.
+        }
+      }
     }
 
     return null;
@@ -159,6 +174,7 @@ export class LldbDapLocator {
     preference: 'auto' | 'lldb-dap' | 'gdb' = 'auto',
     customPath?: string
   ): DebuggerExecutable | null {
+    const isWsl = customPath ? path.basename(customPath).toLowerCase() === 'wsl.exe' : false;
     if (preference === 'lldb-dap') {
       const lldb = this.findLldbDap(customPath);
       if (lldb) return { type: 'lldb-dap', path: lldb, args: [] };
@@ -167,7 +183,7 @@ export class LldbDapLocator {
 
     if (preference === 'gdb') {
       const gdb = this.findGdb(customPath);
-      if (gdb) return { type: 'gdb', path: gdb, args: ['-q', '--interpreter=dap'] };
+      if (gdb) return { type: 'gdb', path: gdb, args: isWsl ? ['--', 'gdb', '-q', '--interpreter=dap'] : ['-q', '--interpreter=dap'] };
       return null;
     }
 

@@ -45,14 +45,14 @@ export class CppProConfigurationTool {
 
     let compilerName = 'Auto-detected';
     let compilerFamily = 'msvc';
-    let architecture = process.arch === 'x64' ? 'x64' : 'x86';
+    let architecture: string = process.arch;
 
     try {
       const preferred = await this.detector.getPreferredCompiler();
       if (preferred) {
         compilerName = preferred.name;
         compilerFamily = preferred.type;
-        architecture = preferred.is64Bit ? 'x64' : 'x86';
+        architecture = preferred.is64Bit === true ? 'x64' : preferred.is64Bit === false ? 'x86' : process.arch;
       }
     } catch {
       // Ignore

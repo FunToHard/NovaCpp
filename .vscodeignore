@@ -22,6 +22,7 @@ scratch/**
 context*.md
 target/**
 crates/**
+!native/**
 temp/**
 Cargo.lock
 Cargo.toml

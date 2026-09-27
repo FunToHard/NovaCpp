@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { CMakeProjectInfo, CMakeTargetInfo } from './cmake-models';
+import { getPathIdentity } from '../platform/path-identity';
 
 export interface CMakeRawCommand {
   name: string;
@@ -152,7 +153,7 @@ export class CMakeParser {
     subdirectories: string[];
   } {
     const normalizedFilePath = path.normalize(filePath);
-    if (visitedFiles.has(normalizedFilePath.toLowerCase())) {
+    if (visitedFiles.has(getPathIdentity(normalizedFilePath))) {
       return {
         includeDirectories: [],
         globalIncludeDirectories: [],
@@ -162,7 +163,7 @@ export class CMakeParser {
         subdirectories: []
       };
     }
-    visitedFiles.add(normalizedFilePath.toLowerCase());
+    visitedFiles.add(getPathIdentity(normalizedFilePath));
 
     const result = {
       includeDirectories: [] as string[],

@@ -686,7 +686,7 @@ function generateMakefile(opts: ProjectCreationOptions): string {
   const flagsVar = isCpp ? 'CXXFLAGS' : 'CFLAGS';
   const stdFlag = `-std=${opts.standard}`;
   const name = opts.projectName;
-  const isDarwin = process.platform === 'darwin';
+  const isDarwin = (opts.platform ?? process.platform) === 'darwin';
   const ext = isCpp ? 'cpp' : 'c';
 
   let targetRule = '';
@@ -722,7 +722,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.${ext}
 
 $(SHARED_TARGET): $(OBJS)
 	@mkdir -p $(BIN_DIR)
-	${compiler} -shared $(OBJS) -o $(SHARED_TARGET) $(LDFLAGS)
+	${compiler} ${isDarwin ? '-dynamiclib' : '-shared'} $(OBJS) -o $(SHARED_TARGET) $(LDFLAGS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.${ext}
 	@mkdir -p $(BUILD_DIR)

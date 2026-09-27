@@ -5,6 +5,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { CompilerDetector, CompilerInfo } from '../prober/compiler-detector';
 import { isCppFile, getOutputBinaryPath } from './runner';
+import { getWslCompilerArgs, isWslCompiler, toWslPath } from '../platform/wsl';
 
 const execFileAsync = promisify(execFile);
 
@@ -26,6 +27,12 @@ export function buildRunCommand(
   standard: string = 'c++20',
   isWindows: boolean = process.platform === 'win32'
 ): string {
+  if (isWslCompiler(compiler)) {
+    const compilerName = compiler.argsPrefix?.[0] ?? (compiler.type === 'wsl-clang' ? 'clang++' : 'g++');
+    const sourceWsl = toWslPath(sourceFile);
+    const outputWsl = toWslPath(outputBinary);
+    return `& "${escapePwshDoubleQuoted(compiler.path)}" -- ${compilerName} "${escapePwshDoubleQuoted(sourceWsl)}" -std=${standard} -g -o "${escapePwshDoubleQuoted(outputWsl)}" ; if ($LASTEXITCODE -eq 0) { & "${escapePwshDoubleQuoted(compiler.path)}" -- "${escapePwshDoubleQuoted(outputWsl)}" }`;
+  }
   const compilerEscaped = isWindows ? escapePwshDoubleQuoted(compiler.path) : escapePosixDoubleQuoted(compiler.path);
   const sourceEscaped = isWindows ? escapePwshDoubleQuoted(sourceFile) : escapePosixDoubleQuoted(sourceFile);
   const outputEscaped = isWindows ? escapePwshDoubleQuoted(outputBinary) : escapePosixDoubleQuoted(outputBinary);
@@ -251,6 +258,16 @@ export class RunController implements vscode.Disposable {
                 cwd: path.dirname(sourceFile)
               });
             }
+          } else if (isWslCompiler(compiler)) {
+            const compileArgs = [
+              ...getWslCompilerArgs(compiler),
+              toWslPath(sourceFile),
+              `-std=${standard}`,
+              '-g',
+              '-o',
+              toWslPath(outputBinary)
+            ];
+            await execFileAsync(compiler.path, compileArgs, { cwd: path.dirname(sourceFile) });
           } else {
             const compileArgs = [sourceFile, `-std=${standard}`, '-g', '-o', outputBinary];
             if (compiler.type === 'gcc' && isWindows) {
@@ -276,10 +293,11 @@ export class RunController implements vscode.Disposable {
           name: `C/C++ Pro: Debug ${path.basename(sourceFile)}`,
           type: 'c-cpp-pro-debug',
           request: 'launch',
-          program: outputBinary,
-          cwd: path.dirname(sourceFile),
+          program: isWslCompiler(compiler) ? toWslPath(outputBinary) : outputBinary,
+          cwd: isWslCompiler(compiler) ? toWslPath(path.dirname(sourceFile)) : path.dirname(sourceFile),
           stopOnEntry: false,
-          console: 'integratedTerminal'
+          console: 'integratedTerminal',
+          ...(isWslCompiler(compiler) ? { debuggerPath: compiler.path, debuggerType: 'gdb' } : {})
         };
 
         return await vscode.debug.startDebugging(undefined, debugConfig);

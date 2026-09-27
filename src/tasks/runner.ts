@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CompilerInfo } from '../prober/compiler-detector';
+import { getWslCompilerArgs, isWslCompiler, toWslPath } from '../platform/wsl';
 
 export function isCppFile(documentOrPath: vscode.TextDocument | string): boolean {
   const filePath = typeof documentOrPath === 'string' ? documentOrPath : documentOrPath.fileName;
@@ -34,7 +35,9 @@ export function createBuildExecution(
   const isWindows = process.platform === 'win32';
   const args: string[] = [];
 
-  if (compiler.type === 'msvc') {
+  if (isWslCompiler(compiler)) {
+    args.push(...getWslCompilerArgs(compiler), toWslPath(sourceFile), `-std=${standard}`, '-g', '-o', toWslPath(outputFile));
+  } else if (compiler.type === 'msvc') {
     // MSVC flags: /EHsc (C++ exception handling), /Zi (debug info), /std:c++20, /Fe:outputFile, sourceFile
     args.push('/EHsc', '/Zi', `/std:${standard}`, `/Fe:${outputFile}`, sourceFile);
   } else {
