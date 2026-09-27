@@ -635,7 +635,8 @@
     "benchmark": "tsx test/benchmark.ts",
     "check-types": "tsc --noEmit",
     "test": "npm run check-types && mocha",
-    "package": "npm run clean && vsce package --no-dependencies --skip-license"
+    "package": "npm run clean && vsce package --no-dependencies",
+    "package:pre": "npm run clean && vsce package --pre-release --no-dependencies"
   },
   "dependencies": {
     "@clangd/install": "^0.1.20",

@@ -1,0 +1,136 @@
+name: Pre-Release & Multi-Platform Native CI
+
+on:
+  push:
+    tags:
+      - 'v*.*.*-pre*'
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to Visual Studio Code Marketplace'
+        required: true
+        type: boolean
+        default: false
+      pre_release:
+        description: 'Publish as Pre-Release version'
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-package:
+    name: Build & Package (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win32-x64
+            rust_target: x86_64-pc-windows-msvc
+            binary_name: novacpp_native.dll
+
+          - os: ubuntu-latest
+            target: linux-x64
+            rust_target: x86_64-unknown-linux-gnu
+            binary_name: libnovacpp_native.so
+
+          - os: macos-latest
+            target: darwin-arm64
+            rust_target: aarch64-apple-darwin
+            binary_name: libnovacpp_native.dylib
+
+          - os: macos-13
+            target: darwin-x64
+            rust_target: x86_64-apple-darwin
+            binary_name: libnovacpp_native.dylib
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/novacpp-native
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check
+        run: npm run check-types
+
+      - name: Build Rust native addon (${{ matrix.rust_target }})
+        working-directory: crates/novacpp-native
+        run: cargo build --release --target ${{ matrix.rust_target }}
+
+      - name: Test Rust native addon
+        working-directory: crates/novacpp-native
+        # Run tests on host target
+        run: cargo test
+
+      - name: Deploy native binary into extension bundle
+        shell: bash
+        run: |
+          mkdir -p native
+          BIN_PATH="crates/novacpp-native/target/${{ matrix.rust_target }}/release/${{ matrix.binary_name }}"
+          if [ -f "$BIN_PATH" ]; then
+            cp "$BIN_PATH" native/novacpp_native.node
+            echo "Successfully staged native binary: $BIN_PATH -> native/novacpp_native.node"
+          else
+            echo "Error: Native binary not found at $BIN_PATH"
+            exit 1
+          fi
+
+      - name: Build extension bundle (esbuild)
+        run: npm run build
+
+      - name: Run unit test suite
+        run: npm test
+
+      - name: Package platform-specific VSIX
+        shell: bash
+        run: |
+          PRE_FLAG=""
+          if [ "${{ inputs.pre_release }}" = "true" ] || [[ "${{ github.ref }}" == *"-pre"* ]]; then
+            PRE_FLAG="--pre-release"
+          fi
+          npx @vscode/vsce package --target ${{ matrix.target }} $PRE_FLAG --no-dependencies
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: novacpp-${{ matrix.target }}
+          path: '*.vsix'
+          retention-days: 14
+
+      - name: Publish to Visual Studio Code Marketplace
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || inputs.publish }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        shell: bash
+        run: |
+          PRE_FLAG=""
+          if [ "${{ inputs.pre_release }}" = "true" ] || [[ "${{ github.ref }}" == *"-pre"* ]]; then
+            PRE_FLAG="--pre-release"
+          fi
+          npx @vscode/vsce publish --target ${{ matrix.target }} $PRE_FLAG --packagePath *.vsix --pat "$VSCE_PAT"
