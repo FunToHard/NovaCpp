@@ -34,16 +34,16 @@ export class VSCodeClangdUI implements ClangdUI {
   }
 
   info(s: string): void {
-    vscode.window.showInformationMessage(`TurboCpp: ${s}`);
+    vscode.window.showInformationMessage(`C/C++ Pro: ${s}`);
   }
 
   error(s: string): void {
-    vscode.window.showErrorMessage(`TurboCpp: ${s}`);
+    vscode.window.showErrorMessage(`C/C++ Pro: ${s}`);
   }
 
   showHelp(message: string, url: string): void {
     vscode.window
-      .showInformationMessage(`TurboCpp: ${message}`, 'Open Help')
+      .showInformationMessage(`C/C++ Pro: ${message}`, 'Open Help')
       .then((choice) => {
         if (choice === 'Open Help') {
           vscode.env.openExternal(vscode.Uri.parse(url));
@@ -53,7 +53,7 @@ export class VSCodeClangdUI implements ClangdUI {
 
   promptReload(message: string): void {
     vscode.window
-      .showInformationMessage(`TurboCpp: ${message}`, 'Reload Window')
+      .showInformationMessage(`C/C++ Pro: ${message}`, 'Reload Window')
       .then((choice) => {
         if (choice === 'Reload Window') {
           vscode.commands.executeCommand('workbench.action.reloadWindow');
@@ -64,7 +64,7 @@ export class VSCodeClangdUI implements ClangdUI {
   promptUpdate(oldVersion: string, newVersion: string): void {
     vscode.window
       .showInformationMessage(
-        `TurboCpp: A clangd update is available (${oldVersion} -> ${newVersion}). Install now?`,
+        `C/C++ Pro: A clangd update is available (${oldVersion} -> ${newVersion}). Install now?`,
         'Install',
         'Later'
       )
@@ -78,7 +78,7 @@ export class VSCodeClangdUI implements ClangdUI {
   promptInstall(version: string): void {
     vscode.window
       .showInformationMessage(
-        `TurboCpp: clangd language server (${version}) is required but not installed. Install now?`,
+        `C/C++ Pro: clangd language server (${version}) is required but not installed. Install now?`,
         'Install clangd',
         'Cancel'
       )
@@ -91,7 +91,7 @@ export class VSCodeClangdUI implements ClangdUI {
 
   async shouldReuse(reusePath: string): Promise<boolean | undefined> {
     const choice = await vscode.window.showInformationMessage(
-      `TurboCpp: Found existing clangd at ${reusePath}. Use it?`,
+      `C/C++ Pro: Found existing clangd at ${reusePath}. Use it?`,
       'Yes',
       'No'
     );
@@ -102,7 +102,7 @@ export class VSCodeClangdUI implements ClangdUI {
     return vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `TurboCpp: ${title}`,
+        title: `C/C++ Pro: ${title}`,
         cancellable: false
       },
       () => work
@@ -117,7 +117,7 @@ export class VSCodeClangdUI implements ClangdUI {
     return vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `TurboCpp: ${title}`,
+        title: `C/C++ Pro: ${title}`,
         cancellable: cancel !== null
       },
       (progress, token) => {
@@ -144,14 +144,14 @@ export class ClangdInstaller {
   /**
    * Resolves the clangd binary path.
    * Priority:
-   * 1. Configuration setting `turbocpp.clangdPath`
+   * 1. Configuration setting `c-cpp-pro.clangdPath`
    * 2. System PATH
    * 3. Downloaded binary in extension globalStorageUri
    * 4. Interactive install via @clangd/install
    */
   public async resolveClangdPath(checkUpdate = false): Promise<string | null> {
     // 1. Check user configuration
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const configuredPath = config.get<string>('clangdPath')?.trim();
     if (configuredPath && configuredPath.length > 0) {
       if (fs.existsSync(configuredPath)) {
@@ -206,7 +206,7 @@ export class ClangdInstaller {
           return status.clangdPath;
         }
       } catch (err) {
-        console.error('TurboCpp: Error running clangd installer:', err);
+        console.error('C/C++ Pro: Error running clangd installer:', err);
       }
     }
 

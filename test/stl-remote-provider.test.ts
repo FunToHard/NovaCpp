@@ -43,7 +43,7 @@ describe('StlRemoteProvider & Asynchronous STL/System IntelliSense', () => {
   });
 
   it('should read from and write to local disk cache', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'novacpp_stl_cache_test_'));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cpp_pro_stl_cache_test_'));
     try {
       provider.setCacheDirectory(tempDir);
 

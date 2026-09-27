@@ -69,7 +69,7 @@ export const IO_ENTRIES: Record<string, StlDocEntry> = {
     docUrl: 'https://en.cppreference.com/w/cpp/io/cout',
     complexity: { time: 'Stream output operation' },
     exceptionSafety: 'Basic guarantee.',
-    example: 'std::cout << "Hello TurboCpp!\\n";',
+    example: 'std::cout << "Hello C/C++ Pro!\\n";',
     seeAlso: ['std::cin', 'std::cerr', 'std::println']
   },
   'std::cin': {

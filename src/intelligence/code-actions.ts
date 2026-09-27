@@ -112,9 +112,9 @@ export function extractMacros(documentText: string): Map<string, MacroDef> {
 }
 
 /**
- * TurboCpp Code Action and Refactoring Assist Provider.
+ * C/C++ Pro Code Action and Refactoring Assist Provider.
  */
-export class TurboCppCodeActionProvider implements vscode.CodeActionProvider {
+export class CppProCodeActionProvider implements vscode.CodeActionProvider {
   public static readonly providedCodeActionKinds = [
     vscode.CodeActionKind.Refactor,
     vscode.CodeActionKind.QuickFix
@@ -145,7 +145,7 @@ export class TurboCppCodeActionProvider implements vscode.CodeActionProvider {
         const targetUri = vscode.Uri.file(targetPath);
 
         const action = new vscode.CodeAction(
-          `TurboCpp: Generate Definition in ${path.basename(targetPath)}`,
+          `C/C++ Pro: Generate Definition in ${path.basename(targetPath)}`,
           vscode.CodeActionKind.Refactor
         );
 
@@ -166,7 +166,7 @@ export class TurboCppCodeActionProvider implements vscode.CodeActionProvider {
         const fullDocText = document.getText();
         if (!fullDocText.includes(`#include ${header}`)) {
           const action = new vscode.CodeAction(
-            `TurboCpp: Add #include ${header}`,
+            `C/C++ Pro: Add #include ${header}`,
             vscode.CodeActionKind.QuickFix
           );
 
@@ -189,7 +189,7 @@ export class TurboCppCodeActionProvider implements vscode.CodeActionProvider {
     // 3. Assist: Exhaustive Switch Case Generator
     if (lineText.trim().startsWith('switch') && lineText.includes('(')) {
       const switchAction = new vscode.CodeAction(
-        'TurboCpp: Generate Exhaustive Enum Switch Cases',
+        'C/C++ Pro: Generate Exhaustive Enum Switch Cases',
         vscode.CodeActionKind.Refactor
       );
       const edit = new vscode.WorkspaceEdit();
@@ -206,7 +206,7 @@ export class TurboCppCodeActionProvider implements vscode.CodeActionProvider {
     }
 
     // 4. Assist: Generate Doxygen Documentation
-    const doxygenEnabled = vscode.workspace.getConfiguration('turbocpp').get<boolean>('doxygen.generateOnCodeAction', true);
+    const doxygenEnabled = vscode.workspace.getConfiguration('c-cpp-pro').get<boolean>('doxygen.generateOnCodeAction', true);
     if (doxygenEnabled) {
       const target = DoxygenGenerator.findTargetDeclaration(document, lineIndex, 5);
       if (target) {
@@ -214,14 +214,14 @@ export class TurboCppCodeActionProvider implements vscode.CodeActionProvider {
         if (item) {
           const prevLineText = target.lineIndex > 0 ? document.lineAt(target.lineIndex - 1).text.trim() : '';
           if (!prevLineText.endsWith('*/') && !prevLineText.startsWith('///') && !prevLineText.startsWith('//!')) {
-            const style = vscode.workspace.getConfiguration('turbocpp').get<DoxygenStyle>('doxygen.generatedStyle', '/**');
+            const style = vscode.workspace.getConfiguration('c-cpp-pro').get<DoxygenStyle>('doxygen.generatedStyle', '/**');
             const comment = DoxygenGenerator.generateComment(item, {
               style,
               asSnippet: false,
               indent: target.indent
             });
             const action = new vscode.CodeAction(
-              `TurboCpp: Generate Doxygen Documentation for '${item.name}'`,
+              `C/C++ Pro: Generate Doxygen Documentation for '${item.name}'`,
               vscode.CodeActionKind.Refactor
             );
             const edit = new vscode.WorkspaceEdit();
@@ -275,7 +275,7 @@ export class TurboCppCodeActionProvider implements vscode.CodeActionProvider {
 
         if (expanded && matchRange) {
           const action = new vscode.CodeAction(
-            `TurboCpp: Inline Macro '${macroName}'`,
+            `C/C++ Pro: Inline Macro '${macroName}'`,
             vscode.CodeActionKind.Refactor
           );
           const edit = new vscode.WorkspaceEdit();

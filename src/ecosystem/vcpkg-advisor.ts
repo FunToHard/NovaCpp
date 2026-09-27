@@ -220,7 +220,7 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
     _context: vscode.CodeActionContext,
     _token: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.CodeAction[]> {
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     if (!config.get<boolean>('vcpkg.enabled', true)) {
       return [];
     }
@@ -240,7 +240,7 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
       vscode.CodeActionKind.QuickFix
     );
     copyAction.command = {
-      command: 'turbocpp.copyToClipboard',
+      command: 'c-cpp-pro.copyToClipboard',
       title: 'Copy Command',
       arguments: [`vcpkg install ${info.port}`]
     };
@@ -252,7 +252,7 @@ export class VcpkgAdvisor implements vscode.CodeActionProvider {
       vscode.CodeActionKind.QuickFix
     );
     installAction.command = {
-      command: 'turbocpp.runInTerminal',
+      command: 'c-cpp-pro.runInTerminal',
       title: 'Run vcpkg install',
       arguments: [`vcpkg install ${info.port}`]
     };

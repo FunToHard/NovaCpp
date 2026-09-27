@@ -21,7 +21,7 @@ export class CMakeManager implements vscode.Disposable {
       vscode.StatusBarAlignment.Left,
       66
     );
-    this.statusBarItem.command = 'turbocpp.cmake.menu';
+    this.statusBarItem.command = 'c-cpp-pro.cmake.menu';
     this.disposables.push(this.statusBarItem);
   }
 
@@ -220,10 +220,10 @@ export class CMakeManager implements vscode.Disposable {
       try {
         await fs.promises.mkdir(path.dirname(targetFile), { recursive: true });
         await fs.promises.writeFile(targetFile, JSON.stringify(entries, null, 2), 'utf8');
-        console.log(`TurboCpp: Statically generated compilation database with ${entries.length} files from CMakeLists.txt`);
+        console.log(`C/C++ Pro: Statically generated compilation database with ${entries.length} files from CMakeLists.txt`);
         return targetFile;
       } catch (err) {
-        console.warn('TurboCpp: Failed to write CMake compile_commands.json:', err);
+        console.warn('C/C++ Pro: Failed to write CMake compile_commands.json:', err);
       }
     }
 
@@ -299,7 +299,7 @@ export class CMakeManager implements vscode.Disposable {
     ];
 
     const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: `TurboCpp CMake Intelligence — ${path.basename(this.activeProject.workspaceRoot)}`
+      placeHolder: `C/C++ Pro CMake Intelligence — ${path.basename(this.activeProject.workspaceRoot)}`
     });
 
     if (!selected) return;
@@ -339,7 +339,7 @@ export class CMakeManager implements vscode.Disposable {
       case 'rescan': {
         await this.refresh();
         vscode.window.showInformationMessage(
-          `TurboCpp: Successfully re-parsed CMakeLists.txt. Discovered ${this.activeProject.includeDirectories.length} include directory(ies).`
+          `C/C++ Pro: Successfully re-parsed CMakeLists.txt. Discovered ${this.activeProject.includeDirectories.length} include directory(ies).`
         );
         break;
       }
@@ -348,10 +348,10 @@ export class CMakeManager implements vscode.Disposable {
         const generated = await this.synthesizeCompilationDatabase();
         if (generated) {
           vscode.window.showInformationMessage(
-            `TurboCpp: Generated compile_commands.json from CMakeLists.txt at ${generated}`
+            `C/C++ Pro: Generated compile_commands.json from CMakeLists.txt at ${generated}`
           );
         } else {
-          vscode.window.showWarningMessage('TurboCpp: Could not generate compile_commands.json.');
+          vscode.window.showWarningMessage('C/C++ Pro: Could not generate compile_commands.json.');
         }
         break;
       }
@@ -367,7 +367,7 @@ export class CMakeManager implements vscode.Disposable {
     const incCount = this.activeProject.includeDirectories.length;
     this.statusBarItem.text = `$(tools) CMake: [${incCount} include${incCount === 1 ? '' : 's'}]`;
     this.statusBarItem.tooltip = [
-      'TurboCpp CMake Intelligence (Direct Static Parser):',
+      'C/C++ Pro CMake Intelligence (Direct Static Parser):',
       `CMakeLists: ${this.activeProject.cmakeListsPath}`,
       `Discovered Includes: ${incCount}`,
       ...this.activeProject.includeDirectories.map((d) => `  - ${d}`),

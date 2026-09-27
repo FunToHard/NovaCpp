@@ -14,7 +14,7 @@ describe('Visual Studio Solution Subsystem: SolutionManager', () => {
   let vcxprojFile: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-solmgr-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-solmgr-'));
 
     slnxFile = path.join(tempDir, 'TestSolution.slnx');
     const slnxContent = `

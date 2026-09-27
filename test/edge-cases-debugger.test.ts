@@ -3,7 +3,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { extractExpressionAtColumn } from '../src/debugger/process-picker';
 import { LaunchGenerator } from '../src/debugger/launch-generator';
-import { TurboCppDebugConfigurationProvider } from '../src/debugger/dap-session';
+import { CppProDebugConfigurationProvider } from '../src/debugger/dap-session';
 import { VsEnvironmentManager } from '../src/tasks/vs-environment-manager';
 
 describe('Debugger, Runtime & Environment Edge Cases', () => {
@@ -87,12 +87,12 @@ describe('Debugger, Runtime & Environment Edge Cases', () => {
 
   describe('Attach Configuration & Variable Resolution Edge Cases', () => {
     it('should resolve variables in attach mode, normalize processId to number, and generate sourceMap array', async () => {
-      const provider = new TurboCppDebugConfigurationProvider();
+      const provider = new CppProDebugConfigurationProvider();
       const mockFolder = { uri: vscode.Uri.file('F:/my_project') } as any;
 
       const attachConfig: vscode.DebugConfiguration = {
         name: 'Attach to Server',
-        type: 'turbocpp-debug',
+        type: 'c-cpp-pro-debug',
         request: 'attach',
         processId: '12345',
         cwd: '${workspaceFolder}',

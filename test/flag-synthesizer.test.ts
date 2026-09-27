@@ -104,7 +104,7 @@ End of search list.
     });
 
     it('should write compile_flags.txt in target directory when missing compilation db', async () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-test-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-test-'));
       try {
         assert.strictEqual(synthesizer.hasCompilationDatabase(tmpDir), false);
 
@@ -120,7 +120,7 @@ End of search list.
     });
 
     it('should respect existing compile_commands.json', async () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-test-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-test-'));
       try {
         fs.writeFileSync(path.join(tmpDir, 'compile_commands.json'), '[]', 'utf8');
         assert.strictEqual(synthesizer.hasCompilationDatabase(tmpDir), true);

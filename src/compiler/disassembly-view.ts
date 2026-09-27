@@ -89,10 +89,10 @@ export function filterAssembly(rawAsm: string, options: { filterDirectives?: boo
 }
 
 /**
- * TextDocumentContentProvider for the virtual scheme "turbocpp-disasm".
+ * TextDocumentContentProvider for the virtual scheme "c-cpp-pro-disasm".
  */
 export class DisassemblyContentProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
-  public static readonly scheme = 'turbocpp-disasm';
+  public static readonly scheme = 'c-cpp-pro-disasm';
   private onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
   public readonly onDidChange = this.onDidChangeEmitter.event;
 
@@ -120,10 +120,10 @@ export class DisassemblyContentProvider implements vscode.TextDocumentContentPro
 
     const compiler = await this.detector.getPreferredCompiler();
     if (!compiler) {
-      return '; TurboCpp: No C/C++ compiler detected on your system to generate assembly.';
+      return '; C/C++ Pro: No C/C++ compiler detected on your system to generate assembly.';
     }
 
-    const tempAsm = path.join(os.tmpdir(), `novacpp_disasm_${Date.now()}.asm`);
+    const tempAsm = path.join(os.tmpdir(), `cpp_pro_disasm_${Date.now()}.asm`);
 
     try {
       const { command, args } = buildDisassemblyArgs(compiler, sourceFilePath, tempAsm, {
@@ -142,7 +142,7 @@ export class DisassemblyContentProvider implements vscode.TextDocumentContentPro
 
         const header = [
           `; =======================================================`,
-          `; TurboCpp: Compiler Explorer Inline Disassembly`,
+          `; C/C++ Pro: Compiler Explorer Inline Disassembly`,
           `; Source: ${path.basename(sourceFilePath)}`,
           `; Compiler: ${compiler.name} (${compiler.path})`,
           `; Optimization: -${this.currentOptLevel} (Intel Syntax)`,
@@ -154,17 +154,17 @@ export class DisassemblyContentProvider implements vscode.TextDocumentContentPro
         this.cachedAsm.set(cacheKey, content);
         return content;
       } else {
-        return '; TurboCpp: Compiler did not produce assembly output file.';
+        return '; C/C++ Pro: Compiler did not produce assembly output file.';
       }
     } catch (err: any) {
-      return `; TurboCpp: Disassembly failed:\n; ${err.message ?? err}`;
+      return `; C/C++ Pro: Disassembly failed:\n; ${err.message ?? err}`;
     }
   }
 
   public async openDisassemblyForActiveEditor(editor?: vscode.TextEditor): Promise<void> {
     const active = editor || vscode.window.activeTextEditor;
     if (!active) {
-      vscode.window.showWarningMessage('TurboCpp: Open a C/C++ source file to view disassembly.');
+      vscode.window.showWarningMessage('C/C++ Pro: Open a C/C++ source file to view disassembly.');
       return;
     }
 

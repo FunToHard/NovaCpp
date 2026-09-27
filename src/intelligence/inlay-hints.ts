@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 /**
- * Manages configuration and lifecycle of C/C++ Inlay Hints for TurboCpp.
+ * Manages configuration and lifecycle of C/C++ Inlay Hints for c-cpp-pro.
  */
 export class InlayHintManager implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
@@ -10,7 +10,7 @@ export class InlayHintManager implements vscode.Disposable {
     this.ensureInlayHintsConfigured();
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('turbocpp.inlayHints')) {
+        if (e.affectsConfiguration('c-cpp-pro.inlayHints')) {
           this.ensureInlayHintsConfigured();
         }
       })
@@ -18,11 +18,11 @@ export class InlayHintManager implements vscode.Disposable {
   }
 
   /**
-   * Evaluates the scoped TurboCpp inlay hint setting without mutating global editor configurations.
+   * Evaluates the scoped C/C++ Pro inlay hint setting without mutating global editor configurations.
    */
   public async ensureInlayHintsConfigured(): Promise<void> {
-    const novacppConfig = vscode.workspace.getConfiguration('turbocpp.inlayHints');
-    const enabled = novacppConfig.get<boolean>('enabled', true);
+    const cppProConfig = vscode.workspace.getConfiguration('c-cpp-pro.inlayHints');
+    const enabled = cppProConfig.get<boolean>('enabled', true);
 
     if (!enabled) {
       return;
@@ -31,10 +31,10 @@ export class InlayHintManager implements vscode.Disposable {
   }
 
   /**
-   * Returns whether TurboCpp inlay hints are enabled via scoped turbocpp.inlayHints.enabled.
+   * Returns whether C/C++ Pro inlay hints are enabled via scoped c-cpp-pro.inlayHints.enabled.
    */
   public isEnabled(): boolean {
-    return vscode.workspace.getConfiguration('turbocpp.inlayHints').get<boolean>('enabled', true);
+    return vscode.workspace.getConfiguration('c-cpp-pro.inlayHints').get<boolean>('enabled', true);
   }
 
   public dispose(): void {

@@ -116,7 +116,7 @@ describe('Visual Studio Solution Subsystem: Compilation Database Generator', () 
   });
 
   it('should write valid compile_commands.json to disk', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-compdb-'));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-compdb-'));
     const targetFile = path.join(tempDir, 'compile_commands.json');
 
     const entries = generator.generateEntries(mockSolution, [mockProject], mockMsvc, []);

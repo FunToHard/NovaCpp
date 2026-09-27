@@ -95,6 +95,6 @@ jobs:
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v7
         with:
-          name: turbocpp-vsix
+          name: c-cpp-pro-vsix
           path: '*.vsix'
           retention-days: 14

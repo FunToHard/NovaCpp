@@ -29,7 +29,7 @@ export class BatchDispatcher implements vscode.Disposable {
   constructor(
     private readonly collector: StlUsageCollector,
     globalStoragePath?: string,
-    private readonly endpointUrl: string = 'https://telemetry.turbocpp.dev/v1/telemetry/stl-usage',
+    private readonly endpointUrl: string = 'https://telemetry.c-cpp-pro.dev/v1/telemetry/stl-usage',
     private readonly flushIntervalMs: number = 60 * 60 * 1000 // 60 minutes
   ) {
     if (globalStoragePath) {
@@ -116,7 +116,7 @@ export class BatchDispatcher implements vscode.Disposable {
       try {
         const url = new URL(this.endpointUrl);
         if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
-          console.warn(`TurboCpp: Insecure telemetry endpoint '${this.endpointUrl}' rejected. HTTPS is required for remote endpoints.`);
+          console.warn(`C/C++ Pro: Insecure telemetry endpoint '${this.endpointUrl}' rejected. HTTPS is required for remote endpoints.`);
           resolve(false);
           return;
         }
@@ -130,7 +130,7 @@ export class BatchDispatcher implements vscode.Disposable {
             headers: {
               'Content-Type': 'application/json',
               'Content-Length': Buffer.byteLength(data),
-              'User-Agent': 'TurboCpp-Client/0.1.0'
+              'User-Agent': 'C/C++ Pro-Client/0.1.0'
             },
             timeout: 5000
           },
@@ -186,7 +186,7 @@ export class BatchDispatcher implements vscode.Disposable {
 
       fs.writeFileSync(this.queueFilePath, JSON.stringify(existing, null, 2), 'utf8');
     } catch (err) {
-      console.warn('TurboCpp: Failed to persist offline telemetry queue:', err);
+      console.warn('C/C++ Pro: Failed to persist offline telemetry queue:', err);
     }
   }
 
@@ -230,7 +230,7 @@ export class BatchDispatcher implements vscode.Disposable {
 
       return drainedCount;
     } catch (err) {
-      console.warn('TurboCpp: Failed to drain offline telemetry queue:', err);
+      console.warn('C/C++ Pro: Failed to drain offline telemetry queue:', err);
       return 0;
     }
   }

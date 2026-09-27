@@ -61,7 +61,7 @@ describe('Header Include Rich Hover Provider', () => {
   });
 
   describe('extractPathFromClangdHover', () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-header-hover-'));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-header-hover-'));
     const dummyHeader = path.join(tempDir, 'dummy.h');
 
     before(() => {
@@ -103,7 +103,7 @@ describe('Header Include Rich Hover Provider', () => {
   });
 
   describe('parseLocalHeaderFile & resolveLocalHeaderPath', () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-local-header-'));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-local-header-'));
     const headerPath = path.join(tempDir, 'geometry.h');
 
     before(() => {

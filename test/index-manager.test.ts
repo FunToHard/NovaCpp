@@ -9,7 +9,7 @@ describe('IndexManager', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'turbocpp-index-test-'));
+    tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'c-cpp-pro-index-test-'));
   });
 
   afterEach(async () => {

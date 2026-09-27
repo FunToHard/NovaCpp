@@ -11,16 +11,16 @@
       <ReadOnly>true</ReadOnly>
     </MappedFolder>
 
-    <!-- Map TurboCpp Project Directory (Read/Write) -->
+    <!-- Map C/C++ Pro Project Directory (Read/Write) -->
     <MappedFolder>
-      <HostFolder>F:\DEV\projects\TurboCpp</HostFolder>
-      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\TurboCpp</SandboxFolder>
+      <HostFolder>F:\DEV\projects\C/C++ Pro</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\C/C++ Pro</SandboxFolder>
       <ReadOnly>false</ReadOnly>
     </MappedFolder>
   </MappedFolders>
 
-  <!-- Automated Logon Command: Installs VS Code and opens TurboCpp workspace -->
+  <!-- Automated Logon Command: Installs VS Code and opens C/C++ Pro workspace -->
   <LogonCommand>
-    <Command>powershell.exe -ExecutionPolicy Bypass -NoProfile -File C:\Users\WDAGUtilityAccount\Desktop\TurboCpp\scripts\sandbox-setup.ps1</Command>
+    <Command>powershell.exe -ExecutionPolicy Bypass -NoProfile -File C:\Users\WDAGUtilityAccount\Desktop\C/C++ Pro\scripts\sandbox-setup.ps1</Command>
   </LogonCommand>
 </Configuration>

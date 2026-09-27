@@ -3,14 +3,14 @@ import { CompilerDetector } from '../prober/compiler-detector';
 import { isCppFile, getOutputBinaryPath, createBuildExecution } from './runner';
 import { VsEnvironmentManager } from './vs-environment-manager';
 
-export interface TurboCppTaskDefinition extends vscode.TaskDefinition {
-  type: 'turbocpp';
+export interface CppProTaskDefinition extends vscode.TaskDefinition {
+  type: 'c-cpp-pro';
   task: string;
   file?: string;
 }
 
-export class TurboCppTaskProvider implements vscode.TaskProvider {
-  static readonly taskType = 'turbocpp';
+export class CppProTaskProvider implements vscode.TaskProvider {
+  static readonly taskType = 'c-cpp-pro';
 
   constructor(private readonly detector: CompilerDetector = new CompilerDetector()) {}
 
@@ -31,7 +31,7 @@ export class TurboCppTaskProvider implements vscode.TaskProvider {
       return tasks;
     }
 
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const standard = config.get<string>('cppStandard') ?? 'c++20';
 
     const outputFile = getOutputBinaryPath(activeFile, workspaceRoot);
@@ -39,8 +39,8 @@ export class TurboCppTaskProvider implements vscode.TaskProvider {
     const execution = createBuildExecution(compiler, activeFile, outputFile, standard, env);
     const problemMatchers = compiler.type === 'msvc' ? ['$msvc'] : ['$gcc'];
 
-    const taskDefinition: TurboCppTaskDefinition = {
-      type: TurboCppTaskProvider.taskType,
+    const taskDefinition: CppProTaskDefinition = {
+      type: CppProTaskProvider.taskType,
       task: 'buildActiveFile',
       file: activeFile
     };
@@ -49,7 +49,7 @@ export class TurboCppTaskProvider implements vscode.TaskProvider {
       taskDefinition,
       workspaceFolder ?? vscode.TaskScope.Workspace,
       'C/C++: Build Active File',
-      'TurboCpp',
+      'c-cpp-pro',
       execution,
       problemMatchers
     );
@@ -61,8 +61,8 @@ export class TurboCppTaskProvider implements vscode.TaskProvider {
   }
 
   public async resolveTask(task: vscode.Task): Promise<vscode.Task | undefined> {
-    const definition = task.definition as TurboCppTaskDefinition;
-    if (definition.type !== TurboCppTaskProvider.taskType) {
+    const definition = task.definition as CppProTaskDefinition;
+    if (definition.type !== CppProTaskProvider.taskType) {
       return undefined;
     }
 
@@ -78,7 +78,7 @@ export class TurboCppTaskProvider implements vscode.TaskProvider {
       return undefined;
     }
 
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const standard = config.get<string>('cppStandard') ?? 'c++20';
 
     const outputFile = getOutputBinaryPath(targetFile);
@@ -90,7 +90,7 @@ export class TurboCppTaskProvider implements vscode.TaskProvider {
       definition,
       task.scope ?? vscode.TaskScope.Workspace,
       task.name || 'C/C++: Build Active File',
-      'TurboCpp',
+      'c-cpp-pro',
       execution,
       problemMatchers
     );

@@ -325,7 +325,7 @@ export class MacroEvaluatorManager implements vscode.Disposable {
   private outputChannel: vscode.OutputChannel;
 
   constructor() {
-    this.outputChannel = vscode.window.createOutputChannel('TurboCpp: Macro & Constexpr');
+    this.outputChannel = vscode.window.createOutputChannel('C/C++ Pro: Macro & Constexpr');
   }
 
   public dispose(): void {
@@ -335,7 +335,7 @@ export class MacroEvaluatorManager implements vscode.Disposable {
   public expandMacroAtCursor(editor?: vscode.TextEditor): MacroExpansionResult | null {
     const active = editor || vscode.window.activeTextEditor;
     if (!active) {
-      vscode.window.showWarningMessage('TurboCpp: No active C/C++ editor.');
+      vscode.window.showWarningMessage('C/C++ Pro: No active C/C++ editor.');
       return null;
     }
 
@@ -352,7 +352,7 @@ export class MacroEvaluatorManager implements vscode.Disposable {
     }
 
     if (!targetToken) {
-      vscode.window.showInformationMessage('TurboCpp: Place cursor on a macro identifier to expand.');
+      vscode.window.showInformationMessage('C/C++ Pro: Place cursor on a macro identifier to expand.');
       return null;
     }
 
@@ -361,7 +361,7 @@ export class MacroEvaluatorManager implements vscode.Disposable {
 
     this.outputChannel.clear();
     this.outputChannel.appendLine(`=======================================================`);
-    this.outputChannel.appendLine(`TurboCpp: Macro Expansion Inspector`);
+    this.outputChannel.appendLine(`C/C++ Pro: Macro Expansion Inspector`);
     this.outputChannel.appendLine(`Target: ${result.original}`);
     this.outputChannel.appendLine(`=======================================================`);
 
@@ -394,10 +394,10 @@ export class MacroEvaluatorManager implements vscode.Disposable {
     if (result.success && result.value !== undefined) {
       const hex = typeof result.value === 'number' ? ` (0x${result.value.toString(16).toUpperCase()})` : '';
       vscode.window.showInformationMessage(
-        `TurboCpp: constexpr value = ${result.value}${hex} [${result.type}]`
+        `C/C++ Pro: constexpr value = ${result.value}${hex} [${result.type}]`
       );
     } else {
-      vscode.window.showWarningMessage(`TurboCpp: Could not evaluate constexpr: ${result.error}`);
+      vscode.window.showWarningMessage(`C/C++ Pro: Could not evaluate constexpr: ${result.error}`);
     }
   }
 }

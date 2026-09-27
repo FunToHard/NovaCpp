@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "TurboCpp: Run Extension",
+      "name": "C/C++ Pro: Run Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -14,7 +14,7 @@
       "preLaunchTask": "npm: build"
     },
     {
-      "name": "TurboCpp: Extension Tests",
+      "name": "C/C++ Pro: Extension Tests",
       "type": "extensionHost",
       "request": "launch",
       "args": [

@@ -86,7 +86,7 @@ export const CSTRING_ENTRIES: Record<string, StlDocEntry> = {
     docUrl: 'https://en.cppreference.com/w/cpp/string/byte/strlen',
     complexity: { time: 'O(N) linear scan until null byte' },
     exceptionSafety: 'No-throw guarantee.',
-    example: 'std::size_t len = std::strlen("TurboCpp"); // 7',
+    example: 'std::size_t len = std::strlen("c-cpp-pro"); // 7',
     seeAlso: ['std::string::size', 'std::string_view::size']
   },
   'std::strcpy': {

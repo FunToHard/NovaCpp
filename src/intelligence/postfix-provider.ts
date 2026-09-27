@@ -379,7 +379,7 @@ export function extractExpressionBeforeDot(
 }
 
 /**
- * TurboCpp Postfix Completion Provider.
+ * C/C++ Pro Postfix Completion Provider.
  * Detects dot completions and produces snippets that transform expressions into control structures.
  */
 export class PostfixCompletionProvider implements vscode.CompletionItemProvider {
@@ -433,7 +433,7 @@ export class PostfixCompletionProvider implements vscode.CompletionItemProvider 
       const item = new vscode.CompletionItem(template.label, vscode.CompletionItemKind.Snippet);
       item.detail = template.detail;
       item.documentation = new vscode.MarkdownString(
-        `**TurboCpp Postfix Completion**\n\nTransforms \`${expr}\` into:\n\`\`\`cpp\n${template.description}\n\`\`\``
+        `**C/C++ Pro Postfix Completion**\n\nTransforms \`${expr}\` into:\n\`\`\`cpp\n${template.description}\n\`\`\``
       );
       item.range = replacementRange;
       item.insertText = new vscode.SnippetString(template.buildSnippet(expr));

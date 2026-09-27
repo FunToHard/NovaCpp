@@ -399,7 +399,7 @@ export class IncludeVisualizerManager implements vscode.Disposable {
   private outputChannel: vscode.OutputChannel;
 
   constructor() {
-    this.outputChannel = vscode.window.createOutputChannel('TurboCpp: Build Bottlenecks');
+    this.outputChannel = vscode.window.createOutputChannel('C/C++ Pro: Build Bottlenecks');
   }
 
   public dispose(): void {
@@ -409,7 +409,7 @@ export class IncludeVisualizerManager implements vscode.Disposable {
   public analyzeActiveDocument(editor?: vscode.TextEditor): IncludeTreeAnalysis | null {
     const activeEditor = editor || vscode.window.activeTextEditor;
     if (!activeEditor) {
-      vscode.window.showWarningMessage('TurboCpp: Open a C/C++ source file to analyze #include tree.');
+      vscode.window.showWarningMessage('C/C++ Pro: Open a C/C++ source file to analyze #include tree.');
       return null;
     }
 
@@ -421,7 +421,7 @@ export class IncludeVisualizerManager implements vscode.Disposable {
 
     this.outputChannel.clear();
     this.outputChannel.appendLine(`=======================================================`);
-    this.outputChannel.appendLine(`TurboCpp: Include Tree & Dependency Bottleneck Analysis`);
+    this.outputChannel.appendLine(`C/C++ Pro: Include Tree & Dependency Bottleneck Analysis`);
     this.outputChannel.appendLine(`File: ${doc.fileName}`);
     this.outputChannel.appendLine(`=======================================================`);
     this.outputChannel.appendLine(`Direct Includes: ${analysis.directIncludes} (System: ${analysis.systemIncludes}, User: ${analysis.userIncludes})`);
@@ -472,7 +472,7 @@ export class IncludeVisualizerManager implements vscode.Disposable {
 
       this.outputChannel.clear();
       this.outputChannel.appendLine(`=======================================================`);
-      this.outputChannel.appendLine(`TurboCpp: Clang -ftime-trace Compilation Bottleneck Report`);
+      this.outputChannel.appendLine(`C/C++ Pro: Clang -ftime-trace Compilation Bottleneck Report`);
       this.outputChannel.appendLine(`Source Trace: ${targetPath}`);
       this.outputChannel.appendLine(`Total Build Time: ${summary.totalDurationMs} ms`);
       this.outputChannel.appendLine(`=======================================================`);
@@ -499,7 +499,7 @@ export class IncludeVisualizerManager implements vscode.Disposable {
       this.outputChannel.show(true);
       return summary;
     } catch (err: any) {
-      vscode.window.showErrorMessage(`TurboCpp: Failed to parse -ftime-trace JSON: ${err.message ?? err}`);
+      vscode.window.showErrorMessage(`C/C++ Pro: Failed to parse -ftime-trace JSON: ${err.message ?? err}`);
       return null;
     }
   }

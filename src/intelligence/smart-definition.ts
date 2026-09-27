@@ -224,7 +224,7 @@ export class SmartDefinitionManager {
     }
 
     vscode.window.showInformationMessage(
-      `TurboCpp: No matching counterpart file found for ${path.basename(currentPath)}`
+      `C/C++ Pro: No matching counterpart file found for ${path.basename(currentPath)}`
     );
     return false;
   }

@@ -7,8 +7,8 @@ import * as os from 'os';
 import { LldbDapLocator } from '../src/debugger/lldb-dap';
 import { LaunchGenerator } from '../src/debugger/launch-generator';
 import {
-  TurboCppDebugConfigurationProvider,
-  TurboCppDebugAdapterDescriptorFactory
+  CppProDebugConfigurationProvider,
+  CppProDebugAdapterDescriptorFactory
 } from '../src/debugger/dap-session';
 
 describe('Integrated Debugger (DAP Engine)', () => {
@@ -47,9 +47,9 @@ describe('Integrated Debugger (DAP Engine)', () => {
   describe('Launch Configuration Generator & Variable Resolver', () => {
     it('should generate valid default launch configuration', () => {
       const config = LaunchGenerator.createDefaultConfiguration();
-      assert.strictEqual(config.type, 'turbocpp-debug');
+      assert.strictEqual(config.type, 'c-cpp-pro-debug');
       assert.strictEqual(config.request, 'launch');
-      assert.strictEqual(config.name, 'TurboCpp: Debug Active File');
+      assert.strictEqual(config.name, 'C/C++ Pro: Debug Active File');
       assert.ok(config.program!.includes('${fileBasenameNoExtension}'));
     });
 
@@ -67,7 +67,7 @@ describe('Integrated Debugger (DAP Engine)', () => {
     });
 
     it('should scaffold .vscode/launch.json when requested', async () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-dap-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-dap-'));
       try {
         const launchFile = await LaunchGenerator.scaffoldLaunchJson(tmpDir);
         assert.ok(fs.existsSync(launchFile));
@@ -75,7 +75,7 @@ describe('Integrated Debugger (DAP Engine)', () => {
         const content = JSON.parse(fs.readFileSync(launchFile, 'utf8'));
         assert.strictEqual(content.version, '0.2.0');
         assert.strictEqual(content.configurations.length, 1);
-        assert.strictEqual(content.configurations[0].type, 'turbocpp-debug');
+        assert.strictEqual(content.configurations[0].type, 'c-cpp-pro-debug');
       } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
       }
@@ -83,14 +83,14 @@ describe('Integrated Debugger (DAP Engine)', () => {
   });
 
   describe('Debug Configuration Provider & Adapter Descriptor Factory', () => {
-    const configProvider = new TurboCppDebugConfigurationProvider();
-    const adapterFactory = new TurboCppDebugAdapterDescriptorFactory();
+    const configProvider = new CppProDebugConfigurationProvider();
+    const adapterFactory = new CppProDebugAdapterDescriptorFactory();
 
     it('should provide default debug configuration list', () => {
       const configs = configProvider.provideDebugConfigurations(undefined);
       assert.ok(Array.isArray(configs));
       assert.strictEqual(configs.length, 2);
-      assert.strictEqual(configs[0].type, 'turbocpp-debug');
+      assert.strictEqual(configs[0].type, 'c-cpp-pro-debug');
       assert.strictEqual(configs[1].request, 'attach');
     });
 
@@ -98,14 +98,14 @@ describe('Integrated Debugger (DAP Engine)', () => {
       const resolved = LldbDapLocator.resolvePreferredDebugger();
       if (!resolved) {
         (mockVscode.workspace as any)._config = {
-          'turbocpp.debuggerPath': process.execPath
+          'c-cpp-pro.debuggerPath': process.execPath
         };
       }
 
       const session: any = {
         configuration: {
           name: 'Debug',
-          type: 'turbocpp-debug',
+          type: 'c-cpp-pro-debug',
           request: 'launch',
           program: 'main.exe',
           debuggerType: 'auto'

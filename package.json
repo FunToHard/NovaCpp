@@ -25,12 +25,12 @@
     "onLanguage:c",
     "onLanguage:cpp",
     "onLanguage:cuda-cpp",
-    "onCommand:turbocpp.openSettings",
-    "onCommand:turbocpp.restartServer",
-    "onCommand:turbocpp.switchSourceHeader",
-    "onCommand:turbocpp.installClangd",
-    "onDebugResolve:turbocpp-debug",
-    "onTaskType:turbocpp",
+    "onCommand:c-cpp-pro.openSettings",
+    "onCommand:c-cpp-pro.restartServer",
+    "onCommand:c-cpp-pro.switchSourceHeader",
+    "onCommand:c-cpp-pro.installClangd",
+    "onDebugResolve:c-cpp-pro-debug",
+    "onTaskType:c-cpp-pro",
     "onTaskType:msbuild",
     "workspaceContains:**/*.sln",
     "workspaceContains:**/*.slnx",
@@ -46,227 +46,227 @@
   "contributes": {
     "commands": [
       {
-        "command": "turbocpp.logDiagnostics",
-        "title": "TurboCpp: Log Diagnostics",
+        "command": "c-cpp-pro.logDiagnostics",
+        "title": "C/C++ Pro: Log Diagnostics",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.resetIndex",
-        "title": "TurboCpp: Reset Clangd Symbol Index",
+        "command": "c-cpp-pro.resetIndex",
+        "title": "C/C++ Pro: Reset Clangd Symbol Index",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.goToNextDirectiveInGroup",
-        "title": "TurboCpp: Go to Next Directive in Group",
+        "command": "c-cpp-pro.goToNextDirectiveInGroup",
+        "title": "C/C++ Pro: Go to Next Directive in Group",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.goToPrevDirectiveInGroup",
-        "title": "TurboCpp: Go to Previous Directive in Group",
+        "command": "c-cpp-pro.goToPrevDirectiveInGroup",
+        "title": "C/C++ Pro: Go to Previous Directive in Group",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.generateDoxygenComment",
-        "title": "TurboCpp: Generate Doxygen Documentation Comment",
+        "command": "c-cpp-pro.generateDoxygenComment",
+        "title": "C/C++ Pro: Generate Doxygen Documentation Comment",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.runClangTidyOnActiveFile",
-        "title": "TurboCpp: Run Clang-Tidy Analysis on Active File",
+        "command": "c-cpp-pro.runClangTidyOnActiveFile",
+        "title": "C/C++ Pro: Run Clang-Tidy Analysis on Active File",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.clearCodeAnalysisDiagnostics",
-        "title": "TurboCpp: Clear Clang-Tidy Diagnostics",
+        "command": "c-cpp-pro.clearCodeAnalysisDiagnostics",
+        "title": "C/C++ Pro: Clear Clang-Tidy Diagnostics",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.setVsDeveloperEnvironment",
-        "title": "TurboCpp: Set Visual Studio Developer Environment",
+        "command": "c-cpp-pro.setVsDeveloperEnvironment",
+        "title": "C/C++ Pro: Set Visual Studio Developer Environment",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.clearVsDeveloperEnvironment",
-        "title": "TurboCpp: Clear Visual Studio Developer Environment",
+        "command": "c-cpp-pro.clearVsDeveloperEnvironment",
+        "title": "C/C++ Pro: Clear Visual Studio Developer Environment",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.selectProfile",
-        "title": "TurboCpp: Select Target Configuration Profile",
+        "command": "c-cpp-pro.selectProfile",
+        "title": "C/C++ Pro: Select Target Configuration Profile",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.pickProcess",
-        "title": "TurboCpp: Pick Process to Attach",
+        "command": "c-cpp-pro.pickProcess",
+        "title": "C/C++ Pro: Pick Process to Attach",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.solutionMenu",
-        "title": "TurboCpp: Solution Actions Menu",
+        "command": "c-cpp-pro.solutionMenu",
+        "title": "C/C++ Pro: Solution Actions Menu",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.selectSolution",
-        "title": "TurboCpp: Select Active Solution (.sln / .slnx)",
+        "command": "c-cpp-pro.selectSolution",
+        "title": "C/C++ Pro: Select Active Solution (.sln / .slnx)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.selectSolutionConfiguration",
-        "title": "TurboCpp: Select Solution Configuration",
+        "command": "c-cpp-pro.selectSolutionConfiguration",
+        "title": "C/C++ Pro: Select Solution Configuration",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.buildSolution",
-        "title": "TurboCpp: Build Solution (MSBuild)",
+        "command": "c-cpp-pro.buildSolution",
+        "title": "C/C++ Pro: Build Solution (MSBuild)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.rebuildSolution",
-        "title": "TurboCpp: Rebuild Solution (MSBuild)",
+        "command": "c-cpp-pro.rebuildSolution",
+        "title": "C/C++ Pro: Rebuild Solution (MSBuild)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.cleanSolution",
-        "title": "TurboCpp: Clean Solution (MSBuild)",
+        "command": "c-cpp-pro.cleanSolution",
+        "title": "C/C++ Pro: Clean Solution (MSBuild)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.generateCompilationDbFromSolution",
-        "title": "TurboCpp: Generate compile_commands.json from Solution",
+        "command": "c-cpp-pro.generateCompilationDbFromSolution",
+        "title": "C/C++ Pro: Generate compile_commands.json from Solution",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.cmake.menu",
-        "title": "TurboCpp: CMake Intelligence Menu",
+        "command": "c-cpp-pro.cmake.menu",
+        "title": "C/C++ Pro: CMake Intelligence Menu",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.cmake.rescan",
-        "title": "TurboCpp: Re-scan CMakeLists.txt Includes",
+        "command": "c-cpp-pro.cmake.rescan",
+        "title": "C/C++ Pro: Re-scan CMakeLists.txt Includes",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.cmake.generateCompilationDatabase",
-        "title": "TurboCpp: Generate compile_commands.json from CMakeLists.txt",
+        "command": "c-cpp-pro.cmake.generateCompilationDatabase",
+        "title": "C/C++ Pro: Generate compile_commands.json from CMakeLists.txt",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.openSettings",
-        "title": "TurboCpp: Open Configuration Panel",
+        "command": "c-cpp-pro.openSettings",
+        "title": "C/C++ Pro: Open Configuration Panel",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.inspectMemoryLayout",
-        "title": "TurboCpp: Inspect Type & Memory Layout (Struct Padding / Alignment)",
+        "command": "c-cpp-pro.inspectMemoryLayout",
+        "title": "C/C++ Pro: Inspect Type & Memory Layout (Struct Padding / Alignment)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.analyzeIncludes",
-        "title": "TurboCpp: Analyze #include Hierarchy & Dependencies",
+        "command": "c-cpp-pro.analyzeIncludes",
+        "title": "C/C++ Pro: Analyze #include Hierarchy & Dependencies",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.visualizeTimeTrace",
-        "title": "TurboCpp: Visualize Clang -ftime-trace Build Bottlenecks",
+        "command": "c-cpp-pro.visualizeTimeTrace",
+        "title": "C/C++ Pro: Visualize Clang -ftime-trace Build Bottlenecks",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.refreshTests",
-        "title": "TurboCpp: Discover & Refresh Unit Tests",
+        "command": "c-cpp-pro.refreshTests",
+        "title": "C/C++ Pro: Discover & Refresh Unit Tests",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.expandMacro",
-        "title": "TurboCpp: Expand Macro at Cursor (Step-by-Step)",
+        "command": "c-cpp-pro.expandMacro",
+        "title": "C/C++ Pro: Expand Macro at Cursor (Step-by-Step)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.evaluateConstexpr",
-        "title": "TurboCpp: Evaluate constexpr Expression at Cursor",
+        "command": "c-cpp-pro.evaluateConstexpr",
+        "title": "C/C++ Pro: Evaluate constexpr Expression at Cursor",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.viewDisassembly",
-        "title": "TurboCpp: Open Inline Compiler Disassembly (Assembly View)",
+        "command": "c-cpp-pro.viewDisassembly",
+        "title": "C/C++ Pro: Open Inline Compiler Disassembly (Assembly View)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.setDisassemblyOptimizationLevel",
-        "title": "TurboCpp: Set Disassembly Optimization Level",
+        "command": "c-cpp-pro.setDisassemblyOptimizationLevel",
+        "title": "C/C++ Pro: Set Disassembly Optimization Level",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.showTypeHierarchy",
-        "title": "TurboCpp: Show Visual Type & Inheritance Hierarchy Graph",
+        "command": "c-cpp-pro.showTypeHierarchy",
+        "title": "C/C++ Pro: Show Visual Type & Inheritance Hierarchy Graph",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.restartServer",
-        "title": "TurboCpp: Restart Language Server",
+        "command": "c-cpp-pro.restartServer",
+        "title": "C/C++ Pro: Restart Language Server",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.toggleDimInactiveRegions",
-        "title": "TurboCpp: Toggle Inactive Regions Dimming",
+        "command": "c-cpp-pro.toggleDimInactiveRegions",
+        "title": "C/C++ Pro: Toggle Inactive Regions Dimming",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.switchSourceHeader",
-        "title": "TurboCpp: Switch Header/Source",
+        "command": "c-cpp-pro.switchSourceHeader",
+        "title": "C/C++ Pro: Switch Header/Source",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.installClangd",
-        "title": "TurboCpp: Download and Install clangd",
+        "command": "c-cpp-pro.installClangd",
+        "title": "C/C++ Pro: Download and Install clangd",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.detectCompilers",
-        "title": "TurboCpp: Scan for Installed Compilers",
+        "command": "c-cpp-pro.detectCompilers",
+        "title": "C/C++ Pro: Scan for Installed Compilers",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.generateCompileFlags",
-        "title": "TurboCpp: Generate compile_flags.txt",
+        "command": "c-cpp-pro.generateCompileFlags",
+        "title": "C/C++ Pro: Generate compile_flags.txt",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.runFile",
+        "command": "c-cpp-pro.runFile",
         "title": "Run C/C++ File",
         "icon": "$(play)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.debugFile",
+        "command": "c-cpp-pro.debugFile",
         "title": "Debug C/C++ File",
         "icon": "$(debug-alt)",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.openDocs",
-        "title": "TurboCpp: Open C++ Reference Documentation",
+        "command": "c-cpp-pro.openDocs",
+        "title": "C/C++ Pro: Open C++ Reference Documentation",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.inspectTelemetry",
-        "title": "TurboCpp: Inspect Anonymous STL Telemetry Buffer",
+        "command": "c-cpp-pro.inspectTelemetry",
+        "title": "C/C++ Pro: Inspect Anonymous STL Telemetry Buffer",
         "category": "C/C++"
       },
       {
-        "command": "turbocpp.flushTelemetry",
-        "title": "TurboCpp: Flush Telemetry Batch",
+        "command": "c-cpp-pro.flushTelemetry",
+        "title": "C/C++ Pro: Flush Telemetry Batch",
         "category": "C/C++"
       }
     ],
     "menus": {
       "editor/title/run": [
         {
-          "command": "turbocpp.runFile",
+          "command": "c-cpp-pro.runFile",
           "when": "editorLangId == cpp || editorLangId == c",
           "group": "navigation@1"
         },
         {
-          "command": "turbocpp.debugFile",
+          "command": "c-cpp-pro.debugFile",
           "when": "editorLangId == cpp || editorLangId == c",
           "group": "navigation@2"
         }
@@ -274,7 +274,7 @@
     },
     "keybindings": [
       {
-        "command": "turbocpp.switchSourceHeader",
+        "command": "c-cpp-pro.switchSourceHeader",
         "key": "alt+o",
         "mac": "alt+cmd+o",
         "when": "editorTextFocus && (editorLangId == c || editorLangId == cpp)"
@@ -282,14 +282,14 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "TurboCpp",
+      "title": "c-cpp-pro",
       "properties": {
-        "turbocpp.clangdPath": {
+        "c-cpp-pro.clangdPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the clangd executable. If empty, TurboCpp searches PATH and the auto-installed binary."
+          "description": "Path to the clangd executable. If empty, C/C++ Pro searches PATH and the auto-installed binary."
         },
-        "turbocpp.clangdArgs": {
+        "c-cpp-pro.clangdArgs": {
           "type": "array",
           "items": {
             "type": "string"
@@ -297,12 +297,12 @@
           "default": [],
           "description": "Additional command-line arguments to pass to clangd."
         },
-        "turbocpp.debuggerPath": {
+        "c-cpp-pro.debuggerPath": {
           "type": "string",
           "default": "",
-          "description": "Path to lldb-dap or gdb. If empty, TurboCpp will detect it automatically."
+          "description": "Path to lldb-dap or gdb. If empty, C/C++ Pro will detect it automatically."
         },
-        "turbocpp.cppStandard": {
+        "c-cpp-pro.cppStandard": {
           "type": "string",
           "enum": [
             "c++98",
@@ -317,7 +317,7 @@
           "default": "c++20",
           "description": "Default C++ language standard for flag synthesis."
         },
-        "turbocpp.cStandard": {
+        "c-cpp-pro.cStandard": {
           "type": "string",
           "enum": [
             "c89",
@@ -329,44 +329,44 @@
           "default": "c17",
           "description": "Default C language standard for flag synthesis."
         },
-        "turbocpp.inactiveRegionsDimming": {
+        "c-cpp-pro.inactiveRegionsDimming": {
           "type": "boolean",
           "default": true,
           "description": "Dim inactive #ifdef preprocessor branches using native Clang AST."
         },
-        "turbocpp.inactiveRegionForegroundColor": {
+        "c-cpp-pro.inactiveRegionForegroundColor": {
           "type": "string",
           "default": "disabledForeground",
           "description": "Font color applied to inactive preprocessor regions. Accepts a ThemeColor id (e.g. 'disabledForeground', 'descriptionForeground'), a hexadecimal color (e.g. '#808080'), or 'none' to preserve original syntax colors."
         },
-        "turbocpp.inactiveRegionOpacity": {
+        "c-cpp-pro.inactiveRegionOpacity": {
           "type": "number",
           "default": 0.6,
           "minimum": 0.1,
           "maximum": 1,
           "description": "Opacity level applied to inactive preprocessor code regions (0.1 to 1.0)."
         },
-        "turbocpp.inactiveRegionBackgroundColor": {
+        "c-cpp-pro.inactiveRegionBackgroundColor": {
           "type": "string",
           "default": "",
           "description": "Optional background color applied to inactive preprocessor regions (hex color or ThemeColor id)."
         },
-        "turbocpp.postfixCompletions": {
+        "c-cpp-pro.postfixCompletions": {
           "type": "boolean",
           "default": true,
           "description": "Enable C++ Postfix Completion templates (.if, .for, .var, .unique, etc.)."
         },
-        "turbocpp.doxygen.generateOnType": {
+        "c-cpp-pro.doxygen.generateOnType": {
           "type": "boolean",
           "default": true,
           "description": "Automatically provide Doxygen completion snippet when typing /** above a C++ declaration."
         },
-        "turbocpp.doxygen.generateOnCodeAction": {
+        "c-cpp-pro.doxygen.generateOnCodeAction": {
           "type": "boolean",
           "default": true,
           "description": "Provide a lightbulb Code Action to generate Doxygen documentation comments for C++ declarations."
         },
-        "turbocpp.doxygen.generatedStyle": {
+        "c-cpp-pro.doxygen.generatedStyle": {
           "type": "string",
           "enum": [
             "/**",
@@ -377,12 +377,12 @@
           "default": "/**",
           "description": "Comment style syntax used when generating Doxygen comment blocks."
         },
-        "turbocpp.codeAnalysis.clangTidy.path": {
+        "c-cpp-pro.codeAnalysis.clangTidy.path": {
           "type": "string",
           "default": "",
-          "description": "Explicit filesystem path to clang-tidy binary. If empty, TurboCpp searches PATH and standard LLVM directories."
+          "description": "Explicit filesystem path to clang-tidy binary. If empty, C/C++ Pro searches PATH and standard LLVM directories."
         },
-        "turbocpp.codeAnalysis.clangTidy.checks.enabled": {
+        "c-cpp-pro.codeAnalysis.clangTidy.checks.enabled": {
           "type": "array",
           "items": {
             "type": "string"
@@ -390,7 +390,7 @@
           "default": [],
           "description": "List of Clang-Tidy checks or families to enable (e.g. ['modernize-*', 'readability-*'])."
         },
-        "turbocpp.codeAnalysis.clangTidy.checks.disabled": {
+        "c-cpp-pro.codeAnalysis.clangTidy.checks.disabled": {
           "type": "array",
           "items": {
             "type": "string"
@@ -398,27 +398,27 @@
           "default": [],
           "description": "List of Clang-Tidy checks or families to suppress (e.g. ['modernize-use-trailing-return-type'])."
         },
-        "turbocpp.persistVsDeveloperEnvironment": {
+        "c-cpp-pro.persistVsDeveloperEnvironment": {
           "type": "boolean",
           "default": true,
           "description": "Preserve the selected Visual Studio Developer Environment across editor restarts on Windows."
         },
-        "turbocpp.vcpkg.enabled": {
+        "c-cpp-pro.vcpkg.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable intelligent header recommendations and Code Actions for vcpkg packages."
         },
-        "turbocpp.addNodeAddonIncludePaths": {
+        "c-cpp-pro.addNodeAddonIncludePaths": {
           "type": "boolean",
           "default": true,
           "description": "Auto-detect and inject include paths for nan and node-addon-api if detected in package.json."
         },
-        "turbocpp.discovery.detectExternalSdks": {
+        "c-cpp-pro.discovery.detectExternalSdks": {
           "type": "boolean",
           "default": true,
           "description": "Auto-detect common external SDKs (Vulkan SDK, raylib, CUDA Toolkit, Boost, SDL) for fallback IntelliSense flags and flag synthesis."
         },
-        "turbocpp.default.forcedInclude": {
+        "c-cpp-pro.default.forcedInclude": {
           "type": "array",
           "items": {
             "type": "string"
@@ -426,32 +426,32 @@
           "default": [],
           "description": "List of header files to force-include before compilation (/FI on MSVC, -include on GCC/Clang)."
         },
-        "turbocpp.inlayHints.parameterNames": {
+        "c-cpp-pro.inlayHints.parameterNames": {
           "type": "boolean",
           "default": true,
           "description": "Display parameter name inlay hints in function and method calls."
         },
-        "turbocpp.inlayHints.deducedTypes": {
+        "c-cpp-pro.inlayHints.deducedTypes": {
           "type": "boolean",
           "default": true,
           "description": "Display deduced type inlay hints for auto variables."
         },
-        "turbocpp.inlayHints.designators": {
+        "c-cpp-pro.inlayHints.designators": {
           "type": "boolean",
           "default": true,
           "description": "Display struct field designators in brace initialization."
         },
-        "turbocpp.telemetry.enabled": {
+        "c-cpp-pro.telemetry.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable anonymous C++ Standard Library (STL) symbol frequency collection to boost autocomplete suggestion accuracy. Zero user code or PII is ever collected."
         },
-        "turbocpp.telemetry.endpoint": {
+        "c-cpp-pro.telemetry.endpoint": {
           "type": "string",
-          "default": "https://telemetry.turbocpp.dev/v1/telemetry/stl-usage",
+          "default": "https://telemetry.c-cpp-pro.dev/v1/telemetry/stl-usage",
           "description": "Ingestion endpoint URL for anonymous STL usage telemetry batches. Must use the secure HTTPS protocol."
         },
-        "turbocpp.cmake.autoScan": {
+        "c-cpp-pro.cmake.autoScan": {
           "type": "boolean",
           "default": true,
           "description": "Automatically parse CMakeLists.txt and include discovered directories into IntelliSense."
@@ -460,8 +460,8 @@
     },
     "debuggers": [
       {
-        "type": "turbocpp-debug",
-        "label": "TurboCpp: C/C++ Debugger (lldb-dap / GDB)",
+        "type": "c-cpp-pro-debug",
+        "label": "C/C++ Pro: C/C++ Debugger (lldb-dap / GDB)",
         "languages": [
           "c",
           "cpp",
@@ -533,14 +533,14 @@
     ],
     "taskDefinitions": [
       {
-        "type": "turbocpp",
+        "type": "c-cpp-pro",
         "required": [
           "task"
         ],
         "properties": {
           "task": {
             "type": "string",
-            "description": "TurboCpp task action name (e.g. buildActiveFile, buildWorkspace)"
+            "description": "C/C++ Pro task action name (e.g. buildActiveFile, buildWorkspace)"
           },
           "file": {
             "type": "string",
@@ -579,7 +579,7 @@
     ],
     "problemMatchers": [
       {
-        "name": "gcc",
+        "name": "c-cpp-pro",
         "owner": "cpp",
         "fileLocation": [
           "relative",
@@ -595,7 +595,7 @@
         }
       },
       {
-        "name": "msvc",
+        "name": "c-cpp-pro",
         "owner": "cpp",
         "fileLocation": [
           "relative",
@@ -614,9 +614,9 @@
     ],
     "languageModelTools": [
       {
-        "name": "turbocpp_configuration",
+        "name": "c-cpp-pro",
         "toolReferenceName": "cpp",
-        "displayName": "C/C++ Project Configuration",
+        "displayName": "C/C++ Pro",
         "canBeReferencedInPrompt": true,
         "modelDescription": "For the active C or C++ file, this tool provides: the language (C, C++, or CUDA), the language standard version, the compiler (GCC, Clang, or MSVC), the target platform, active preprocessor defines, and solution/build configuration."
       }
@@ -624,7 +624,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/FunToHard/TurboCpp"
+    "url": "https://github.com/funtohard/c-cpp-pro"
   },
   "license": "MIT",
   "scripts": {

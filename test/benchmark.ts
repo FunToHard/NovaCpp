@@ -1,5 +1,5 @@
 /**
- * TurboCpp Architectural Performance Micro-Benchmark Harness.
+ * C/C++ Pro Architectural Performance Micro-Benchmark Harness.
  *
  * This file measures throughput and latency for:
  * 1. Zero-config system compiler discovery.
@@ -26,7 +26,7 @@ import { createBuildExecution } from '../src/tasks/runner';
 
 async function runBenchmarks() {
   console.log('===============================================================');
-  console.log('       TurboCpp vs. vscode-cpptools Architecture Benchmark      ');
+  console.log('       C/C++ Pro vs. vscode-cpptools Architecture Benchmark      ');
   console.log('===============================================================\n');
 
   const detector = new CompilerDetector();
@@ -88,43 +88,43 @@ async function runBenchmarks() {
     {
       Dimension: 'Parsing & Completion Speed',
       'vscode-cpptools': 'Disk AutoPCH (200 - 1000ms delay)',
-      TurboCpp: '< 30ms (In-memory AST preamble)',
+      'C/C++ Pro': '< 30ms (In-memory AST preamble)',
       Advantage: '10x - 30x faster'
     },
     {
       Dimension: 'Symbol Navigation & Go to Def',
       'vscode-cpptools': 'SQLite token DB (500 - 3000ms)',
-      TurboCpp: '< 50ms (Compacted AST index)',
+      'C/C++ Pro': '< 50ms (Compacted AST index)',
       Advantage: '10x - 60x faster'
     },
     {
       Dimension: 'Find All References',
       'vscode-cpptools': 'SQLite scan (3000 - 60000ms)',
-      TurboCpp: '< 200ms (clangd index shards)',
+      'C/C++ Pro': '< 200ms (clangd index shards)',
       Advantage: '15x - 300x faster'
     },
     {
       Dimension: 'Memory Footprint',
       'vscode-cpptools': '1.2 GB - 4.5 GB (multi-process srv)',
-      TurboCpp: '< 350 MB (single daemon + DAP)',
+      'C/C++ Pro': '< 350 MB (single daemon + DAP)',
       Advantage: '70% - 90% memory reduction'
     },
     {
       Dimension: 'Out-of-the-Box Experience',
       'vscode-cpptools': 'Manual prompts, sluggish probing',
-      TurboCpp: 'Zero-config auto-probing & synthesis',
+      'C/C++ Pro': 'Zero-config auto-probing & synthesis',
       Advantage: 'Instant zero red squiggles'
     },
     {
       Dimension: 'Integrated Debugger',
       'vscode-cpptools': 'cppdbg / cppvsdbg (proprietary)',
-      TurboCpp: 'lldb-dap & GDB DAP (Open standard)',
+      'C/C++ Pro': 'lldb-dap & GDB DAP (Open standard)',
       Advantage: 'No vendor lock-in'
     },
     {
       Dimension: 'VSIX Bundle Size',
       'vscode-cpptools': '~75 MB',
-      TurboCpp: '1.0 MB',
+      'C/C++ Pro': '1.0 MB',
       Advantage: '98.6% smaller bundle'
     }
   ]);

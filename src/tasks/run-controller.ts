@@ -124,13 +124,13 @@ export class RunController implements vscode.Disposable {
    */
   public async runFile(document?: vscode.TextDocument): Promise<boolean> {
     if (vscode.workspace.isTrusted === false) {
-      vscode.window.showErrorMessage('TurboCpp: Running code is disabled in untrusted workspaces.');
+      vscode.window.showErrorMessage('C/C++ Pro: Running code is disabled in untrusted workspaces.');
       return false;
     }
 
     const doc = document || vscode.window.activeTextEditor?.document;
     if (!doc || !isCppFile(doc)) {
-      vscode.window.showWarningMessage('TurboCpp: Open a valid C/C++ source file to run.');
+      vscode.window.showWarningMessage('C/C++ Pro: Open a valid C/C++ source file to run.');
       return false;
     }
 
@@ -141,7 +141,7 @@ export class RunController implements vscode.Disposable {
     const compiler = await this.detector.getPreferredCompiler();
     if (!compiler) {
       vscode.window.showErrorMessage(
-        'TurboCpp: No C/C++ compiler detected on system. Please install MSVC, GCC, or Clang.'
+        'C/C++ Pro: No C/C++ compiler detected on system. Please install MSVC, GCC, or Clang.'
       );
       return false;
     }
@@ -156,7 +156,7 @@ export class RunController implements vscode.Disposable {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const standard = config.get<string>('cppStandard', 'c++20');
     const runCmd = buildRunCommand(compiler, sourceFile, outputBinary, standard);
 
@@ -171,17 +171,17 @@ export class RunController implements vscode.Disposable {
   }
 
   /**
-   * Compiles the active C/C++ file with debug flags and launches a TurboCpp DAP debug session.
+   * Compiles the active C/C++ file with debug flags and launches a C/C++ Pro DAP debug session.
    */
   public async debugFile(document?: vscode.TextDocument): Promise<boolean> {
     if (vscode.workspace.isTrusted === false) {
-      vscode.window.showErrorMessage('TurboCpp: Debugging is disabled in untrusted workspaces.');
+      vscode.window.showErrorMessage('C/C++ Pro: Debugging is disabled in untrusted workspaces.');
       return false;
     }
 
     const doc = document || vscode.window.activeTextEditor?.document;
     if (!doc || !isCppFile(doc)) {
-      vscode.window.showWarningMessage('TurboCpp: Open a valid C/C++ source file to debug.');
+      vscode.window.showWarningMessage('C/C++ Pro: Open a valid C/C++ source file to debug.');
       return false;
     }
 
@@ -191,7 +191,7 @@ export class RunController implements vscode.Disposable {
 
     const compiler = await this.detector.getPreferredCompiler();
     if (!compiler) {
-      vscode.window.showErrorMessage('TurboCpp: No C/C++ compiler detected on system for debugging.');
+      vscode.window.showErrorMessage('C/C++ Pro: No C/C++ compiler detected on system for debugging.');
       return false;
     }
 
@@ -204,13 +204,13 @@ export class RunController implements vscode.Disposable {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const standard = config.get<string>('cppStandard', 'c++20');
 
     return vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `TurboCpp: Building ${path.basename(sourceFile)} for debugging...`,
+        title: `C/C++ Pro: Building ${path.basename(sourceFile)} for debugging...`,
         cancellable: false
       },
       async () => {
@@ -266,15 +266,15 @@ export class RunController implements vscode.Disposable {
           }
         } catch (err: any) {
           vscode.window.showErrorMessage(
-            `TurboCpp: Compilation failed: ${err.stderr || err.stdout || err.message || err}`
+            `C/C++ Pro: Compilation failed: ${err.stderr || err.stdout || err.message || err}`
           );
           return false;
         }
 
-        // Launch TurboCpp debugger
+        // Launch C/C++ Pro debugger
         const debugConfig: vscode.DebugConfiguration = {
-          name: `TurboCpp: Debug ${path.basename(sourceFile)}`,
-          type: 'turbocpp-debug',
+          name: `C/C++ Pro: Debug ${path.basename(sourceFile)}`,
+          type: 'c-cpp-pro-debug',
           request: 'launch',
           program: outputBinary,
           cwd: path.dirname(sourceFile),
@@ -290,7 +290,7 @@ export class RunController implements vscode.Disposable {
   private getOrCreateTerminal(compiler: CompilerInfo): { terminal: vscode.Terminal; isNew: boolean } {
     const isWindows = process.platform === 'win32';
     const isMsvc = compiler.type === 'msvc' && isWindows;
-    const terminalName = isMsvc ? 'Developer PowerShell for VS' : 'TurboCpp: Run';
+    const terminalName = isMsvc ? 'Developer PowerShell for VS' : 'C/C++ Pro: Run';
 
     // Verify existing terminal is still alive
     const existing = vscode.window.terminals?.find(

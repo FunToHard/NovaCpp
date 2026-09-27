@@ -1,17 +1,17 @@
-# TurboCpp: Fast C/C++ Extension for Visual Studio Code
+# C/C++ Pro: Fast C/C++ Extension for Visual Studio Code
 
-[![CI](https://github.com/FunToHard/TurboCpp/actions/workflows/ci.yml/badge.svg)](https://github.com/FunToHard/TurboCpp/actions/workflows/ci.yml)
+[![CI](https://github.com/funtohard/c-cpp-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/funtohard/c-cpp-pro/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![VS Code Engine](https://img.shields.io/badge/VS%20Code-%5E1.85.0-brightgreen.svg)](https://code.visualstudio.com/)
 [![Language](https://img.shields.io/badge/Language-C%20%2F%20C%2B%2B%20%2F%20CUDA-00599C.svg)](https://isocpp.org/)
 
-TurboCpp combines the blazing index and AST completion speed of LLVM's **`clangd`** with the turnkey developer experience of modern IDEs. It provides instant symbol search, zero-configuration compiler discovery, integrated DAP debugging, native Visual Studio solution (`.sln` / `.slnx`) support, struct memory layout inspection, build time bottleneck analysis, and unit test discovery right out of the box.
+C/C++ Pro combines the blazing index and AST completion speed of LLVM's **`clangd`** with the turnkey developer experience of modern IDEs. It provides instant symbol search, zero-configuration compiler discovery, integrated DAP debugging, native Visual Studio solution (`.sln` / `.slnx`) support, struct memory layout inspection, build time bottleneck analysis, and unit test discovery right out of the box.
 
 ---
 
-## Why TurboCpp?
+## Why C/C++ Pro?
 
-| Feature | Microsoft `vscode-cpptools` | Official `vscode-clangd` | **TurboCpp** |
+| Feature | Microsoft `vscode-cpptools` | Official `vscode-clangd` | **C/C++ Pro** |
 | :--- | :--- | :--- | :--- |
 | **Completion & AST Latency** | Slow (Disk AutoPCH, 500–1000ms) | Ultra Fast (In-memory AST) | **Ultra Fast (`clangd` backend)** |
 | **Workspace Indexing** | Sluggish (SQLite token database) | Instant (Compacted AST index) | **Instant (`clangd` index)** |
@@ -37,7 +37,7 @@ TurboCpp combines the blazing index and AST completion speed of LLVM's **`clangd
 
 ### 2. Zero-Configuration Compiler & SDK Discovery
 - **Automatic Compiler Probing**: Detects installed MSVC (`cl.exe`), Clang (`clang++`), GCC/MinGW (`g++`), and WSL toolchains without manual path configuration.
-- **Flags Synthesis**: Generates `compile_flags.txt` on-demand via the Command Palette (`TurboCpp: Generate compile_flags.txt`) and synthesizes compilation flags for single-file scripts and unstructured projects.
+- **Flags Synthesis**: Generates `compile_flags.txt` on-demand via the Command Palette (`C/C++ Pro: Generate compile_flags.txt`) and synthesizes compilation flags for single-file scripts and unstructured projects.
 - **Ecosystem & SDK Discovery**: Out-of-the-box detection of common graphics and system SDKs:
   - **Vulkan SDK** (`C:\VulkanSDK\<version>` or `$VULKAN_SDK`)
   - **raylib** (`C:\raylib` or `/usr/local/include/raylib`)
@@ -60,13 +60,13 @@ TurboCpp combines the blazing index and AST completion speed of LLVM's **`clangd
 - **Run & Debug Editor Title Actions**: One-click play and debug buttons in the editor title bar with automated Visual Studio Developer Shell (`vcvarsall`) environment injection on Windows.
 
 ### 5. Type & Memory Layout Inspector
-- Inspect struct and class memory layouts directly inside the editor (`turbocpp.inspectMemoryLayout`).
+- Inspect struct and class memory layouts directly inside the editor (`c-cpp-pro.inspectMemoryLayout`).
 - Visualize field byte offsets, member sizes, struct alignment, and wasted memory from padding holes.
 - Visual indicators for 64-byte CPU cache line boundaries to optimize data structures for cache locality.
 
 ### 6. Include Tree & Build Bottleneck Visualizer
-- **Header Dependency Hierarchy**: Analyze `#include` trees, detect circular inclusion cycles, and receive optimization tips for heavy headers (`turbocpp.analyzeIncludes`).
-- **Clang `-ftime-trace` Profiling**: Inspect Chrome tracing JSON files to pinpoint slow template instantiations and expensive header parse times (`turbocpp.visualizeTimeTrace`).
+- **Header Dependency Hierarchy**: Analyze `#include` trees, detect circular inclusion cycles, and receive optimization tips for heavy headers (`c-cpp-pro.analyzeIncludes`).
+- **Clang `-ftime-trace` Profiling**: Inspect Chrome tracing JSON files to pinpoint slow template instantiations and expensive header parse times (`c-cpp-pro.visualizeTimeTrace`).
 
 ### 7. Modern C++ Test Explorer
 - Native VS Code Test Explorer integration for modern C++ testing frameworks.
@@ -77,29 +77,29 @@ TurboCpp combines the blazing index and AST completion speed of LLVM's **`clangd
   - **Boost.Test** (`BOOST_AUTO_TEST_CASE`)
 
 ### 8. Macro Expansion & Compile-Time Evaluation
-- **Step-by-Step Macro Expansion**: Preview complex object-like and function-like macro expansions directly at cursor position (`turbocpp.expandMacro`).
-- **`constexpr` Evaluation**: Preview compile-time evaluations and constant folding results (`turbocpp.evaluateConstexpr`).
+- **Step-by-Step Macro Expansion**: Preview complex object-like and function-like macro expansions directly at cursor position (`c-cpp-pro.expandMacro`).
+- **`constexpr` Evaluation**: Preview compile-time evaluations and constant folding results (`c-cpp-pro.evaluateConstexpr`).
 
 ### 9. Inline Disassembly & Compiler Explorer
-- Open inline assembly output alongside your C++ code (`turbocpp.viewDisassembly`).
+- Open inline assembly output alongside your C++ code (`c-cpp-pro.viewDisassembly`).
 - Filter compiler directives, labels, and comments with customizable optimization flags (`-O0`, `-O1`, `-O2`, `-O3`, `-Os`, `-Oz`).
 
 ### 10. Semantic Symbol Hierarchy Graphs
-- Generate Mermaid diagrams visualizing class inheritance and symbol relationships (`turbocpp.showTypeHierarchy`).
+- Generate Mermaid diagrams visualizing class inheritance and symbol relationships (`c-cpp-pro.showTypeHierarchy`).
 
 ### 11. Configuration Editor & Multi-Target Profiles
-- Modern graphical Webview editor (`turbocpp.openSettings`) to configure include paths, preprocessor defines, compiler paths, and C/C++ language standards.
+- Modern graphical Webview editor (`c-cpp-pro.openSettings`) to configure include paths, preprocessor defines, compiler paths, and C/C++ language standards.
 - Supports `.vscode/c_cpp_properties.json` and Linux/RTOS Kconfig (`.config`) files.
-- Visual Studio Developer Environment switcher (`turbocpp.setVsDeveloperEnvironment`) to quickly initialize compiler environments.
+- Visual Studio Developer Environment switcher (`c-cpp-pro.setVsDeveloperEnvironment`) to quickly initialize compiler environments.
 
 ---
 
 ## Getting Started
 
-1. **Install TurboCpp** from the Visual Studio Code Marketplace.
+1. **Install C/C++ Pro** from the Visual Studio Code Marketplace.
 2. Open any C or C++ folder or source file.
-3. If `clangd` is not installed on your system, TurboCpp will prompt you to automatically download and install a managed LLVM release.
-4. TurboCpp detects your local compiler (MSVC, Clang, or GCC) and configures your project automatically.
+3. If `clangd` is not installed on your system, C/C++ Pro will prompt you to automatically download and install a managed LLVM release.
+4. C/C++ Pro detects your local compiler (MSVC, Clang, or GCC) and configures your project automatically.
 
 ---
 
@@ -107,23 +107,23 @@ TurboCpp combines the blazing index and AST completion speed of LLVM's **`clangd
 
 | Command | Title |
 | :--- | :--- |
-| `turbocpp.openSettings` | TurboCpp: Open Configuration Panel |
-| `turbocpp.restartServer` | TurboCpp: Restart Language Server |
-| `turbocpp.switchSourceHeader` | TurboCpp: Switch Header/Source (`Alt+O`) |
-| `turbocpp.inspectMemoryLayout` | TurboCpp: Inspect Type & Memory Layout |
-| `turbocpp.analyzeIncludes` | TurboCpp: Analyze #include Hierarchy & Dependencies |
-| `turbocpp.visualizeTimeTrace` | TurboCpp: Visualize Clang -ftime-trace Build Bottlenecks |
-| `turbocpp.refreshTests` | TurboCpp: Discover & Refresh Unit Tests |
-| `turbocpp.expandMacro` | TurboCpp: Expand Macro at Cursor |
-| `turbocpp.evaluateConstexpr` | TurboCpp: Evaluate constexpr Expression at Cursor |
-| `turbocpp.viewDisassembly` | TurboCpp: Open Inline Compiler Disassembly |
-| `turbocpp.showTypeHierarchy` | TurboCpp: Show Visual Type & Inheritance Hierarchy Graph |
-| `turbocpp.selectSolution` | TurboCpp: Select Active Solution (.sln / .slnx) |
-| `turbocpp.buildSolution` | TurboCpp: Build Solution (MSBuild) |
-| `turbocpp.setVsDeveloperEnvironment` | TurboCpp: Set Visual Studio Developer Environment |
-| `turbocpp.generateDoxygenComment` | TurboCpp: Generate Doxygen Documentation Comment |
-| `turbocpp.runClangTidyOnActiveFile` | TurboCpp: Run Clang-Tidy Analysis on Active File |
-| `turbocpp.resetIndex` | TurboCpp: Reset Clangd Symbol Index |
+| `c-cpp-pro.openSettings` | C/C++ Pro: Open Configuration Panel |
+| `c-cpp-pro.restartServer` | C/C++ Pro: Restart Language Server |
+| `c-cpp-pro.switchSourceHeader` | C/C++ Pro: Switch Header/Source (`Alt+O`) |
+| `c-cpp-pro.inspectMemoryLayout` | C/C++ Pro: Inspect Type & Memory Layout |
+| `c-cpp-pro.analyzeIncludes` | C/C++ Pro: Analyze #include Hierarchy & Dependencies |
+| `c-cpp-pro.visualizeTimeTrace` | C/C++ Pro: Visualize Clang -ftime-trace Build Bottlenecks |
+| `c-cpp-pro.refreshTests` | C/C++ Pro: Discover & Refresh Unit Tests |
+| `c-cpp-pro.expandMacro` | C/C++ Pro: Expand Macro at Cursor |
+| `c-cpp-pro.evaluateConstexpr` | C/C++ Pro: Evaluate constexpr Expression at Cursor |
+| `c-cpp-pro.viewDisassembly` | C/C++ Pro: Open Inline Compiler Disassembly |
+| `c-cpp-pro.showTypeHierarchy` | C/C++ Pro: Show Visual Type & Inheritance Hierarchy Graph |
+| `c-cpp-pro.selectSolution` | C/C++ Pro: Select Active Solution (.sln / .slnx) |
+| `c-cpp-pro.buildSolution` | C/C++ Pro: Build Solution (MSBuild) |
+| `c-cpp-pro.setVsDeveloperEnvironment` | C/C++ Pro: Set Visual Studio Developer Environment |
+| `c-cpp-pro.generateDoxygenComment` | C/C++ Pro: Generate Doxygen Documentation Comment |
+| `c-cpp-pro.runClangTidyOnActiveFile` | C/C++ Pro: Run Clang-Tidy Analysis on Active File |
+| `c-cpp-pro.resetIndex` | C/C++ Pro: Reset Clangd Symbol Index |
 
 ---
 
@@ -131,17 +131,17 @@ TurboCpp combines the blazing index and AST completion speed of LLVM's **`clangd
 
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `turbocpp.path` | `string` | `"clangd"` | Path to the `clangd` language server executable. |
-| `turbocpp.arguments` | `array` | `[...]` | Command-line flags passed to `clangd` on startup. |
-| `turbocpp.compilerPath` | `string` | `""` | Path to the preferred C/C++ compiler. Auto-detected if omitted. |
-| `turbocpp.cppStandard` | `string` | `"c++20"` | C++ language standard (`c++98`, `c++11`, `c++14`, `c++17`, `c++20`, `c++23`, `c++26`). |
-| `turbocpp.cStandard` | `string` | `"c17"` | C language standard (`c89`, `c99`, `c11`, `c17`, `c23`). |
-| `turbocpp.inactiveRegions.enabled` | `boolean` | `true` | Dim inactive preprocessor blocks (`#ifdef`, `#if 0`). |
-| `turbocpp.inactiveRegions.opacity` | `number` | `0.45` | Opacity for dimmed preprocessor regions (0.1 to 1.0). |
-| `turbocpp.postfixCompletions` | `boolean` | `true` | Enable C++ postfix completion templates (`.if`, `.for`, etc.). |
-| `turbocpp.doxygen.generateOnType` | `boolean` | `true` | Auto-generate Doxygen comments when typing `/**`. |
-| `turbocpp.codeAnalysis.clangTidy.enabled` | `boolean` | `true` | Enable Clang-Tidy background linter analysis. |
-| `turbocpp.debugger.preferred` | `string` | `"auto"` | Preferred debugger backend (`auto`, `lldb-dap`, `gdb`, `msvc`). |
+| `c-cpp-pro.path` | `string` | `"clangd"` | Path to the `clangd` language server executable. |
+| `c-cpp-pro.arguments` | `array` | `[...]` | Command-line flags passed to `clangd` on startup. |
+| `c-cpp-pro.compilerPath` | `string` | `""` | Path to the preferred C/C++ compiler. Auto-detected if omitted. |
+| `c-cpp-pro.cppStandard` | `string` | `"c++20"` | C++ language standard (`c++98`, `c++11`, `c++14`, `c++17`, `c++20`, `c++23`, `c++26`). |
+| `c-cpp-pro.cStandard` | `string` | `"c17"` | C language standard (`c89`, `c99`, `c11`, `c17`, `c23`). |
+| `c-cpp-pro.inactiveRegions.enabled` | `boolean` | `true` | Dim inactive preprocessor blocks (`#ifdef`, `#if 0`). |
+| `c-cpp-pro.inactiveRegions.opacity` | `number` | `0.45` | Opacity for dimmed preprocessor regions (0.1 to 1.0). |
+| `c-cpp-pro.postfixCompletions` | `boolean` | `true` | Enable C++ postfix completion templates (`.if`, `.for`, etc.). |
+| `c-cpp-pro.doxygen.generateOnType` | `boolean` | `true` | Auto-generate Doxygen comments when typing `/**`. |
+| `c-cpp-pro.codeAnalysis.clangTidy.enabled` | `boolean` | `true` | Enable Clang-Tidy background linter analysis. |
+| `c-cpp-pro.debugger.preferred` | `string` | `"auto"` | Preferred debugger backend (`auto`, `lldb-dap`, `gdb`, `msvc`). |
 
 ---
 

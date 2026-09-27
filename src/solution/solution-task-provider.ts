@@ -124,7 +124,7 @@ export class SolutionTaskProvider implements vscode.TaskProvider {
       definition,
       task.scope ?? vscode.TaskScope.Workspace,
       task.name || `MSBuild: ${target}`,
-      'TurboCpp',
+      'c-cpp-pro',
       execution,
       ['$msvc']
     );
@@ -156,7 +156,7 @@ export class SolutionTaskProvider implements vscode.TaskProvider {
       taskDefinition,
       workspaceFolder ?? vscode.TaskScope.Workspace,
       `MSBuild: ${target} Solution (${solution.name} [${configuration}|${platform}])`,
-      'TurboCpp',
+      'c-cpp-pro',
       execution,
       ['$msvc']
     );
@@ -198,7 +198,7 @@ export class SolutionTaskProvider implements vscode.TaskProvider {
       taskDefinition,
       workspaceFolder ?? vscode.TaskScope.Workspace,
       `MSBuild: Build Project (${project.name} [${configuration}|${platform}])`,
-      'TurboCpp',
+      'c-cpp-pro',
       execution,
       ['$msvc']
     );

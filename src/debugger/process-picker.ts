@@ -37,7 +37,7 @@ export class ProcessPicker {
           }
         }
       } catch (err) {
-        console.warn('TurboCpp: tasklist.exe failed:', err);
+        console.warn('C/C++ Pro: tasklist.exe failed:', err);
       }
     } else {
       // Linux & macOS
@@ -57,7 +57,7 @@ export class ProcessPicker {
           }
         }
       } catch (err) {
-        console.warn('TurboCpp: ps command failed:', err);
+        console.warn('C/C++ Pro: ps command failed:', err);
       }
     }
 
@@ -72,7 +72,7 @@ export class ProcessPicker {
   public static async pickProcess(): Promise<string | undefined> {
     const processes = await this.getRunningProcesses();
     if (processes.length === 0) {
-      vscode.window.showWarningMessage('TurboCpp: No running native processes detected.');
+      vscode.window.showWarningMessage('C/C++ Pro: No running native processes detected.');
       return undefined;
     }
 

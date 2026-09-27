@@ -20,7 +20,7 @@ describe('Build, Solutions & Configuration Edge Cases', () => {
     let tmpDir: string;
 
     beforeEach(async () => {
-      tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'turbocpp-enc-test-'));
+      tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'c-cpp-pro-enc-test-'));
     });
 
     afterEach(async () => {

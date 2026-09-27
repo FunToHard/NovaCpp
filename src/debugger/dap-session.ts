@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { LldbDapLocator, DebuggerExecutable } from './lldb-dap';
 import { LaunchGenerator, DebugLaunchConfiguration } from './launch-generator';
 
-export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+export class CppProDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   provideDebugConfigurations(
     _folder: vscode.WorkspaceFolder | undefined,
     _token?: vscode.CancellationToken
@@ -20,7 +20,7 @@ export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigura
     _token?: vscode.CancellationToken
   ): Promise<vscode.DebugConfiguration | null | undefined> {
     if (!vscode.workspace.isTrusted) {
-      vscode.window.showErrorMessage('TurboCpp: Debugging is disabled in untrusted workspaces.');
+      vscode.window.showErrorMessage('C/C++ Pro: Debugging is disabled in untrusted workspaces.');
       return undefined;
     }
 
@@ -31,7 +31,7 @@ export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigura
     // If config is completely empty (e.g. F5 on loose file without launch.json)
     if (!config.type && !config.request && !config.name) {
       if (!activeEditor) {
-        vscode.window.showErrorMessage('TurboCpp: Select a C/C++ source file to debug.');
+        vscode.window.showErrorMessage('C/C++ Pro: Select a C/C++ source file to debug.');
         return null;
       }
       const generated = LaunchGenerator.createDefaultConfiguration(activeFile, workspaceRoot);
@@ -63,9 +63,9 @@ export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigura
     // Handle Attach mode
     if (config.request === 'attach') {
       if (!config.processId) {
-        config.processId = '${command:turbocpp.pickProcess}';
-      } else if (config.processId === '${command:turbocpp.pickProcess}') {
-        const picked = await vscode.commands.executeCommand<number | string | undefined>('turbocpp.pickProcess');
+        config.processId = '${command:c-cpp-pro.pickProcess}';
+      } else if (config.processId === '${command:c-cpp-pro.pickProcess}') {
+        const picked = await vscode.commands.executeCommand<number | string | undefined>('c-cpp-pro.pickProcess');
         if (picked !== undefined && picked !== null) {
           config.processId = typeof picked === 'number' ? picked : parseInt(String(picked).trim(), 10);
         }
@@ -77,7 +77,7 @@ export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigura
 
     if (!config.program) {
       vscode.window.showErrorMessage(
-        'TurboCpp Debug: Missing "program" property in launch configuration.'
+        'C/C++ Pro Debug: Missing "program" property in launch configuration.'
       );
       return null;
     }
@@ -85,7 +85,7 @@ export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigura
     // Check if binary exists
     if (!fs.existsSync(config.program)) {
       const choice = await vscode.window.showWarningMessage(
-        `TurboCpp: Target executable not found at "${config.program}". Would you like to build active file first?`,
+        `C/C++ Pro: Target executable not found at "${config.program}". Would you like to build active file first?`,
         'Build and Debug',
         'Cancel'
       );
@@ -124,7 +124,7 @@ export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigura
         });
 
         if (!fs.existsSync(config.program)) {
-          vscode.window.showErrorMessage(`TurboCpp: Build completed but executable still not found.`);
+          vscode.window.showErrorMessage(`C/C++ Pro: Build completed but executable still not found.`);
           return null;
         }
       } else {
@@ -136,7 +136,7 @@ export class TurboCppDebugConfigurationProvider implements vscode.DebugConfigura
   }
 }
 
-export class TurboCppDebugAdapterDescriptorFactory
+export class CppProDebugAdapterDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory {
   createDebugAdapterDescriptor(
     session: vscode.DebugSession,
@@ -144,7 +144,7 @@ export class TurboCppDebugAdapterDescriptorFactory
   ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
     const config = session.configuration as DebugLaunchConfiguration;
 
-    const globalSettings = vscode.workspace.getConfiguration('turbocpp');
+    const globalSettings = vscode.workspace.getConfiguration('c-cpp-pro');
     const customPath = config.debuggerPath || globalSettings.get<string>('debuggerPath');
     const preference = config.debuggerType ?? 'auto';
 
@@ -155,7 +155,7 @@ export class TurboCppDebugAdapterDescriptorFactory
 
     if (!resolved) {
       const message =
-        'TurboCpp: No debugger backend found (lldb-dap or gdb). Please install LLVM or MinGW GDB or configure "turbocpp.debuggerPath".';
+        'C/C++ Pro: No debugger backend found (lldb-dap or gdb). Please install LLVM or MinGW GDB or configure "c-cpp-pro.debuggerPath".';
       vscode.window.showErrorMessage(message);
       throw new Error(message);
     }

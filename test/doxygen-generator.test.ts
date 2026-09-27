@@ -2,7 +2,7 @@ import './vscode-mock';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { DoxygenGenerator } from '../src/documentation/doxygen-generator';
-import { TurboCppCodeActionProvider } from '../src/intelligence/code-actions';
+import { CppProCodeActionProvider } from '../src/intelligence/code-actions';
 
 describe('Doxygen Documentation Authoring', () => {
   describe('DoxygenGenerator.extractTemplateParams', () => {
@@ -116,7 +116,7 @@ describe('Doxygen Documentation Authoring', () => {
     it('should offer Doxygen Code Action above function declarations', () => {
       const code = 'int add(int a, int b);\n';
       const mockDoc = {
-        uri: vscode.Uri.file('F:/DEV/projects/TurboCpp/src/math.h'),
+        uri: vscode.Uri.file('F:/DEV/projects/C/C++ Pro/src/math.h'),
         getText: () => code,
         lineCount: 2,
         lineAt: (line: number) => ({
@@ -125,7 +125,7 @@ describe('Doxygen Documentation Authoring', () => {
         })
       } as any;
 
-      const provider = new TurboCppCodeActionProvider();
+      const provider = new CppProCodeActionProvider();
       const actions = provider.provideCodeActions(
         mockDoc,
         new vscode.Range(0, 0, 0, 0),

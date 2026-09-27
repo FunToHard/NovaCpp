@@ -14,7 +14,7 @@ describe('External SDKs Auto-Discovery Subsystem', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-sdk-test-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-sdk-test-'));
   });
 
   afterEach(() => {

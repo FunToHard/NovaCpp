@@ -28,7 +28,7 @@ export class SolutionManager implements vscode.Disposable {
         await this.synthesizeCompilationDatabase();
       }
     } catch (err) {
-      console.warn('TurboCpp: Solution reload failed:', err);
+      console.warn('C/C++ Pro: Solution reload failed:', err);
     }
   }, 1200);
 
@@ -41,7 +41,7 @@ export class SolutionManager implements vscode.Disposable {
       vscode.StatusBarAlignment.Left,
       65
     );
-    this.statusBarItem.command = 'turbocpp.solutionMenu';
+    this.statusBarItem.command = 'c-cpp-pro.solutionMenu';
     this.disposables.push(this.statusBarItem);
 
     // Watch for solution and vcxproj changes
@@ -140,7 +140,7 @@ export class SolutionManager implements vscode.Disposable {
     const rootDir = workspaceFolders[0].uri.fsPath;
     const compiler = await this.detector.getPreferredCompiler();
     if (!compiler) {
-      console.warn('TurboCpp: No compiler available for solution compilation database synthesis.');
+      console.warn('C/C++ Pro: No compiler available for solution compilation database synthesis.');
       return null;
     }
 
@@ -176,7 +176,7 @@ export class SolutionManager implements vscode.Disposable {
     await this.compDbGenerator.writeCompilationDatabase(targetFile, entries);
 
     console.log(
-      `TurboCpp: Generated compile_commands.json from solution ${this.activeSolution.name} (${entries.length} files)`
+      `C/C++ Pro: Generated compile_commands.json from solution ${this.activeSolution.name} (${entries.length} files)`
     );
 
     if (this.onReloadServer) {
@@ -192,7 +192,7 @@ export class SolutionManager implements vscode.Disposable {
   public async showSolutionMenu(): Promise<void> {
     if (!this.activeSolution) {
       const scan = await vscode.window.showInformationMessage(
-        'TurboCpp: No Visual Studio solution (.sln / .slnx) currently loaded.',
+        'C/C++ Pro: No Visual Studio solution (.sln / .slnx) currently loaded.',
         'Scan Workspace'
       );
       if (scan) {
@@ -262,7 +262,7 @@ export class SolutionManager implements vscode.Disposable {
       case 'regenDb':
         await this.synthesizeCompilationDatabase();
         vscode.window.showInformationMessage(
-          `TurboCpp: Updated compile_commands.json for ${this.activeSolution.name} [${this.activeConfiguration.key}].`
+          `C/C++ Pro: Updated compile_commands.json for ${this.activeSolution.name} [${this.activeConfiguration.key}].`
         );
         break;
     }
@@ -273,7 +273,7 @@ export class SolutionManager implements vscode.Disposable {
    */
   public async selectSolution(): Promise<void> {
     if (this.solutions.length === 0) {
-      vscode.window.showWarningMessage('TurboCpp: No .sln or .slnx files found in workspace.');
+      vscode.window.showWarningMessage('C/C++ Pro: No .sln or .slnx files found in workspace.');
       return;
     }
 
@@ -312,7 +312,7 @@ export class SolutionManager implements vscode.Disposable {
    */
   public async selectConfiguration(): Promise<void> {
     if (!this.activeSolution) {
-      vscode.window.showWarningMessage('TurboCpp: No active solution selected.');
+      vscode.window.showWarningMessage('C/C++ Pro: No active solution selected.');
       return;
     }
 
@@ -331,7 +331,7 @@ export class SolutionManager implements vscode.Disposable {
       this.updateStatusBar();
       await this.synthesizeCompilationDatabase();
       vscode.window.showInformationMessage(
-        `TurboCpp: Switched solution configuration to ${picked.config.key}.`
+        `C/C++ Pro: Switched solution configuration to ${picked.config.key}.`
       );
     }
   }
@@ -352,7 +352,7 @@ export class SolutionManager implements vscode.Disposable {
       await vscode.tasks.executeTask(match);
     } else {
       vscode.window.showErrorMessage(
-        `TurboCpp: Could not locate MSBuild task for ${target}. Ensure MSBuild or Visual Studio is installed.`
+        `C/C++ Pro: Could not locate MSBuild task for ${target}. Ensure MSBuild or Visual Studio is installed.`
       );
     }
   }

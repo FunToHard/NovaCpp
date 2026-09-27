@@ -35,12 +35,12 @@ CONFIG_RETRY_COUNT=5
 
   it('should handle strings with escaped double quotes without premature truncation', () => {
     const content = `
-CONFIG_BANNER="TurboCpp Kernel v1.0 \\"Enterprise Edition\\""
+CONFIG_BANNER="C/C++ Pro Kernel v1.0 \\"Enterprise Edition\\""
 CONFIG_PATH="/usr/local/bin"
 `;
     const defines = parseDotConfig(content);
     assert.strictEqual(defines.length, 2);
-    assert.strictEqual(defines[0], 'CONFIG_BANNER="TurboCpp Kernel v1.0 \\"Enterprise Edition\\""');
+    assert.strictEqual(defines[0], 'CONFIG_BANNER="C/C++ Pro Kernel v1.0 \\"Enterprise Edition\\""');
     assert.strictEqual(defines[1], 'CONFIG_PATH="/usr/local/bin"');
   });
 

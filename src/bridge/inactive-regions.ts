@@ -28,10 +28,10 @@ export class InactiveRegionsManager implements vscode.Disposable {
       }),
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (
-          e.affectsConfiguration('turbocpp.inactiveRegionsDimming') ||
-          e.affectsConfiguration('turbocpp.inactiveRegionForegroundColor') ||
-          e.affectsConfiguration('turbocpp.inactiveRegionBackgroundColor') ||
-          e.affectsConfiguration('turbocpp.inactiveRegionOpacity')
+          e.affectsConfiguration('c-cpp-pro.inactiveRegionsDimming') ||
+          e.affectsConfiguration('c-cpp-pro.inactiveRegionForegroundColor') ||
+          e.affectsConfiguration('c-cpp-pro.inactiveRegionBackgroundColor') ||
+          e.affectsConfiguration('c-cpp-pro.inactiveRegionOpacity')
         ) {
           this.recreateDecorationType();
           this.refreshAllVisibleEditors();
@@ -76,7 +76,7 @@ export class InactiveRegionsManager implements vscode.Disposable {
    * rather than simply faded or matching theme comment colors.
    */
   public createDecorationType(): vscode.TextEditorDecorationType {
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const opacityVal = config.get<number>('inactiveRegionOpacity', 0.6);
     const foregroundSetting = config.get<string>('inactiveRegionForegroundColor', 'disabledForeground');
     const backgroundSetting = config.get<string>('inactiveRegionBackgroundColor', '');
@@ -135,7 +135,7 @@ export class InactiveRegionsManager implements vscode.Disposable {
    * Applies the decoration to the given editor.
    */
   public applyDecorations(editor: vscode.TextEditor): void {
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const enabled = config.get<boolean>('inactiveRegionsDimming', true);
 
     if (!enabled) {

@@ -338,17 +338,17 @@ export class DoxygenGenerator {
     const lineIndex = editor.selection.active.line;
     const target = this.findTargetDeclaration(document, lineIndex, 6);
     if (!target) {
-      vscode.window.showWarningMessage('TurboCpp: No declaration found near cursor to document.');
+      vscode.window.showWarningMessage('C/C++ Pro: No declaration found near cursor to document.');
       return false;
     }
 
     const item = this.parseDeclaration(target.text);
     if (!item) {
-      vscode.window.showWarningMessage('TurboCpp: Could not parse declaration for Doxygen comment.');
+      vscode.window.showWarningMessage('C/C++ Pro: Could not parse declaration for Doxygen comment.');
       return false;
     }
 
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const style = config.get<DoxygenStyle>('doxygen.generatedStyle', '/**');
     const comment = this.generateComment(item, {
       style,
@@ -376,7 +376,7 @@ export class DoxygenCompletionProvider implements vscode.CompletionItemProvider 
     _token: vscode.CancellationToken,
     _context: vscode.CompletionContext
   ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     if (!config.get<boolean>('doxygen.generateOnType', true)) {
       return [];
     }
@@ -404,7 +404,7 @@ export class DoxygenCompletionProvider implements vscode.CompletionItemProvider 
     const trimmedSnippet = commentBody.replace(new RegExp(`^${indent}/\\*\\*\\r?\\n`), '');
 
     const completion = new vscode.CompletionItem(
-      '/** TurboCpp: Generate Doxygen Documentation */',
+      '/** C/C++ Pro: Generate Doxygen Documentation */',
       vscode.CompletionItemKind.Snippet
     );
     completion.insertText = new vscode.SnippetString(`\n${trimmedSnippet}`);

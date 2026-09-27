@@ -14,8 +14,8 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
   private outputChannel: vscode.OutputChannel;
 
   constructor() {
-    this.diagnosticCollection = vscode.languages.createDiagnosticCollection('TurboCpp Clang-Tidy');
-    this.outputChannel = vscode.window.createOutputChannel('TurboCpp Clang-Tidy');
+    this.diagnosticCollection = vscode.languages.createDiagnosticCollection('C/C++ Pro Clang-Tidy');
+    this.outputChannel = vscode.window.createOutputChannel('C/C++ Pro Clang-Tidy');
   }
 
   public static getInstance(): ClangTidyManager {
@@ -151,7 +151,7 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
    * Finds the clang-tidy binary path from config, PATH, or standard LLVM directory.
    */
   public static findClangTidyBinary(): string | null {
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const customPath = config.get<string>('codeAnalysis.clangTidy.path', '').trim();
     if (customPath && fs.existsSync(customPath)) {
       return customPath;
@@ -211,20 +211,20 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
   public async runOnActiveFile(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage('TurboCpp: No active editor to run Clang-Tidy on.');
+      vscode.window.showWarningMessage('C/C++ Pro: No active editor to run Clang-Tidy on.');
       return;
     }
 
     const doc = editor.document;
     if (doc.languageId !== 'cpp' && doc.languageId !== 'c') {
-      vscode.window.showWarningMessage('TurboCpp: Active file is not a C/C++ source file.');
+      vscode.window.showWarningMessage('C/C++ Pro: Active file is not a C/C++ source file.');
       return;
     }
 
     const filePath = doc.uri.fsPath;
     const clangTidyBin = ClangTidyManager.findClangTidyBinary();
     if (!clangTidyBin) {
-      vscode.window.showErrorMessage('TurboCpp: clang-tidy binary not found.');
+      vscode.window.showErrorMessage('C/C++ Pro: clang-tidy binary not found.');
       return;
     }
 
@@ -234,7 +234,7 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
       args.push(`-p=${compDbDir}`);
     }
 
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const enabledChecks = config.get<string[]>('codeAnalysis.clangTidy.checks.enabled', []);
     const disabledChecks = config.get<string[]>('codeAnalysis.clangTidy.checks.disabled', []);
 
@@ -249,7 +249,7 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
     args.push(filePath);
 
     this.outputChannel.clear();
-    this.outputChannel.appendLine(`=== TurboCpp Clang-Tidy Analysis: ${path.basename(filePath)} ===`);
+    this.outputChannel.appendLine(`=== C/C++ Pro Clang-Tidy Analysis: ${path.basename(filePath)} ===`);
     this.outputChannel.appendLine(`Command: ${clangTidyBin} ${args.join(' ')}\n`);
     this.outputChannel.show(true);
 
@@ -258,7 +258,7 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `TurboCpp: Running Clang-Tidy on ${path.basename(filePath)}...`,
+        title: `C/C++ Pro: Running Clang-Tidy on ${path.basename(filePath)}...`,
         cancellable: true
       },
       (_progress, token) => {
@@ -341,7 +341,7 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
               this.diagnosticCollection.set(uri, diags);
             }
             vscode.window.showInformationMessage(
-              `TurboCpp: Clang-Tidy completed with ${diagnostics.length} diagnostic(s).`
+              `C/C++ Pro: Clang-Tidy completed with ${diagnostics.length} diagnostic(s).`
             );
             resolve();
           });
@@ -360,6 +360,6 @@ export class ClangTidyManager implements vscode.CodeActionProvider {
    */
   public clearDiagnostics(): void {
     this.diagnosticCollection.clear();
-    vscode.window.showInformationMessage('TurboCpp: Cleared all Clang-Tidy code analysis problems.');
+    vscode.window.showInformationMessage('C/C++ Pro: Cleared all Clang-Tidy code analysis problems.');
   }
 }

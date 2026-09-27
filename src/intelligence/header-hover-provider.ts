@@ -1150,15 +1150,15 @@ export function formatStandardHeaderHover(
   md.appendMarkdown('---\n');
   if (isWin32) {
     md.appendMarkdown(
-      `[Microsoft Learn: <${normKey}>](${docUrl}) | [Switch Header/Source](command:turbocpp.switchSourceHeader)`
+      `[Microsoft Learn: <${normKey}>](${docUrl}) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader)`
     );
   } else if (isPosix) {
     md.appendMarkdown(
-      `[POSIX Reference: <${normKey}>](${docUrl}) | [Switch Header/Source](command:turbocpp.switchSourceHeader)`
+      `[POSIX Reference: <${normKey}>](${docUrl}) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader)`
     );
   } else {
     md.appendMarkdown(
-      `[cppreference: <${normKey}>](${docUrl}) | [Open Docs (cppreference)](command:turbocpp.openDocs)`
+      `[cppreference: <${normKey}>](${docUrl}) | [Open Docs (cppreference)](command:c-cpp-pro.openDocs)`
     );
   }
 
@@ -1223,7 +1223,7 @@ export function formatLocalHeaderHover(
   if (resolvedPath) {
     md.appendMarkdown('---\n');
     md.appendMarkdown(
-      `[Switch Header/Source](command:turbocpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+      `[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
     );
   }
 

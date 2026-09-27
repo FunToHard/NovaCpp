@@ -1,13 +1,13 @@
-# NovaCpp Sandbox Initialization Script
-# Automatically installs VS Code, installs NovaCpp VSIX (if present), and opens the workspace.
+# C/C++ Pro Sandbox Initialization Script
+# Automatically installs VS Code, installs C/C++ Pro VSIX (if present), and opens the workspace.
 
 $ErrorActionPreference = 'Continue'
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "  NovaCpp Windows Sandbox Environment Setup     " -ForegroundColor Cyan
+Write-Host "  C/C++ Pro Windows Sandbox Environment Setup   " -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 $installerPath = "C:\Users\WDAGUtilityAccount\Desktop\Downloads\VSCodeSetup-x64-1.137.0.exe"
-$projectDir = "C:\Users\WDAGUtilityAccount\Desktop\NovaCpp"
+$projectDir = "C:\Users\WDAGUtilityAccount\Desktop\c-cpp-pro"
 
 # 1. Locate and run installer
 if (-not (Test-Path $installerPath)) {
@@ -45,7 +45,7 @@ if (-not $codeExe) {
     Exit 1
 }
 
-# 3. Auto-install NovaCpp VSIX extension if available in the mapped project
+# 3. Auto-install C/C++ Pro VSIX extension if available in the mapped project
 $vsixFile = Get-ChildItem -Path $projectDir -Filter "*.vsix" -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($vsixFile -and $codeCmd) {
     Write-Host "[2/3] Installing extension: $($vsixFile.Name)..." -ForegroundColor Yellow

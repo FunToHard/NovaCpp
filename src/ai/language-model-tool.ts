@@ -20,7 +20,7 @@ export interface CppProjectContext {
   activeFile?: string;
 }
 
-export class TurboCppConfigurationTool {
+export class CppProConfigurationTool {
   constructor(
     private readonly detector: CompilerDetector,
     private readonly solutionManager?: SolutionManager | null
@@ -40,7 +40,7 @@ export class TurboCppConfigurationTool {
       language = 'CUDA C++';
     }
 
-    const config = vscode.workspace.getConfiguration('turbocpp');
+    const config = vscode.workspace.getConfiguration('c-cpp-pro');
     const standard = config.get<string>('cppStandard', 'c++20');
 
     let compilerName = 'Auto-detected';

@@ -106,7 +106,7 @@ describe('Visual Studio Solution Subsystem: SolutionTaskProvider', () => {
       definition,
       vscode.TaskScope.Workspace,
       'MSBuild: Rebuild',
-      'TurboCpp'
+      'c-cpp-pro'
     );
 
     const resolved = await provider.resolveTask(dummyTask);

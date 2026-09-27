@@ -942,7 +942,7 @@ export function formatTypedefHover(
 
   const docLink = info.docUrl ? `[cppreference: ${info.name}](${info.docUrl}) | ` : '';
   md.appendMarkdown(
-    `${docLink}[Switch Header/Source](command:turbocpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+    `${docLink}[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
   );
 
   return new vscode.Hover(md, range);
@@ -968,7 +968,7 @@ export function formatUserTypedefHover(
 
   md.appendMarkdown('\n---\n');
   md.appendMarkdown(
-    '[Switch Header/Source](command:turbocpp.switchSourceHeader) | [Find References](command:editor.action.findReferences)'
+    '[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)'
   );
 
   return new vscode.Hover(md, range);

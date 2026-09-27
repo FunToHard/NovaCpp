@@ -14,7 +14,7 @@ export class IndexManager {
     const root =
       workspaceRoot ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!root) {
-      vscode.window.showWarningMessage('TurboCpp: No workspace folder open to reset index.');
+      vscode.window.showWarningMessage('C/C++ Pro: No workspace folder open to reset index.');
       return false;
     }
 
@@ -46,7 +46,7 @@ export class IndexManager {
           break;
         } catch (err) {
           if (attempt === maxAttempts) {
-            console.warn(`TurboCpp: Could not remove directory ${dir} after ${maxAttempts} attempts:`, err);
+            console.warn(`C/C++ Pro: Could not remove directory ${dir} after ${maxAttempts} attempts:`, err);
           } else {
             const delay = baseDelayMs * attempt;
             await new Promise((resolve) => setTimeout(resolve, delay));
@@ -56,7 +56,7 @@ export class IndexManager {
     }
 
     vscode.window.showInformationMessage(
-      'TurboCpp: Clangd symbol index reset. Restarting language server...'
+      'C/C++ Pro: Clangd symbol index reset. Restarting language server...'
     );
 
     if (onRestartServer) {

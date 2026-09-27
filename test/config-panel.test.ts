@@ -49,7 +49,7 @@ describe('Configuration Webview Editor', () => {
   });
 
   it('should save settings to compile_flags.txt and trigger server reload', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-webview-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-webview-'));
     let reloaded = false;
     const onReload = async () => {
       reloaded = true;
@@ -102,7 +102,7 @@ describe('Configuration Webview Editor', () => {
   });
 
   it('should save settings to .clangd YAML and trigger server reload', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-clangd-yaml-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-clangd-yaml-'));
     let reloaded = false;
     const onReload = async () => {
       reloaded = true;
@@ -155,7 +155,7 @@ describe('Configuration Webview Editor', () => {
   });
 
   it('should append to existing .clangd without overriding user configuration', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'turbocpp-clangd-append-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'c-cpp-pro-clangd-append-'));
     let reloaded = false;
     const onReload = async () => {
       reloaded = true;

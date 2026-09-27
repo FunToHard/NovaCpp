@@ -195,7 +195,7 @@ export class DirectiveNavigator {
       return true;
     }
 
-    vscode.window.showInformationMessage('TurboCpp: No subsequent preprocessor directive found.');
+    vscode.window.showInformationMessage('C/C++ Pro: No subsequent preprocessor directive found.');
     return false;
   }
 
@@ -218,7 +218,7 @@ export class DirectiveNavigator {
       return true;
     }
 
-    vscode.window.showInformationMessage('TurboCpp: No preceding preprocessor directive found.');
+    vscode.window.showInformationMessage('C/C++ Pro: No preceding preprocessor directive found.');
     return false;
   }
 }

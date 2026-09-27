@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/turbocpp-native"
+    "crates/c-cpp-pro-native"
 ]
 resolver = "2"
 

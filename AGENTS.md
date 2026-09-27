@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Instructions and guidelines for AI agents working in the TurboCpp codebase.
+Instructions and guidelines for AI agents working in the C/C++ Pro codebase.
 
 ## 1. Project Overview
 
-TurboCpp is a high-performance C/C++ extension for Visual Studio Code. It integrates LLVM Clangd, compiler discovery, static build system analysis, and native debugging.
+C/C++ Pro is a high-performance C/C++ extension for Visual Studio Code. It integrates LLVM Clangd, compiler discovery, static build system analysis, and native debugging.
 
 ### Core Architecture
 

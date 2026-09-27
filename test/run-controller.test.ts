@@ -121,7 +121,7 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
 
         const controller = new RunController(mockDetector);
         const mockDoc = {
-          fileName: path.join(os.tmpdir(), 'turbocpp-run-test', 'test.cpp'),
+          fileName: path.join(os.tmpdir(), 'c-cpp-pro-run-test', 'test.cpp'),
           isDirty: false
         } as unknown as vscode.TextDocument;
 
@@ -137,7 +137,7 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
       }
     });
 
-    it('should create standard TurboCpp Run terminal when compiler is GCC', async () => {
+    it('should create standard C/C++ Pro Run terminal when compiler is GCC', async () => {
       (vscode.window as any).terminals = [];
 
       const mockGcc: CompilerInfo = {
@@ -152,7 +152,7 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
 
       const controller = new RunController(mockDetector);
       const mockDoc = {
-        fileName: path.join(os.tmpdir(), 'turbocpp-run-test', 'test.cpp'),
+        fileName: path.join(os.tmpdir(), 'c-cpp-pro-run-test', 'test.cpp'),
         isDirty: false
       } as unknown as vscode.TextDocument;
 
@@ -161,7 +161,7 @@ describe('Run & Debug Controller (Title Bar Actions)', () => {
 
       const terminals = (vscode.window as any).terminals;
       assert.ok(terminals.length > 0);
-      assert.strictEqual(terminals[0].name, 'TurboCpp: Run');
+      assert.strictEqual(terminals[0].name, 'C/C++ Pro: Run');
       if (process.platform === 'win32') {
         assert.strictEqual(terminals[0].options?.shellPath, 'powershell.exe');
       }

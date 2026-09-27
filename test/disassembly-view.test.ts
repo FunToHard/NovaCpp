@@ -78,13 +78,13 @@ main:
   });
 
   describe('DisassemblyContentProvider', () => {
-    it('should initialize and register turbocpp-disasm scheme', () => {
+    it('should initialize and register c-cpp-pro-disasm scheme', () => {
       const mockDetector = {
         getPreferredCompiler: async () => null
       } as any;
 
       const provider = new DisassemblyContentProvider(mockDetector);
-      assert.strictEqual(DisassemblyContentProvider.scheme, 'turbocpp-disasm');
+      assert.strictEqual(DisassemblyContentProvider.scheme, 'c-cpp-pro-disasm');
       provider.dispose();
     });
   });

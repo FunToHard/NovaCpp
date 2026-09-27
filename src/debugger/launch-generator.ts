@@ -50,8 +50,8 @@ export class LaunchGenerator {
     }
 
     return {
-      name: 'TurboCpp: Debug Active File',
-      type: 'turbocpp-debug',
+      name: 'C/C++ Pro: Debug Active File',
+      type: 'c-cpp-pro-debug',
       request: 'launch',
       program: programPath,
       args: [],
@@ -67,11 +67,11 @@ export class LaunchGenerator {
    * Generates default attach-to-process configuration using process picker.
    */
   public static createAttachConfiguration(
-    processId: string = '${command:turbocpp.pickProcess}'
+    processId: string = '${command:c-cpp-pro.pickProcess}'
   ): DebugLaunchConfiguration {
     return {
-      name: 'TurboCpp: Attach to Process',
-      type: 'turbocpp-debug',
+      name: 'C/C++ Pro: Attach to Process',
+      type: 'c-cpp-pro-debug',
       request: 'attach',
       processId,
       debuggerType: 'auto'
