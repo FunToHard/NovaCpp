@@ -19,6 +19,11 @@ export class NovaCppDebugConfigurationProvider implements vscode.DebugConfigurat
     config: vscode.DebugConfiguration,
     _token?: vscode.CancellationToken
   ): Promise<vscode.DebugConfiguration | null | undefined> {
+    if (!vscode.workspace.isTrusted) {
+      vscode.window.showErrorMessage('NovaCpp: Debugging is disabled in untrusted workspaces.');
+      return undefined;
+    }
+
     const activeEditor = vscode.window.activeTextEditor;
     const activeFile = activeEditor?.document.fileName;
     const workspaceRoot = folder ? folder.uri.fsPath : undefined;

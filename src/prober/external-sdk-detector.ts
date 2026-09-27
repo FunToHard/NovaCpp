@@ -655,9 +655,13 @@ export class ExternalSdkDetector {
               const readSize = Math.min(stat.size, 32768);
               const buffer = Buffer.alloc(readSize);
               const fd = fs.openSync(filePath, 'r');
-              fs.readSync(fd, buffer, 0, readSize, 0);
-              fs.closeSync(fd);
-              const text = buffer.toString('utf8');
+              let text = '';
+              try {
+                fs.readSync(fd, buffer, 0, readSize, 0);
+                text = buffer.toString('utf8');
+              } finally {
+                fs.closeSync(fd);
+              }
 
               for (const pattern of patterns) {
                 if (pattern.test(text)) {

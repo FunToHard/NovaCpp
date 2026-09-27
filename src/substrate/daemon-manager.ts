@@ -12,7 +12,7 @@ import {
   ErrorAction
 } from 'vscode-languageclient/node';
 import { ClangdInstaller } from './installer';
-import { createClangdMiddleware, EditorEventDebouncer } from './protocol-filter';
+import { createClangdMiddleware, EditorEventDebouncer, debounce } from './protocol-filter';
 import { StlRankingTable } from '../telemetry/ranking-table';
 import { ExternalSdkDetector } from '../prober/external-sdk-detector';
 import { CMakeParser } from '../cmake/cmake-parser';
@@ -54,13 +54,22 @@ export class DaemonManager implements vscode.Disposable {
   private onInactiveRegionsEmitter = new vscode.EventEmitter<InactiveRegionsParams>();
   public readonly onInactiveRegions = this.onInactiveRegionsEmitter.event;
 
-  private restartCount = 0;
+  private crashCount = 0;
   private maxRestarts = 5;
   private lastRestartTime = 0;
+  private stabilityTimeout: NodeJS.Timeout | null = null;
+  private crashRestartTimeout: NodeJS.Timeout | null = null;
   private isStopping = false;
+  private isRestarting = false;
+  private lifecycleQueue: Promise<void> = Promise.resolve();
   private startPromise: Promise<void> | null = null;
   private stopPromise: Promise<void> | null = null;
   private restartPromise: Promise<void> | null = null;
+  private activeWatchers: vscode.FileSystemWatcher[] = [];
+
+  public debouncedStart = debounce(async () => {
+    await this.start();
+  }, 300);
 
   constructor(
     _context: vscode.ExtensionContext,
@@ -84,6 +93,30 @@ export class DaemonManager implements vscode.Disposable {
     );
   }
 
+  private cancelPendingStarts(): void {
+    if (this.crashRestartTimeout) {
+      clearTimeout(this.crashRestartTimeout);
+      this.crashRestartTimeout = null;
+    }
+    if (this.stabilityTimeout) {
+      clearTimeout(this.stabilityTimeout);
+      this.stabilityTimeout = null;
+    }
+    this.debouncedStart.cancel();
+  }
+
+  private async runSerialized<T>(action: () => Promise<T>): Promise<T> {
+    const execute = async () => {
+      return await action();
+    };
+    const resultPromise = this.lifecycleQueue.then(execute, execute);
+    this.lifecycleQueue = resultPromise.then(
+      () => {},
+      () => {}
+    );
+    return resultPromise;
+  }
+
   public async start(): Promise<void> {
     if (this.client && this.client.isRunning()) {
       return;
@@ -91,16 +124,18 @@ export class DaemonManager implements vscode.Disposable {
     if (this.startPromise) {
       return this.startPromise;
     }
-    if (this.stopPromise) {
-      await this.stopPromise;
-    }
-    if (this.client && this.client.isRunning()) {
-      return;
-    }
 
-    this.startPromise = this.doStart().finally(() => {
-      this.startPromise = null;
+    this.startPromise = this.runSerialized(async () => {
+      try {
+        if (this.client && this.client.isRunning()) {
+          return;
+        }
+        await this.doStart();
+      } finally {
+        this.startPromise = null;
+      }
     });
+
     return this.startPromise;
   }
 
@@ -189,6 +224,12 @@ export class DaemonManager implements vscode.Disposable {
       }
     }
 
+    this.activeWatchers = [
+      vscode.workspace.createFileSystemWatcher('**/compile_commands.json'),
+      vscode.workspace.createFileSystemWatcher('**/compile_flags.txt'),
+      vscode.workspace.createFileSystemWatcher('**/.clangd')
+    ];
+
     const clientOptions: LanguageClientOptions = {
       documentSelector: [
         { scheme: 'file', language: 'c' },
@@ -196,11 +237,7 @@ export class DaemonManager implements vscode.Disposable {
         { scheme: 'file', language: 'cuda-cpp' }
       ],
       synchronize: {
-        fileEvents: [
-          vscode.workspace.createFileSystemWatcher('**/compile_commands.json'),
-          vscode.workspace.createFileSystemWatcher('**/compile_flags.txt'),
-          vscode.workspace.createFileSystemWatcher('**/.clangd')
-        ]
+        fileEvents: this.activeWatchers
       },
       initializationOptions: {
         clangdFileStatus: true,
@@ -220,23 +257,35 @@ export class DaemonManager implements vscode.Disposable {
         },
         closed: () => {
           this.outputChannel.appendLine('[Closed] Connection to clangd closed.');
+          if (this.stabilityTimeout) {
+            clearTimeout(this.stabilityTimeout);
+            this.stabilityTimeout = null;
+          }
           if (this.isStopping) {
             return { action: CloseAction.DoNotRestart, handled: true };
           }
           const now = Date.now();
           if (now - this.lastRestartTime > 60000) {
-            this.restartCount = 0;
+            this.crashCount = 0;
           }
           this.lastRestartTime = now;
-          this.restartCount++;
 
-          if (this.restartCount <= this.maxRestarts) {
+          if (this.crashCount < this.maxRestarts) {
+            const delay = Math.min(1000 * Math.pow(2, this.crashCount), 10000);
+            this.crashCount++;
             this.outputChannel.appendLine(
-              `[Watchdog] Attempting auto-restart (${this.restartCount}/${this.maxRestarts})...`
+              `[Watchdog] Attempting auto-restart (${this.crashCount}/${this.maxRestarts}) after ${delay}ms backoff...`
             );
-            this.restart();
+            if (this.crashRestartTimeout) {
+              clearTimeout(this.crashRestartTimeout);
+            }
+            this.crashRestartTimeout = setTimeout(() => {
+              this.crashRestartTimeout = null;
+              this.restart();
+            }, delay);
             return { action: CloseAction.DoNotRestart, handled: true };
           } else {
+            this.crashCount++;
             vscode.window.showErrorMessage(
               'NovaCpp: clangd daemon crashed repeatedly. Auto-restart aborted.'
             );
@@ -259,7 +308,18 @@ export class DaemonManager implements vscode.Disposable {
         if (event.newState === State.Running) {
           this.updateStatusBar('$(check) NovaCpp: Ready', 'clangd is active and ready');
           this.registerCustomProtocolHandlers();
+          if (this.stabilityTimeout) {
+            clearTimeout(this.stabilityTimeout);
+          }
+          this.stabilityTimeout = setTimeout(() => {
+            this.crashCount = 0;
+            this.stabilityTimeout = null;
+          }, 60000);
         } else if (event.newState === State.Stopped) {
+          if (this.stabilityTimeout) {
+            clearTimeout(this.stabilityTimeout);
+            this.stabilityTimeout = null;
+          }
           this.updateStatusBar('$(circle-slash) NovaCpp: Stopped', 'Click to start language server');
         }
       })
@@ -322,44 +382,55 @@ export class DaemonManager implements vscode.Disposable {
   }
 
   public async restart(): Promise<void> {
-    if (this.restartPromise) {
+    this.cancelPendingStarts();
+    if (this.isRestarting && this.restartPromise) {
       return this.restartPromise;
     }
+    this.isRestarting = true;
 
-    this.restartPromise = (async () => {
+    this.restartPromise = this.runSerialized(async () => {
       try {
         this.outputChannel.appendLine('[Info] Restarting NovaCpp Language Server...');
-        await this.stop();
-        await this.start();
+        await this.doStop();
+        await this.doStart();
       } finally {
+        this.isRestarting = false;
         this.restartPromise = null;
       }
-    })();
+    });
 
     return this.restartPromise;
   }
 
   public async stop(): Promise<void> {
-    if (this.startPromise) {
-      try {
-        await this.startPromise;
-      } catch {
-        // Ignore startup error when stopping
-      }
-    }
+    this.cancelPendingStarts();
     if (this.stopPromise) {
       return this.stopPromise;
     }
 
-    this.stopPromise = this.doStop().finally(() => {
-      this.stopPromise = null;
+    this.stopPromise = this.runSerialized(async () => {
+      try {
+        await this.doStop();
+      } finally {
+        this.stopPromise = null;
+      }
     });
+
     return this.stopPromise;
   }
 
   private async doStop(): Promise<void> {
     this.isStopping = true;
     try {
+      for (const watcher of this.activeWatchers) {
+        try {
+          watcher.dispose();
+        } catch {
+          // Ignore disposal errors
+        }
+      }
+      this.activeWatchers = [];
+
       for (const d of this.clientDisposables) {
         d.dispose();
       }
@@ -394,7 +465,16 @@ export class DaemonManager implements vscode.Disposable {
   }
 
   dispose(): void {
-    this.stop();
+    this.cancelPendingStarts();
+    this.stop().catch(() => {});
+    for (const watcher of this.activeWatchers) {
+      try {
+        watcher.dispose();
+      } catch {
+        // Ignore disposal errors
+      }
+    }
+    this.activeWatchers = [];
     for (const d of this.clientDisposables) {
       d.dispose();
     }

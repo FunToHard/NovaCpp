@@ -29,13 +29,29 @@ export class IndexManager {
       path.join(root, '.cache', 'clangd')
     ];
 
+    const maxAttempts = 5;
+    const baseDelayMs = 300;
+
     for (const dir of candidateDirs) {
-      try {
-        if (fs.existsSync(dir)) {
+      if (!fs.existsSync(dir)) {
+        continue;
+      }
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          if (!fs.existsSync(dir)) {
+            break;
+          }
           await fs.promises.rm(dir, { recursive: true, force: true });
+          break;
+        } catch (err) {
+          if (attempt === maxAttempts) {
+            console.warn(`NovaCpp: Could not remove directory ${dir} after ${maxAttempts} attempts:`, err);
+          } else {
+            const delay = baseDelayMs * attempt;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
         }
-      } catch (err) {
-        console.warn(`NovaCpp: Could not remove directory ${dir}:`, err);
       }
     }
 

@@ -27,14 +27,16 @@ export class NativeBridgeImpl implements INativeBridge {
   public nativeVersion: string | null = null;
   private nativeBinding: any = null;
 
-  constructor(customAddonPath?: string) {
-    this.loadNativeBinding(customAddonPath);
+  constructor(customAddonPath?: string, extensionPath?: string) {
+    this.loadNativeBinding(customAddonPath, extensionPath);
   }
 
-  private loadNativeBinding(customPath?: string): void {
-    const candidatePaths = customPath
+  private loadNativeBinding(customPath?: string, extensionPath?: string): void {
+    const candidatePaths: string[] = customPath
       ? [customPath]
       : [
+          path.join(__dirname, '../native/novacpp_native.node'),
+          ...(extensionPath ? [path.join(extensionPath, 'native/novacpp_native.node')] : []),
           path.resolve(__dirname, '../../native/novacpp_native.node'),
           path.resolve(__dirname, '../../../native/novacpp_native.node'),
           path.resolve(__dirname, '../../crates/novacpp-native/target/release/novacpp_native.node'),

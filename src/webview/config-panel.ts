@@ -13,6 +13,39 @@ export interface WebviewSaveData {
   defines: string[];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isValidSaveData(data: unknown): data is WebviewSaveData {
+  if (!isRecord(data)) {
+    return false;
+  }
+  if (typeof data.compilerPath !== 'string') {
+    return false;
+  }
+  if (typeof data.cppStandard !== 'string') {
+    return false;
+  }
+  if (typeof data.cStandard !== 'string') {
+    return false;
+  }
+  if (data.outputFormat !== 'compile_flags' && data.outputFormat !== 'clangd_yaml') {
+    return false;
+  }
+  if (!Array.isArray(data.includes) || !data.includes.every((item) => typeof item === 'string')) {
+    return false;
+  }
+  if (!Array.isArray(data.defines) || !data.defines.every((item) => typeof item === 'string')) {
+    return false;
+  }
+  return true;
+}
+
+function sanitizeFlag(flag: string): string {
+  return flag.replace(/[\r\n]/g, '').trim();
+}
+
 export class ConfigPanel {
   public static currentPanel: ConfigPanel | undefined;
   public static readonly viewType = 'novacpp.configPanel';
@@ -70,7 +103,11 @@ export class ConfigPanel {
     this.panel.webview.html = this.getHtmlForWebview(this.panel.webview);
 
     this.panel.webview.onDidReceiveMessage(
-      async (message) => {
+      async (message: unknown) => {
+        if (!isRecord(message) || typeof message.command !== 'string') {
+          return;
+        }
+
         switch (message.command) {
           case 'getInitialData': {
             const data = await this.gatherInitialData();
@@ -78,7 +115,15 @@ export class ConfigPanel {
             break;
           }
           case 'saveSettings': {
-            const result = await this.handleSaveSettings(message.data as WebviewSaveData);
+            if (!isValidSaveData(message.data)) {
+              this.panel.webview.postMessage({
+                command: 'saveResult',
+                success: false,
+                message: 'Invalid settings payload received.'
+              });
+              return;
+            }
+            const result = await this.handleSaveSettings(message.data);
             this.panel.webview.postMessage({
               command: 'saveResult',
               success: result.success,
@@ -156,9 +201,15 @@ export class ConfigPanel {
     data: WebviewSaveData
   ): Promise<{ success: boolean; message: string }> {
     try {
+      const sanitizedCppStandard = sanitizeFlag(data.cppStandard);
+      const sanitizedCStandard = sanitizeFlag(data.cStandard);
+      const sanitizedCompilerPath = sanitizeFlag(data.compilerPath);
+      const sanitizedIncludes = data.includes.map(sanitizeFlag).filter((s) => s.length > 0);
+      const sanitizedDefines = data.defines.map(sanitizeFlag).filter((s) => s.length > 0);
+
       const config = vscode.workspace.getConfiguration('novacpp');
-      await config.update('cppStandard', data.cppStandard, vscode.ConfigurationTarget.Workspace);
-      await config.update('cStandard', data.cStandard, vscode.ConfigurationTarget.Workspace);
+      await config.update('cppStandard', sanitizedCppStandard, vscode.ConfigurationTarget.Workspace);
+      await config.update('cStandard', sanitizedCStandard, vscode.ConfigurationTarget.Workspace);
 
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -170,44 +221,47 @@ export class ConfigPanel {
 
       const rootPath = workspaceFolders[0].uri.fsPath;
       const compilers = await this.detector.detectAllCompilers();
-      const selected = compilers.find((c) => c.path === data.compilerPath) ?? {
+      const selected = compilers.find((c) => c.path === sanitizedCompilerPath) ?? {
         name: 'Custom Compiler',
         type: 'gcc',
-        path: data.compilerPath
+        path: sanitizedCompilerPath
       } as CompilerInfo;
 
       if (data.outputFormat === 'compile_flags') {
         const extraFlags: string[] = [];
-        for (const inc of data.includes) {
+        for (const inc of sanitizedIncludes) {
           extraFlags.push(`-I${inc.replace(/\\/g, '/')}`);
         }
-        for (const def of data.defines) {
+        for (const def of sanitizedDefines) {
           extraFlags.push(`-D${def}`);
         }
 
         const flags = await this.synthesizer.generateFlags(selected, {
-          standard: data.cppStandard,
+          standard: sanitizedCppStandard,
           extraFlags,
           forceOverwrite: true
         });
 
+        const cleanFlags = flags.map(sanitizeFlag).filter((f) => f.length > 0);
         const targetFile = path.join(rootPath, 'compile_flags.txt');
-        fs.writeFileSync(targetFile, flags.join('\n') + '\n', 'utf8');
+        fs.writeFileSync(targetFile, cleanFlags.join('\n') + '\n', 'utf8');
       } else if (data.outputFormat === 'clangd_yaml') {
-        const addFlags: string[] = [`-std=${data.cppStandard}`];
-        for (const inc of data.includes) {
-          const sanitizedInc = inc.replace(/[\r\n]/g, '').replace(/"/g, '\\"').replace(/\\/g, '/');
+        const addFlags: string[] = [`-std=${sanitizedCppStandard}`];
+        for (const inc of sanitizedIncludes) {
+          const sanitizedInc = inc.replace(/"/g, '\\"').replace(/\\/g, '/');
           addFlags.push(`-I${sanitizedInc}`);
         }
-        for (const def of data.defines) {
-          const sanitizedDef = def.replace(/[\r\n]/g, '').replace(/"/g, '\\"');
+        for (const def of sanitizedDefines) {
+          const sanitizedDef = def.replace(/"/g, '\\"');
           addFlags.push(`-D${sanitizedDef}`);
         }
+
+        const cleanAddFlags = addFlags.map(sanitizeFlag).filter((f) => f.length > 0);
 
         const targetFile = path.join(rootPath, '.clangd');
         if (fs.existsSync(targetFile)) {
           const existing = fs.readFileSync(targetFile, 'utf8');
-          const missingFlags = addFlags.filter((f) => !existing.includes(f));
+          const missingFlags = cleanAddFlags.filter((f) => !existing.includes(f));
           if (missingFlags.length > 0) {
             let updated = existing;
             if (/CompileFlags:\s*\r?\n\s*Add:/i.test(existing)) {
@@ -240,7 +294,7 @@ export class ConfigPanel {
             '# Generated by NovaCpp',
             'CompileFlags:',
             '  Add:',
-            ...addFlags.map((f) => `    - "${f}"`)
+            ...cleanAddFlags.map((f) => `    - "${f}"`)
           ].join('\n') + '\n';
           fs.writeFileSync(targetFile, yamlContent, 'utf8');
         }
@@ -262,11 +316,16 @@ export class ConfigPanel {
   }
 
   private getHtmlForWebview(webview: vscode.Webview): string {
+    const distMediaPath = path.join(this.extensionUri.fsPath, 'dist', 'media');
+    const mediaDirSegments = fs.existsSync(distMediaPath)
+      ? ['dist', 'media']
+      : ['src', 'webview', 'media'];
+
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'src', 'webview', 'media', 'main.js')
+      vscode.Uri.joinPath(this.extensionUri, ...mediaDirSegments, 'main.js')
     );
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'src', 'webview', 'media', 'style.css')
+      vscode.Uri.joinPath(this.extensionUri, ...mediaDirSegments, 'style.css')
     );
 
     let nonce = '';

@@ -14,64 +14,65 @@ export interface CppTestCase {
 }
 
 function maskComments(source: string): string {
-  const chars = source.split('');
-  let inString: string | null = null;
-  let inLineComment = false;
-  let inBlockComment = false;
+  const parts: string[] = [];
+  let lastCopied = 0;
+  let i = 0;
+  const len = source.length;
 
-  for (let i = 0; i < chars.length; i++) {
-    const ch = chars[i];
-    const next = chars[i + 1];
-
-    if (inLineComment) {
-      if (ch === '\n') {
-        inLineComment = false;
-      } else if (ch !== '\r') {
-        chars[i] = ' ';
-      }
-      continue;
-    }
-
-    if (inBlockComment) {
-      if (ch === '*' && next === '/') {
-        chars[i] = ' ';
-        chars[i + 1] = ' ';
-        i++;
-        inBlockComment = false;
-      } else if (ch !== '\n' && ch !== '\r') {
-        chars[i] = ' ';
-      }
-      continue;
-    }
-
-    if (inString) {
-      if (ch === '\\') {
-        i++; // skip escaped char
-      } else if (ch === inString) {
-        inString = null;
-      }
-      continue;
-    }
+  while (i < len) {
+    const ch = source[i];
 
     if (ch === '"' || ch === "'") {
-      inString = ch;
+      const quote = ch;
+      i++;
+      while (i < len) {
+        if (source[i] === '\\') {
+          i += 2;
+        } else if (source[i] === quote) {
+          i++;
+          break;
+        } else if (source[i] === '\n') {
+          break;
+        } else {
+          i++;
+        }
+      }
       continue;
     }
 
-    if (ch === '/' && next === '/') {
-      inLineComment = true;
-      chars[i] = ' ';
-      chars[i + 1] = ' ';
-      i++;
-    } else if (ch === '/' && next === '*') {
-      inBlockComment = true;
-      chars[i] = ' ';
-      chars[i + 1] = ' ';
-      i++;
+    if (ch === '/' && i + 1 < len) {
+      const next = source[i + 1];
+      if (next === '/') {
+        parts.push(source.slice(lastCopied, i));
+        const commentStart = i;
+        const newlineIdx = source.indexOf('\n', i + 2);
+        const commentEnd = newlineIdx === -1 ? len : newlineIdx;
+        const commentText = source.slice(commentStart, commentEnd);
+        parts.push(commentText.replace(/[^\r\n]/g, ' '));
+        i = commentEnd;
+        lastCopied = i;
+        continue;
+      } else if (next === '*') {
+        parts.push(source.slice(lastCopied, i));
+        const commentStart = i;
+        const closeIdx = source.indexOf('*/', i + 2);
+        const commentEnd = closeIdx === -1 ? len : closeIdx + 2;
+        const commentText = source.slice(commentStart, commentEnd);
+        parts.push(commentText.replace(/[^\r\n]/g, ' '));
+        i = commentEnd;
+        lastCopied = i;
+        continue;
+      }
     }
+
+    i++;
   }
 
-  return chars.join('');
+  if (lastCopied < len) {
+    parts.push(source.slice(lastCopied));
+  }
+
+  return parts.join('');
 }
 
 function offsetToPosition(offset: number, lineOffsets: number[]): { line: number; column: number } {
@@ -184,6 +185,7 @@ export class CppTestController implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
   private runProfile: vscode.TestRunProfile;
   private debugProfile: vscode.TestRunProfile;
+  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     this.controller = vscode.tests.createTestController(
@@ -206,9 +208,15 @@ export class CppTestController implements vscode.Disposable {
     // Watch active and opened documents
     this.disposables.push(
       vscode.workspace.onDidOpenTextDocument((doc) => this.discoverTestsInDocument(doc)),
-      vscode.workspace.onDidChangeTextDocument((e) => this.discoverTestsInDocument(e.document)),
+      vscode.workspace.onDidChangeTextDocument((e) => this.debounceDiscoverTests(e.document)),
       vscode.workspace.onDidCloseTextDocument((doc) => {
-        this.controller.items.delete(doc.uri.toString());
+        const uriStr = doc.uri.toString();
+        const timer = this.debounceTimers.get(uriStr);
+        if (timer) {
+          clearTimeout(timer);
+          this.debounceTimers.delete(uriStr);
+        }
+        this.controller.items.delete(uriStr);
       })
     );
 
@@ -218,7 +226,29 @@ export class CppTestController implements vscode.Disposable {
     }
   }
 
+  /**
+   * Debounces test discovery by 300ms on document edits.
+   */
+  private debounceDiscoverTests(document: vscode.TextDocument): void {
+    const uriStr = document.uri.toString();
+    const existing = this.debounceTimers.get(uriStr);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    const timer = setTimeout(() => {
+      this.debounceTimers.delete(uriStr);
+      this.discoverTestsInDocument(document);
+    }, 300);
+
+    this.debounceTimers.set(uriStr, timer);
+  }
+
   public dispose(): void {
+    for (const timer of this.debounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.debounceTimers.clear();
     this.runProfile.dispose();
     this.debugProfile.dispose();
     this.controller.dispose();

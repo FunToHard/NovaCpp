@@ -71,7 +71,7 @@
 
       const removeBtn = document.createElement('button');
       removeBtn.className = 'danger';
-      removeBtn.textContent = '✕';
+      removeBtn.textContent = 'x';
       removeBtn.title = 'Remove';
       removeBtn.addEventListener('click', () => {
         includes.splice(index, 1);
@@ -95,7 +95,7 @@
 
       const removeBtn = document.createElement('button');
       removeBtn.className = 'danger';
-      removeBtn.textContent = '✕';
+      removeBtn.textContent = 'x';
       removeBtn.title = 'Remove';
       removeBtn.addEventListener('click', () => {
         defines.splice(index, 1);

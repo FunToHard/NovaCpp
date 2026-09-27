@@ -147,8 +147,12 @@ export function createClangdMiddleware(
         token: vscode.CancellationToken
       ) => vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList>
     ): Promise<vscode.CompletionList | vscode.CompletionItem[]> => {
+      if (token.isCancellationRequested) {
+        return [];
+      }
+
       const list = await next(document, position, context, token);
-      if (!list) {
+      if (token.isCancellationRequested || !list) {
         return list ?? [];
       }
 
@@ -166,7 +170,16 @@ export function createClangdMiddleware(
         items = rawItems;
       }
 
-      for (const item of items) {
+      const MAX_DIRECT_ENRICH = 100;
+      const itemCount = items.length;
+
+      for (let i = 0; i < itemCount; i++) {
+        if (i % 50 === 0 && token.isCancellationRequested) {
+          return new vscode.CompletionList(items, isIncomplete);
+        }
+
+        const item = items[i];
+
         // A. Apply Adaptive Empirical STL Re-Ranking
         rankingTable.applyStlRanking(item);
 
@@ -203,10 +216,30 @@ export function createClangdMiddleware(
         }
 
         // D. Enrich with Rust-like STL Documentation Card
-        enrichCompletionItemWithStl(item);
+        if (itemCount <= MAX_DIRECT_ENRICH || i < MAX_DIRECT_ENRICH) {
+          enrichCompletionItemWithStl(item);
+        }
       }
 
       return new vscode.CompletionList(items, isIncomplete);
+    },
+
+    resolveCompletionItem: async (
+      item: vscode.CompletionItem,
+      token: vscode.CancellationToken,
+      next: (
+        item: vscode.CompletionItem,
+        token: vscode.CancellationToken
+      ) => vscode.ProviderResult<vscode.CompletionItem>
+    ): Promise<vscode.CompletionItem> => {
+      if (token.isCancellationRequested) {
+        return item;
+      }
+      const resolved = (await next(item, token)) ?? item;
+      if (!resolved.documentation) {
+        enrichCompletionItemWithStl(resolved);
+      }
+      return resolved;
     },
 
     provideWorkspaceSymbols: async (
@@ -241,13 +274,32 @@ export function createClangdMiddleware(
         token: vscode.CancellationToken
       ) => vscode.ProviderResult<vscode.Hover>
     ): Promise<vscode.Hover | null | undefined> => {
+      if (token.isCancellationRequested) {
+        return null;
+      }
+
       const lineText = document.lineAt(position.line).text;
       const includeInfo = parseIncludeLine(lineText, position.line, position.character);
+
+      let cachedHover: vscode.Hover | null | undefined = undefined;
+      let nextCalled = false;
+
+      const getHover = async (): Promise<vscode.Hover | null | undefined> => {
+        if (!nextCalled) {
+          nextCalled = true;
+          try {
+            cachedHover = await next(document, position, token);
+          } catch {
+            cachedHover = null;
+          }
+        }
+        return cachedHover;
+      };
 
       if (includeInfo) {
         let resolvedPath: string | undefined;
         try {
-          const rawHover = await next(document, position, token);
+          const rawHover = await getHover();
           if (rawHover) {
             resolvedPath = extractPathFromClangdHover(rawHover);
           }
@@ -266,7 +318,7 @@ export function createClangdMiddleware(
         }
       }
 
-      const hover = await next(document, position, token);
+      const hover = await getHover();
       if (!hover) {
         return hover;
       }
@@ -332,17 +384,7 @@ export class EditorEventDebouncer implements vscode.Disposable {
   public readonly onSelectionDebounced = this.onSelectionDebouncedEmitter.event;
 
   constructor() {
-    this.disposables.push(
-      vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
-        this.debouncedVisibleRanges(e.textEditor, e.visibleRanges);
-      })
-    );
-
-    this.disposables.push(
-      vscode.window.onDidChangeTextEditorSelection((e) => {
-        this.debouncedSelection(e.textEditor, e.selections);
-      })
-    );
+    // Unused window event subscriptions removed to eliminate unnecessary event loop churn
   }
 
   dispose(): void {

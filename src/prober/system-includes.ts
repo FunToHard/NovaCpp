@@ -119,10 +119,14 @@ export class SystemIncludeExtractor {
       }
       if (collecting && trimmed.length > 0) {
         // Handle '(framework directory)' or similar annotations
-        const cleaned = trimmed.replace(/\s*\(framework directory\)/, '');
-        const normalized = path.normalize(cleaned);
-        if (fs.existsSync(normalized)) {
-          includes.push(normalized);
+        const cleaned = trimmed.replace(/\s*\(framework directory\)/, '').trim();
+        if (cleaned.startsWith('/')) {
+          includes.push(path.posix.normalize(cleaned));
+        } else {
+          const normalized = path.normalize(cleaned);
+          if (fs.existsSync(normalized)) {
+            includes.push(normalized);
+          }
         }
       }
     }

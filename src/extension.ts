@@ -60,6 +60,7 @@ let solutionManager: SolutionManager | null = null;
 let solutionTaskProvider: SolutionTaskProvider | null = null;
 let profileManager: ProfileManager | null = null;
 let cmakeManager: CMakeManager | null = null;
+let telemetryOutputChannel: vscode.OutputChannel | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('Activating NovaCpp extension...');
@@ -111,15 +112,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   // Wire inactive regions notification from clangd to inactive regions renderer
-  daemonManager.onInactiveRegions((params) => {
-    inactiveRegionsManager?.handleInactiveRegions(params);
-  });
+  context.subscriptions.push(
+    daemonManager.onInactiveRegions((params) => {
+      inactiveRegionsManager?.handleInactiveRegions(params);
+    })
+  );
 
   context.subscriptions.push(
     daemonManager,
     cmakeWatcher,
     inactiveRegionsManager,
     runController,
+    batchDispatcher,
+    ClangTidyManager.getInstance(),
     { dispose: () => DiagnosticsLogger.dispose() }
   );
 
@@ -375,15 +380,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const counts = stlCollector?.getPendingCounts() ?? {};
       const totalSymbols = Object.keys(counts).length;
       const totalInvocations = Object.values(counts).reduce((a, b) => a + b, 0);
-      const channel = vscode.window.createOutputChannel('NovaCpp Telemetry Buffer');
-      channel.clear();
-      channel.appendLine('=== NovaCpp Anonymous STL Telemetry Buffer ===');
-      channel.appendLine(`Tracked Distinct Symbols : ${totalSymbols}`);
-      channel.appendLine(`Total Recorded Calls     : ${totalInvocations}`);
-      channel.appendLine('Privacy Policy           : ISO C++ Standard Library Allowlist (Zero Code / Zero PII)');
-      channel.appendLine('--------------------------------------------------------------------------------');
-      channel.appendLine(JSON.stringify(counts, null, 2));
-      channel.show();
+      if (!telemetryOutputChannel) {
+        telemetryOutputChannel = vscode.window.createOutputChannel('NovaCpp Telemetry Buffer');
+        context.subscriptions.push(telemetryOutputChannel);
+      }
+      telemetryOutputChannel.clear();
+      telemetryOutputChannel.appendLine('=== NovaCpp Anonymous STL Telemetry Buffer ===');
+      telemetryOutputChannel.appendLine(`Tracked Distinct Symbols : ${totalSymbols}`);
+      telemetryOutputChannel.appendLine(`Total Recorded Calls     : ${totalInvocations}`);
+      telemetryOutputChannel.appendLine('Privacy Policy           : ISO C++ Standard Library Allowlist (Zero Code / Zero PII)');
+      telemetryOutputChannel.appendLine('--------------------------------------------------------------------------------');
+      telemetryOutputChannel.appendLine(JSON.stringify(counts, null, 2));
+      telemetryOutputChannel.show();
     }),
     vscode.commands.registerCommand('novacpp.flushTelemetry', async () => {
       const success = await batchDispatcher?.flushNow(1);
@@ -461,9 +469,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.window.showInformationMessage(`NovaCpp: Copied "${text}" to clipboard.`);
     }),
     vscode.commands.registerCommand('novacpp.runInTerminal', (command: string) => {
+      if (typeof command !== 'string' || !command.trim()) {
+        vscode.window.showWarningMessage('NovaCpp: Cannot execute empty terminal command.');
+        return;
+      }
+      const trimmed = command.trim();
+      if (/[\r\n]/.test(trimmed)) {
+        vscode.window.showErrorMessage('NovaCpp: Multiline commands are not permitted.');
+        return;
+      }
+      const allowedPrefixes = ['vcpkg ', 'conan ', 'vcpkg.exe ', 'conan.exe '];
+      const isAllowedPrefix = allowedPrefixes.some((prefix) => trimmed.startsWith(prefix));
+      if (!isAllowedPrefix) {
+        vscode.window.showErrorMessage(`NovaCpp: Command '${trimmed}' is not an authorized package manager command.`);
+        return;
+      }
+      if (/[;&|`$]/.test(trimmed)) {
+        vscode.window.showErrorMessage('NovaCpp: Command contains disallowed shell metacharacters.');
+        return;
+      }
       const term = vscode.window.createTerminal('NovaCpp Package Manager');
       term.show();
-      term.sendText(command);
+      term.sendText(trimmed);
     }),
     vscode.commands.registerCommand('novacpp.selectProfile', async () => {
       await profileManager?.selectProfile();
@@ -526,6 +553,10 @@ export async function deactivate(): Promise<void> {
   if (profileManager) {
     profileManager.dispose();
     profileManager = null;
+  }
+  if (telemetryOutputChannel) {
+    telemetryOutputChannel.dispose();
+    telemetryOutputChannel = null;
   }
   ClangTidyManager.getInstance().dispose();
 }

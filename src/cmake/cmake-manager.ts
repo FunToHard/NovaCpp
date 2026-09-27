@@ -218,7 +218,8 @@ export class CMakeManager implements vscode.Disposable {
 
     if (entries.length > 0) {
       try {
-        fs.writeFileSync(targetFile, JSON.stringify(entries, null, 2), 'utf8');
+        await fs.promises.mkdir(path.dirname(targetFile), { recursive: true });
+        await fs.promises.writeFile(targetFile, JSON.stringify(entries, null, 2), 'utf8');
         console.log(`NovaCpp: Statically generated compilation database with ${entries.length} files from CMakeLists.txt`);
         return targetFile;
       } catch (err) {

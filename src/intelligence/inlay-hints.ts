@@ -8,22 +8,33 @@ export class InlayHintManager implements vscode.Disposable {
 
   constructor() {
     this.ensureInlayHintsConfigured();
+    this.disposables.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('novacpp.inlayHints')) {
+          this.ensureInlayHintsConfigured();
+        }
+      })
+    );
   }
 
   /**
-   * Validates and applies recommended settings for parameter name and type inlay hints.
+   * Evaluates the scoped NovaCpp inlay hint setting without mutating global editor configurations.
    */
   public async ensureInlayHintsConfigured(): Promise<void> {
-    const editorConfig = vscode.workspace.getConfiguration('editor.inlayHints');
-    const enabled = editorConfig.get<string>('enabled');
+    const novacppConfig = vscode.workspace.getConfiguration('novacpp.inlayHints');
+    const enabled = novacppConfig.get<boolean>('enabled', true);
 
-    if (!enabled || enabled === 'off') {
-      try {
-        await editorConfig.update('enabled', 'on', vscode.ConfigurationTarget.Global);
-      } catch {
-        // Silently ignore if permission restricted in test harnesses
-      }
+    if (!enabled) {
+      return;
     }
+    // Respect user configuration sovereignty: do not unconditionally mutate global editor.inlayHints.enabled
+  }
+
+  /**
+   * Returns whether NovaCpp inlay hints are enabled via scoped novacpp.inlayHints.enabled.
+   */
+  public isEnabled(): boolean {
+    return vscode.workspace.getConfiguration('novacpp.inlayHints').get<boolean>('enabled', true);
   }
 
   public dispose(): void {

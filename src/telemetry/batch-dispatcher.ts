@@ -84,6 +84,7 @@ export class BatchDispatcher implements vscode.Disposable {
       }));
 
       if (events.length === 0) {
+        await this.drainOfflineQueue();
         return true;
       }
 
@@ -97,6 +98,8 @@ export class BatchDispatcher implements vscode.Disposable {
       const success = await this.transmitPayload(payload);
       if (!success) {
         this.persistOfflineQueue(payload);
+      } else {
+        await this.drainOfflineQueue();
       }
 
       return success;
@@ -172,14 +175,58 @@ export class BatchDispatcher implements vscode.Disposable {
       existing.push(payload);
 
       // Enforce 500 KB ceiling with FIFO eviction
-      const serialized = JSON.stringify(existing);
-      if (Buffer.byteLength(serialized, 'utf8') > 500 * 1024) {
+      while (existing.length > 0 && Buffer.byteLength(JSON.stringify(existing), 'utf8') > 500 * 1024) {
         existing.shift();
       }
 
       fs.writeFileSync(this.queueFilePath, JSON.stringify(existing, null, 2), 'utf8');
     } catch (err) {
       console.warn('NovaCpp: Failed to persist offline telemetry queue:', err);
+    }
+  }
+
+  /**
+   * Drains and re-transmits queued offline telemetry records upon network recovery.
+   */
+  public async drainOfflineQueue(): Promise<number> {
+    if (!this.queueFilePath || !fs.existsSync(this.queueFilePath)) {
+      return 0;
+    }
+
+    try {
+      const content = fs.readFileSync(this.queueFilePath, 'utf8');
+      const existing: TelemetryPayload[] = JSON.parse(content);
+      if (!Array.isArray(existing) || existing.length === 0) {
+        return 0;
+      }
+
+      let drainedCount = 0;
+      while (existing.length > 0) {
+        const payload = existing[0];
+        const success = await this.transmitPayload(payload);
+        if (success) {
+          existing.shift();
+          drainedCount++;
+        } else {
+          // Stop draining if network is still unreachable
+          break;
+        }
+      }
+
+      if (existing.length === 0) {
+        try {
+          fs.unlinkSync(this.queueFilePath);
+        } catch {
+          fs.writeFileSync(this.queueFilePath, '[]', 'utf8');
+        }
+      } else {
+        fs.writeFileSync(this.queueFilePath, JSON.stringify(existing, null, 2), 'utf8');
+      }
+
+      return drainedCount;
+    } catch (err) {
+      console.warn('NovaCpp: Failed to drain offline telemetry queue:', err);
+      return 0;
     }
   }
 

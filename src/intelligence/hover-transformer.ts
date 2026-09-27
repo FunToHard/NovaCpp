@@ -422,48 +422,8 @@ export function parseSignature(code: string): ParsedFunctionSignature | null {
   };
 }
 
-/**
- * Parses Doxygen documentation comments into structured metadata.
- */
-export function parseDoxygen(text: string): {
-  brief: string;
-  params: Map<string, string>;
-  returns?: string;
-} {
-  const params = new Map<string, string>();
-  let brief = '';
-  let returns: string | undefined;
-
-  const lines = text.split('\n');
-  for (const rawLine of lines) {
-    const line = rawLine.replace(/^[/ *#]+/, '').trim();
-    if (!line) continue;
-
-    const paramMatch = line.match(/^@param(?:\s*\[[^\]]+\])?\s+([a-zA-Z0-9_]+)\s+(.+)/);
-    if (paramMatch) {
-      params.set(paramMatch[1], paramMatch[2].trim());
-      continue;
-    }
-
-    const returnMatch = line.match(/^@return\s+(.+)/);
-    if (returnMatch) {
-      returns = returnMatch[1].trim();
-      continue;
-    }
-
-    const briefMatch = line.match(/^@brief\s+(.+)/);
-    if (briefMatch) {
-      brief = briefMatch[1].trim();
-      continue;
-    }
-
-    if (!brief && !line.startsWith('@')) {
-      brief = line;
-    }
-  }
-
-  return { brief, params, returns };
-}
+export { parseDoxygen, DoxygenParsedDoc } from './doxygen-parser';
+import { parseDoxygen } from './doxygen-parser';
 
 /**
  * Transforms standard Clangd hovers into rich, rust-analyzer style developer cards.
@@ -716,6 +676,22 @@ export class HoverTransformer {
         md.appendMarkdown(`**Specifiers**: ${badgeList}\n\n`);
       }
 
+      if (doxygen.deprecated) {
+        md.appendMarkdown(`> **Deprecated**: ${doxygen.deprecated}\n\n`);
+      }
+
+      if (doxygen.warnings.length > 0) {
+        for (const w of doxygen.warnings) {
+          md.appendMarkdown(`> **Warning**: ${w}\n\n`);
+        }
+      }
+
+      if (doxygen.notes.length > 0) {
+        for (const n of doxygen.notes) {
+          md.appendMarkdown(`> **Note**: ${n}\n\n`);
+        }
+      }
+
       // Brief description
       if (doxygen.brief) {
         md.appendMarkdown(`${doxygen.brief}\n\n`);
@@ -748,6 +724,18 @@ export class HoverTransformer {
       // Returns section
       const retDoc = doxygen.returns ? ` - ${doxygen.returns}` : '';
       md.appendMarkdown(`**Returns**: \`${sig.returnType}\`${retDoc}\n\n`);
+
+      if (doxygen.throws.length > 0) {
+        md.appendMarkdown('#### Exceptions\n\n');
+        for (const th of doxygen.throws) {
+          md.appendMarkdown(`- ${th}\n`);
+        }
+        md.appendMarkdown('\n');
+      }
+
+      if (doxygen.see.length > 0) {
+        md.appendMarkdown(`**See Also**: ${doxygen.see.join(', ')}\n\n`);
+      }
 
       // Interactive Action Links
       md.appendMarkdown('---\n');

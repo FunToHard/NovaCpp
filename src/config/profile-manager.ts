@@ -21,53 +21,14 @@ export interface PropertiesConfigFile {
   version?: number;
 }
 
-/**
- * Parses Linux Kernel / Zephyr / RTOS Kconfig `.config` file into compiler defines (-D).
- */
-export function parseDotConfig(content: string): string[] {
-  const defines: string[] = [];
-  const lines = content.split(/\r?\n/);
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    const eqIdx = trimmed.indexOf('=');
-    if (eqIdx !== -1) {
-      const key = trimmed.substring(0, eqIdx).trim();
-      let val = trimmed.substring(eqIdx + 1).trim();
-
-      // Handle quoted string values with potential inline comments after closing quote
-      if (val.startsWith('"')) {
-        const closingQuoteIdx = val.indexOf('"', 1);
-        if (closingQuoteIdx !== -1) {
-          val = val.substring(0, closingQuoteIdx + 1);
-        }
-      } else {
-        // Strip inline comments (#, //, /* ... */)
-        val = val.replace(/\s*(?:#|\/\/|\/\*).*$/, '').trim();
-      }
-
-      // 'n' means disabled/undefined in Kconfig; defining -DCONFIG_FOO=n would evaluate to true!
-      if (val === 'n' || val === 'N') {
-        continue;
-      }
-
-      if (val === 'y' || val === 'Y' || val === 'm' || val === 'M') {
-        defines.push(`${key}=1`);
-      } else {
-        defines.push(`${key}=${val}`);
-      }
-    }
-  }
-
-  return defines;
-}
+export { parseDotConfig } from './kconfig-parser';
+import { parseDotConfig } from './kconfig-parser';
 
 export class ProfileManager implements vscode.Disposable {
   private activeProfile: CppProfile;
   private statusBarItem: vscode.StatusBarItem;
   private onReloadCallback?: () => Promise<void>;
+  private disposables: vscode.Disposable[] = [];
 
   constructor(
     private readonly detector: CompilerDetector,
@@ -82,10 +43,70 @@ export class ProfileManager implements vscode.Disposable {
 
     this.activeProfile = this.getDefaultProfile();
     this.updateStatusBar();
+    this.registerWatchers();
+  }
+
+  private registerWatchers(): void {
+    const configWatcher = vscode.workspace.createFileSystemWatcher('**/.config');
+    const propsWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/c_cpp_properties.json');
+
+    const handleExternalEdit = async () => {
+      await this.reloadProfiles();
+    };
+
+    this.disposables.push(
+      configWatcher,
+      propsWatcher,
+      configWatcher.onDidChange(handleExternalEdit),
+      configWatcher.onDidCreate(handleExternalEdit),
+      configWatcher.onDidDelete(handleExternalEdit),
+      propsWatcher.onDidChange(handleExternalEdit),
+      propsWatcher.onDidCreate(handleExternalEdit),
+      propsWatcher.onDidDelete(handleExternalEdit)
+    );
+  }
+
+  public async reloadProfiles(): Promise<void> {
+    const wsFolders = vscode.workspace.workspaceFolders;
+    const wsRoot = wsFolders?.[0]?.uri.fsPath;
+    const profiles = this.loadProfiles(wsRoot);
+
+    const matching = profiles.find((p) => p.name === this.activeProfile.name);
+    if (matching) {
+      this.activeProfile = matching;
+    } else if (profiles.length > 0) {
+      this.activeProfile = profiles[0];
+    } else {
+      this.activeProfile = this.getDefaultProfile();
+    }
+    this.updateStatusBar();
+
+    if (wsRoot) {
+      try {
+        const flagsPath = path.join(wsRoot, 'compile_flags.txt');
+        if (fs.existsSync(flagsPath)) {
+          const compiler = await this.detector.getPreferredCompiler();
+          if (compiler) {
+            const flags = this.synthesizeProfileFlags(this.activeProfile, wsRoot, compiler);
+            await fs.promises.writeFile(flagsPath, flags.join('\n') + '\n', 'utf8');
+          }
+        }
+      } catch (err) {
+        console.warn('NovaCpp: Could not update compile_flags.txt on profile reload:', err);
+      }
+    }
+
+    if (this.onReloadCallback) {
+      await this.onReloadCallback();
+    }
   }
 
   public dispose(): void {
     this.statusBarItem.dispose();
+    for (const d of this.disposables) {
+      d.dispose();
+    }
+    this.disposables = [];
   }
 
   public getActiveProfile(): CppProfile {

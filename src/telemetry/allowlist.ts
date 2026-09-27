@@ -43,12 +43,28 @@ export const KNOWN_STL_CONTAINERS = new Set([
   'any',
   'tuple',
   'pair',
-  'complex'
+  'complex',
+  'expected',
+  'function',
+  'byte',
+  'source_location',
+  'stop_token',
+  'mdspan'
 ]);
 
 export const KNOWN_STL_GLOBAL_FUNCTIONS = new Set([
   'make_unique',
   'make_shared',
+  'make_pair',
+  'make_tuple',
+  'get',
+  'tie',
+  'any_cast',
+  'visit',
+  'exchange',
+  'invoke',
+  'apply',
+  'bit_cast',
   'move',
   'forward',
   'format',
@@ -169,15 +185,53 @@ export const KNOWN_STL_CONTAINER_METHODS = new Set([
   'try_lock'
 ]);
 
+export function cleanSymbolSignature(symbol: string): string {
+  // Strip template parameters to avoid logging confidential or user class names
+  let cleaned = symbol.replace(/<.*>/g, '');
+  // Remove function call parentheses: push_back(...) -> push_back
+  cleaned = cleaned.replace(/\(.*\)/g, '');
+  // Remove trailing whitespace
+  return cleaned.trim();
+}
+
 /**
  * Validates whether a fully qualified symbol belongs exclusively to the C++ Standard Library.
+ * Rejects arbitrary user identifiers, custom namespace types, and unapproved member functions.
  */
 export function isAllowedStlSymbol(symbol: string): boolean {
   if (!symbol) return false;
-  const trimmed = symbol.trim();
+  const bare = cleanSymbolSignature(symbol);
+  if (!bare) return false;
 
-  // Must match at least one approved std:: prefix
-  return STL_NAMESPACE_PREFIXES.some((prefix) => trimmed.startsWith(prefix));
+  // Check known STL sub-namespaces (excluding bare 'std::')
+  for (const prefix of STL_NAMESPACE_PREFIXES) {
+    if (prefix !== 'std::' && bare.startsWith(prefix)) {
+      const suffix = bare.slice(prefix.length).trim();
+      return suffix.length > 0 && /^[a-zA-Z_]\w*(?:::_?[a-zA-Z_]\w*)*$/.test(suffix);
+    }
+  }
+
+  // Must start with 'std::'
+  if (!bare.startsWith('std::')) {
+    return false;
+  }
+
+  const remainder = bare.slice('std::'.length).trim();
+  if (!remainder) return false;
+
+  const parts = remainder.split('::');
+  if (parts.length === 1) {
+    // Top-level free function or container/type directly under std::
+    return KNOWN_STL_GLOBAL_FUNCTIONS.has(parts[0]) || KNOWN_STL_CONTAINERS.has(parts[0]);
+  } else if (parts.length === 2) {
+    // Container method: std::<container>::<method>
+    if (KNOWN_STL_CONTAINERS.has(parts[0])) {
+      return KNOWN_STL_CONTAINER_METHODS.has(parts[1]);
+    }
+    return false;
+  }
+
+  return false;
 }
 
 /**
@@ -194,10 +248,11 @@ export function extractStlSymbolKey(item: {
   if (!labelStr) return null;
 
   const trimmedLabel = labelStr.trim();
+  const cleanedLabel = cleanSymbolSignature(trimmedLabel);
 
   // 1. Direct fully qualified std:: symbols (e.g. "std::format", "std::ranges::sort")
-  if (isAllowedStlSymbol(trimmedLabel)) {
-    return cleanSymbolSignature(trimmedLabel);
+  if (isAllowedStlSymbol(cleanedLabel)) {
+    return cleanedLabel;
   }
 
   // 2. Qualified prefix without std:: explicitly in label (check detail)
@@ -221,15 +276,4 @@ export function extractStlSymbolKey(item: {
   }
 
   return null;
-}
-
-/**
- * Strips parentheses, template arguments, and whitespace from symbol name.
- */
-function cleanSymbolSignature(symbol: string): string {
-  // Remove function call parentheses: push_back(...) -> push_back
-  let cleaned = symbol.replace(/\(.*\)/g, '');
-  // Remove trailing whitespace
-  cleaned = cleaned.trim();
-  return cleaned;
 }

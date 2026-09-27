@@ -23,6 +23,7 @@ export interface CompilerInfo {
 
 export class CompilerDetector {
   private cachedCompilers: CompilerInfo[] | null = null;
+  private cachedMsBuildPath: string | null | undefined = undefined;
 
   /**
    * Detects all installed compilers across the system.
@@ -109,6 +110,13 @@ export class CompilerDetector {
     const sdkInfo = this.detectWindowsSDK();
 
     for (const inst of installations) {
+      if (!this.cachedMsBuildPath) {
+        const msbuildCand = path.join(inst.installationPath, 'MSBuild', 'Current', 'Bin', 'MSBuild.exe');
+        if (fs.existsSync(msbuildCand)) {
+          this.cachedMsBuildPath = msbuildCand;
+        }
+      }
+
       const msvcBase = path.join(inst.installationPath, 'VC', 'Tools', 'MSVC');
       if (!fs.existsSync(msvcBase)) continue;
 
@@ -346,9 +354,13 @@ export class CompilerDetector {
   }
 
   /**
-   * Locates MSBuild executable on the system using vswhere or standard installation directories.
+   * Asynchronously locates MSBuild executable on the system using vswhere or standard installation directories.
    */
-  public findMsBuild(): string | null {
+  public async findMsBuildAsync(): Promise<string | null> {
+    if (this.cachedMsBuildPath !== undefined) {
+      return this.cachedMsBuildPath;
+    }
+
     if (process.platform === 'win32') {
       const vswherePath = path.join(
         process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)',
@@ -359,17 +371,18 @@ export class CompilerDetector {
 
       if (fs.existsSync(vswherePath)) {
         try {
-          const stdout = cp.execFileSync(
+          const { stdout } = await execFileAsync(
             vswherePath,
             ['-latest', '-products', '*', '-find', 'MSBuild\\**\\Bin\\MSBuild.exe'],
             { encoding: 'utf8', timeout: 5000 }
           );
           const lines = stdout
             .trim()
-            .split('\n')
+            .split(/\r?\n/)
             .map((l) => l.trim())
             .filter((l) => l.length > 0);
           if (lines.length > 0 && fs.existsSync(lines[0])) {
+            this.cachedMsBuildPath = lines[0];
             return lines[0];
           }
         } catch {
@@ -390,6 +403,7 @@ export class CompilerDetector {
 
       for (const p of defaultMsBuildPaths) {
         if (fs.existsSync(p)) {
+          this.cachedMsBuildPath = p;
           return p;
         }
       }
@@ -397,17 +411,78 @@ export class CompilerDetector {
 
     try {
       const resolved = which.sync('msbuild');
-      if (resolved) return resolved;
+      if (resolved) {
+        this.cachedMsBuildPath = resolved;
+        return resolved;
+      }
     } catch {
       // Ignore
     }
 
     try {
       const dotnet = which.sync('dotnet');
-      if (dotnet) return dotnet;
+      if (dotnet) {
+        this.cachedMsBuildPath = dotnet;
+        return dotnet;
+      }
     } catch {
       // Ignore
     }
+
+    this.cachedMsBuildPath = null;
+    return null;
+  }
+
+  /**
+   * Locates MSBuild executable on the system using cached lookup or standard installation directories.
+   */
+  public findMsBuild(): string | null {
+    if (this.cachedMsBuildPath !== undefined) {
+      return this.cachedMsBuildPath;
+    }
+
+    if (process.platform === 'win32') {
+      const defaultMsBuildPaths = [
+        'C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\18\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe',
+        'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe'
+      ];
+
+      for (const p of defaultMsBuildPaths) {
+        if (fs.existsSync(p)) {
+          this.cachedMsBuildPath = p;
+          return p;
+        }
+      }
+    }
+
+    try {
+      const resolved = which.sync('msbuild');
+      if (resolved) {
+        this.cachedMsBuildPath = resolved;
+        return resolved;
+      }
+    } catch {
+      // Ignore
+    }
+
+    try {
+      const dotnet = which.sync('dotnet');
+      if (dotnet) {
+        this.cachedMsBuildPath = dotnet;
+        return dotnet;
+      }
+    } catch {
+      // Ignore
+    }
+
+    // Trigger async discovery in background to populate cache for future calls
+    this.findMsBuildAsync().catch(() => {});
 
     return null;
   }

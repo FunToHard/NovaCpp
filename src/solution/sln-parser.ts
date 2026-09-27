@@ -5,8 +5,23 @@ import {
   SolutionConfiguration,
   SolutionProjectEntry,
   VcxProjectModel,
-  ProjectCompileOptions
+  ProjectCompileOptions,
+  ProjectReferenceEntry
 } from './solution-models';
+
+/**
+ * Decodes standard XML entity references (&quot;, &apos;, &lt;, &gt;, &amp;).
+ * Entity &amp; is intentionally replaced last to avoid double-unescaping.
+ */
+export function decodeXmlEntities(s: string): string {
+  if (!s || !s.includes('&')) return s;
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
 
 /**
  * Normalizes Visual Studio LanguageStandard values (e.g. stdcpp20, stdcpplatest)
@@ -126,13 +141,13 @@ export function parseSlnx(content: string, filePath: string): SolutionModel {
   const configRegex = /<Configuration\s+Name="([^"]+)"/g;
   let cMatch: RegExpExecArray | null;
   while ((cMatch = configRegex.exec(cleanContent)) !== null) {
-    configNames.push(cMatch[1]);
+    configNames.push(decodeXmlEntities(cMatch[1].trim()));
   }
 
   const platformRegex = /<Platform\s+Name="([^"]+)"/g;
   let plMatch: RegExpExecArray | null;
   while ((plMatch = platformRegex.exec(cleanContent)) !== null) {
-    platformNames.push(plMatch[1]);
+    platformNames.push(decodeXmlEntities(plMatch[1].trim()));
   }
 
   if (configNames.length > 0 && platformNames.length > 0) {
@@ -151,7 +166,7 @@ export function parseSlnx(content: string, filePath: string): SolutionModel {
   const compositeRegex = /<Configuration\s+Solution="([^"]+)"/g;
   let compMatch: RegExpExecArray | null;
   while ((compMatch = compositeRegex.exec(cleanContent)) !== null) {
-    const key = compMatch[1];
+    const key = decodeXmlEntities(compMatch[1].trim());
     const parts = key.split('|');
     if (parts.length === 2 && !configurations.some((c) => c.key === key)) {
       configurations.push({
@@ -178,7 +193,7 @@ export function parseSlnx(content: string, filePath: string): SolutionModel {
     const pathMatch = attrs.match(/Path="([^"]+)"/);
     if (!pathMatch) continue;
 
-    let relPath = pathMatch[1].trim();
+    let relPath = decodeXmlEntities(pathMatch[1].trim());
     if (relPath.startsWith('"') && relPath.endsWith('"')) {
       relPath = relPath.slice(1, -1).trim();
     }
@@ -192,7 +207,7 @@ export function parseSlnx(content: string, filePath: string): SolutionModel {
         name,
         relativePath: relPath,
         fullPath,
-        guid: idMatch ? idMatch[1] : undefined
+        guid: idMatch ? decodeXmlEntities(idMatch[1].trim()) : undefined
       });
     }
   }
@@ -219,18 +234,18 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
 
   // Extract GUID
   const guidMatch = cleanContent.match(/<ProjectGuid>([^<]+)<\/ProjectGuid>/i);
-  const guid = guidMatch ? guidMatch[1].trim() : undefined;
+  const guid = guidMatch ? decodeXmlEntities(guidMatch[1].trim()) : undefined;
 
   // Extract ConfigurationType (Application, DynamicLibrary, StaticLibrary)
   const typeMatch = cleanContent.match(/<ConfigurationType>([^<]+)<\/ConfigurationType>/i);
-  const configurationType = typeMatch ? typeMatch[1].trim() : 'Application';
+  const configurationType = typeMatch ? decodeXmlEntities(typeMatch[1].trim()) : 'Application';
 
   // Extract TargetName and OutDir
   const targetNameMatch = cleanContent.match(/<TargetName>([^<]+)<\/TargetName>/i);
-  const targetName = targetNameMatch ? targetNameMatch[1].trim() : projectName;
+  const targetName = targetNameMatch ? decodeXmlEntities(targetNameMatch[1].trim()) : projectName;
 
   const outDirMatch = cleanContent.match(/<OutDir>([^<]+)<\/OutDir>/i);
-  const rawOutDir = outDirMatch ? outDirMatch[1].trim() : undefined;
+  const rawOutDir = outDirMatch ? decodeXmlEntities(outDirMatch[1].trim()) : undefined;
   const outDir = rawOutDir
     ? rawOutDir
         .replace(/\$\(ProjectDir\)/gi, projectDir + path.sep)
@@ -245,9 +260,9 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
   let pcMatch: RegExpExecArray | null;
   while ((pcMatch = projectConfigRegex.exec(cleanContent)) !== null) {
     configurations.push({
-      key: pcMatch[1].trim(),
-      configuration: pcMatch[2].trim(),
-      platform: pcMatch[3].trim()
+      key: decodeXmlEntities(pcMatch[1].trim()),
+      configuration: decodeXmlEntities(pcMatch[2].trim()),
+      platform: decodeXmlEntities(pcMatch[3].trim())
     });
   }
 
@@ -256,7 +271,7 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
   const clCompileRegex = /<ClCompile\s+Include="([^"]+)"/g;
   let clMatch: RegExpExecArray | null;
   while ((clMatch = clCompileRegex.exec(cleanContent)) !== null) {
-    let rawFile = clMatch[1].trim();
+    let rawFile = decodeXmlEntities(clMatch[1].trim());
     if (rawFile.startsWith('"') && rawFile.endsWith('"')) {
       rawFile = rawFile.slice(1, -1).trim();
     }
@@ -271,7 +286,7 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
   const clIncludeRegex = /<ClInclude\s+Include="([^"]+)"/g;
   let hMatch: RegExpExecArray | null;
   while ((hMatch = clIncludeRegex.exec(cleanContent)) !== null) {
-    let rawFile = hMatch[1].trim();
+    let rawFile = decodeXmlEntities(hMatch[1].trim());
     if (rawFile.startsWith('"') && rawFile.endsWith('"')) {
       rawFile = rawFile.slice(1, -1).trim();
     }
@@ -279,6 +294,27 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
     if (!headerFiles.includes(fullPath)) {
       headerFiles.push(fullPath);
     }
+  }
+
+  // Extract ProjectReferences
+  const projectReferences: ProjectReferenceEntry[] = [];
+  const projRefRegex = /<ProjectReference\s+Include=["']([^"']+)["'](?:\s*\/>|>([\s\S]*?)<\/ProjectReference>)/gi;
+  let prMatch: RegExpExecArray | null;
+  while ((prMatch = projRefRegex.exec(cleanContent)) !== null) {
+    let rawRef = decodeXmlEntities(prMatch[1].trim());
+    if (rawRef.startsWith('"') && rawRef.endsWith('"')) {
+      rawRef = rawRef.slice(1, -1).trim();
+    }
+    const fullPath = path.resolve(projectDir, rawRef.replace(/\\/g, '/'));
+    const innerContent = prMatch[2] || '';
+    const refGuidMatch = innerContent.match(/<Project>([^<]+)<\/Project>/i);
+    const refGuid = refGuidMatch ? decodeXmlEntities(refGuidMatch[1].trim()) : undefined;
+
+    projectReferences.push({
+      relativePath: rawRef.replace(/\\/g, '/'),
+      fullPath: fullPath.replace(/\\/g, '/'),
+      projectGuid: refGuid
+    });
   }
 
   // Parse ItemDefinitionGroup blocks
@@ -304,13 +340,14 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
 
     // LanguageStandard
     const stdMatch = clBody.match(/<LanguageStandard>([^<]+)<\/LanguageStandard>/i);
-    const standard = normalizeLanguageStandard(stdMatch ? stdMatch[1] : undefined);
+    const standard = normalizeLanguageStandard(stdMatch ? decodeXmlEntities(stdMatch[1]) : undefined);
 
     // AdditionalIncludeDirectories
     const incMatch = clBody.match(/<AdditionalIncludeDirectories>([^<]+)<\/AdditionalIncludeDirectories>/i);
     const includeDirectories: string[] = [];
     if (incMatch) {
-      const rawIncs = incMatch[1].split(';');
+      const decodedIncs = decodeXmlEntities(incMatch[1]);
+      const rawIncs = decodedIncs.split(';');
       for (const inc of rawIncs) {
         let trimmed = inc.trim();
         if (!trimmed || trimmed.includes('%(AdditionalIncludeDirectories)')) continue;
@@ -335,7 +372,8 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
     const defMatch = clBody.match(/<PreprocessorDefinitions>([^<]+)<\/PreprocessorDefinitions>/i);
     const preprocessorDefinitions: string[] = [];
     if (defMatch) {
-      const rawDefs = defMatch[1].split(';');
+      const decodedDefs = decodeXmlEntities(defMatch[1]);
+      const rawDefs = decodedDefs.split(';');
       for (const def of rawDefs) {
         const trimmed = def.trim();
         if (!trimmed || trimmed.includes('%(PreprocessorDefinitions)')) continue;
@@ -347,7 +385,8 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
     const optMatch = clBody.match(/<AdditionalOptions>([^<]+)<\/AdditionalOptions>/i);
     const additionalOptions: string[] = [];
     if (optMatch) {
-      const rawOpts = optMatch[1].trim().split(/\s+/);
+      const decodedOpts = decodeXmlEntities(optMatch[1]);
+      const rawOpts = decodedOpts.trim().split(/\s+/);
       for (const opt of rawOpts) {
         if (!opt || opt.includes('%(AdditionalOptions)')) continue;
         additionalOptions.push(opt);
@@ -364,7 +403,8 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
 
     if (condition) {
       // Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"
-      const condMatch = condition.match(/==\s*'([^']+)'/);
+      const decodedCond = decodeXmlEntities(condition);
+      const condMatch = decodedCond.match(/==\s*'([^']+)'/);
       if (condMatch) {
         const configKey = condMatch[1].trim();
         // Merge with defaultCompileOptions
@@ -425,7 +465,8 @@ export function parseVcxproj(content: string, filePath: string, solutionDir?: st
     sourceFiles,
     headerFiles,
     targetName,
-    outDir
+    outDir,
+    projectReferences
   };
 }
 
@@ -480,3 +521,89 @@ export async function loadVcxProject(filePath: string, solutionDir?: string): Pr
     return null;
   }
 }
+
+/**
+ * Resolves transitive project references (DAG) for a project among all available projects.
+ * Returns referenced projects in dependency order without cycles.
+ */
+export function resolveProjectReferenceDAG(
+  project: VcxProjectModel,
+  allProjects: VcxProjectModel[]
+): VcxProjectModel[] {
+  const mapByPath = new Map<string, VcxProjectModel>();
+  const mapByGuid = new Map<string, VcxProjectModel>();
+
+  for (const p of allProjects) {
+    mapByPath.set(p.filePath.replace(/\\/g, '/').toLowerCase(), p);
+    if (p.guid) {
+      mapByGuid.set(p.guid.toLowerCase(), p);
+    }
+  }
+
+  const result: VcxProjectModel[] = [];
+  const visited = new Set<string>();
+
+  function traverse(current: VcxProjectModel) {
+    if (!current.projectReferences) return;
+    for (const ref of current.projectReferences) {
+      const refPathNorm = ref.fullPath.replace(/\\/g, '/').toLowerCase();
+      let targetProj = mapByPath.get(refPathNorm);
+      if (!targetProj && ref.projectGuid) {
+        targetProj = mapByGuid.get(ref.projectGuid.toLowerCase());
+      }
+      if (targetProj) {
+        const targetPathNorm = targetProj.filePath.replace(/\\/g, '/').toLowerCase();
+        if (!visited.has(targetPathNorm)) {
+          visited.add(targetPathNorm);
+          traverse(targetProj);
+          result.push(targetProj);
+        }
+      }
+    }
+  }
+
+  traverse(project);
+  return result;
+}
+
+/**
+ * Propagates include directories from referenced projects across the project DAG into each project's compile options.
+ */
+export function propagateProjectReferences(
+  projects: VcxProjectModel[],
+  targetConfig?: string
+): void {
+  for (const project of projects) {
+    const refProjects = resolveProjectReferenceDAG(project, projects);
+    if (refProjects.length === 0) continue;
+
+    const extraIncs: string[] = [];
+    for (const ref of refProjects) {
+      const refDir = path.dirname(ref.filePath).replace(/\\/g, '/');
+      extraIncs.push(refDir);
+      const refOpts = targetConfig
+        ? ref.compileOptionsByConfig.get(targetConfig) || ref.defaultCompileOptions
+        : ref.defaultCompileOptions;
+      for (const inc of refOpts.includeDirectories) {
+        extraIncs.push(inc.replace(/\\/g, '/'));
+      }
+    }
+
+    // Merge into defaultCompileOptions
+    for (const inc of extraIncs) {
+      if (!project.defaultCompileOptions.includeDirectories.includes(inc)) {
+        project.defaultCompileOptions.includeDirectories.push(inc);
+      }
+    }
+
+    // Merge into compileOptionsByConfig
+    for (const [, opts] of project.compileOptionsByConfig.entries()) {
+      for (const inc of extraIncs) {
+        if (!opts.includeDirectories.includes(inc)) {
+          opts.includeDirectories.push(inc);
+        }
+      }
+    }
+  }
+}
+

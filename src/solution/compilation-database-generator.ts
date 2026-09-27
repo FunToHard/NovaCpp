@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { SolutionModel, VcxProjectModel, CompileCommandEntry } from './solution-models';
 import { CompilerInfo } from '../prober/compiler-detector';
 import { ExternalSdkDetector } from '../prober/external-sdk-detector';
+import { resolveProjectReferenceDAG } from './sln-parser';
 
 export class CompilationDatabaseGenerator {
   /**
@@ -33,11 +34,24 @@ export class CompilationDatabaseGenerator {
 
       const standard = projectOpts.languageStandard || 'c++20';
 
-      // Assemble all includes: project directory + project additional includes + system includes + external SDKs
+      // Propagate include directories from referenced project DAG
+      const refProjects = resolveProjectReferenceDAG(project, projects);
+      const referencedIncludes: string[] = [];
+      for (const ref of refProjects) {
+        referencedIncludes.push(path.dirname(ref.filePath).replace(/\\/g, '/'));
+        const refOpts =
+          ref.compileOptionsByConfig.get(targetConfig) || ref.defaultCompileOptions;
+        for (const inc of refOpts.includeDirectories) {
+          referencedIncludes.push(inc.replace(/\\/g, '/'));
+        }
+      }
+
+      // Assemble all includes: project directory + project additional includes + referenced project includes + system includes + external SDKs
       const allIncludes = Array.from(
         new Set([
           projectDir,
           ...projectOpts.includeDirectories.map((d) => d.replace(/\\/g, '/')),
+          ...referencedIncludes,
           ...systemIncludes.map((s) => s.replace(/\\/g, '/')),
           ...externalSdkIncludes
         ])
@@ -139,11 +153,7 @@ export class CompilationDatabaseGenerator {
     targetFilePath: string,
     entries: CompileCommandEntry[]
   ): Promise<string> {
-    const dir = path.dirname(targetFilePath);
-    if (!fs.existsSync(dir)) {
-      await fs.promises.mkdir(dir, { recursive: true });
-    }
-
+    await fs.promises.mkdir(path.dirname(targetFilePath), { recursive: true });
     const content = JSON.stringify(entries, null, 2) + '\n';
     await fs.promises.writeFile(targetFilePath, content, 'utf8');
     return targetFilePath;

@@ -209,6 +209,14 @@ export class RunController implements vscode.Disposable {
         try {
           const isWindows = process.platform === 'win32';
 
+          if (fs.existsSync(outputBinary)) {
+            try {
+              fs.unlinkSync(outputBinary);
+            } catch {
+              // Ignore failure to delete existing binary
+            }
+          }
+
           if (compiler.type === 'msvc') {
             const devShellScript = isWindows ? findLaunchVsDevShell(compiler) : null;
             if (devShellScript) {
@@ -223,7 +231,7 @@ export class RunController implements vscode.Disposable {
                 '-ExecutionPolicy',
                 'Bypass',
                 '-Command',
-                `& '${devShellEsc}' -Arch ${arch} -HostArch ${arch} -SkipAutomaticLocation -NoLogo ; ${clCmd}`
+                `& '${devShellEsc}' -Arch ${arch} -HostArch ${arch} -SkipAutomaticLocation -NoLogo ; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } ; ${clCmd} ; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`
               ];
 
               await execFileAsync('powershell.exe', psArgs, {
@@ -244,9 +252,13 @@ export class RunController implements vscode.Disposable {
               cwd: path.dirname(sourceFile)
             });
           }
+
+          if (!fs.existsSync(outputBinary)) {
+            throw new Error(`Output binary was not generated: ${outputBinary}`);
+          }
         } catch (err: any) {
           vscode.window.showErrorMessage(
-            `NovaCpp: Compilation failed: ${err.stderr || err.message || err}`
+            `NovaCpp: Compilation failed: ${err.stderr || err.stdout || err.message || err}`
           );
           return false;
         }

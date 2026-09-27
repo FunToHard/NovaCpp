@@ -15,8 +15,16 @@ export class InactiveRegionsManager implements vscode.Disposable {
           this.applyDecorations(editor);
         }
       }),
+      vscode.workspace.onDidOpenTextDocument((doc) => {
+        const uriStr = this.normalizeUri(doc.uri.toString());
+        for (const editor of vscode.window.visibleTextEditors) {
+          if (this.normalizeUri(editor.document.uri.toString()) === uriStr) {
+            this.applyDecorations(editor);
+          }
+        }
+      }),
       vscode.workspace.onDidCloseTextDocument((doc) => {
-        this.inactiveRegionsMap.delete(doc.uri.toString());
+        this.inactiveRegionsMap.delete(this.normalizeUri(doc.uri.toString()));
       }),
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (

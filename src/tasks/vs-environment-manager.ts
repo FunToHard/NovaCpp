@@ -87,7 +87,8 @@ export class VsEnvironmentManager {
 
     const { stdout } = await execFileAsync(comSpec, ['/c', cmd], {
       windowsHide: true,
-      maxBuffer: 10 * 1024 * 1024
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 15000
     });
 
     const envMap: Record<string, string> = {};
@@ -101,6 +102,24 @@ export class VsEnvironmentManager {
         if (key && value) {
           envMap[key] = value;
         }
+      }
+    }
+
+    // Deduplicate PATH entries in the extracted environment
+    for (const key of Object.keys(envMap)) {
+      if (key.toUpperCase() === 'PATH') {
+        const seen = new Set<string>();
+        const uniquePaths: string[] = [];
+        for (const part of envMap[key].split(';')) {
+          const trimmed = part.trim();
+          if (!trimmed) continue;
+          const norm = path.normalize(trimmed).toLowerCase();
+          if (!seen.has(norm)) {
+            seen.add(norm);
+            uniquePaths.push(trimmed);
+          }
+        }
+        envMap[key] = uniquePaths.join(';');
       }
     }
 
@@ -230,11 +249,21 @@ export class VsEnvironmentManager {
           .filter((p) => p.trim().length > 0)
           .map((p) => path.normalize(p.trim()).toLowerCase())
       );
-      const newEntries = vcvarsEntries.filter(
-        (p) => !existingEntries.has(path.normalize(p.trim()).toLowerCase())
-      );
-      const pathToAdd = newEntries.length > 0 ? newEntries.join(';') : env[pathKey];
-      col.prepend('PATH', pathToAdd + ';');
+      const seen = new Set<string>();
+      const newEntries: string[] = [];
+      for (const p of vcvarsEntries) {
+        const trimmed = p.trim();
+        if (!trimmed) continue;
+        const norm = path.normalize(trimmed).toLowerCase();
+        if (!existingEntries.has(norm) && !seen.has(norm)) {
+          seen.add(norm);
+          newEntries.push(trimmed);
+        }
+      }
+      const pathToAdd = newEntries.length > 0 ? newEntries.join(';') : '';
+      if (pathToAdd) {
+        col.prepend('PATH', pathToAdd + ';');
+      }
     }
   }
 

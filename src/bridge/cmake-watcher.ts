@@ -1,6 +1,17 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 import { debounce } from '../substrate/protocol-filter';
+
+/**
+ * Writes CMake compilation database to disk, creating any missing parent directories recursively.
+ */
+export async function writeCompilationDatabase(filePath: string, content: string | object): Promise<string> {
+  await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+  const text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+  await fs.promises.writeFile(filePath, text, 'utf8');
+  return filePath;
+}
 
 export class CMakeWatcher implements vscode.Disposable {
   private watcher: vscode.FileSystemWatcher | null = null;

@@ -840,14 +840,19 @@ export function parseTypedefCodeBlock(
   }
 
   // 2. Match function pointer typedef: `typedef ReturnType (*Alias)(Args...);`
-  const fnPtrMatch = clean.match(/\btypedef\s+([^;*()]+)\s*\(\s*\*([A-Za-z0-9_]+)\s*\)\s*\(([^)]*)\);?/);
+  // Supports pointer return types (e.g. void* (*Fn)()) and Win32 calling conventions (CALLBACK, WINAPI, __stdcall, __cdecl)
+  const fnPtrMatch = clean.match(
+    /\btypedef\s+([^;()]+?)\s*(?:\b(CALLBACK|WINAPI|APIENTRY|__stdcall|__cdecl|__fastcall)\s+)?\(\s*(?:(CALLBACK|WINAPI|APIENTRY|__stdcall|__cdecl|__fastcall)\s+)?\*([A-Za-z0-9_]+)\s*\)\s*\(([^)]*)\);?/
+  );
   if (fnPtrMatch) {
     const retType = fnPtrMatch[1].trim();
-    const name = fnPtrMatch[2].trim();
-    const args = fnPtrMatch[3].trim();
+    const conv = (fnPtrMatch[2] || fnPtrMatch[3] || '').trim();
+    const name = fnPtrMatch[4].trim();
+    const args = fnPtrMatch[5].trim();
+    const convPrefix = conv ? `${conv} ` : '';
     return {
       name,
-      underlyingType: `${retType} (*)(${args})`,
+      underlyingType: `${retType} (${convPrefix}*)(${args})`,
       isTypedef: true
     };
   }

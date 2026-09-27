@@ -32,6 +32,12 @@ export interface ProjectCompileOptions {
   configurationType?: 'Application' | 'DynamicLibrary' | 'StaticLibrary' | 'Utility';
 }
 
+export interface ProjectReferenceEntry {
+  relativePath: string;
+  fullPath: string;
+  projectGuid?: string;
+}
+
 export interface VcxProjectModel {
   filePath: string;
   name: string;
@@ -44,6 +50,7 @@ export interface VcxProjectModel {
   headerFiles: string[]; // Absolute paths
   targetName?: string;
   outDir?: string;
+  projectReferences?: ProjectReferenceEntry[];
 }
 
 export interface CompileCommandEntry {

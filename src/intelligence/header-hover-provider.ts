@@ -726,7 +726,7 @@ export function parseIncludeLine(
   const startCol = lineText.indexOf('#');
   const endCol = lineText.indexOf(headerText) + headerText.length;
 
-  if (character !== undefined && (character < startCol || character > lineText.length)) {
+  if (character !== undefined && (character < startCol || character > endCol)) {
     return null;
   }
 
@@ -828,13 +828,42 @@ export function resolveLocalHeaderPath(
   return undefined;
 }
 
+interface HeaderCacheEntry {
+  mtimeMs: number;
+  symbols: LocalHeaderSymbol[];
+}
+
+const headerContentCache = new Map<string, HeaderCacheEntry>();
+const MAX_HEADER_CACHE_SIZE = 250;
+
+function getCachedSymbols(filePath: string, mtimeMs: number): LocalHeaderSymbol[] | null {
+  const cached = headerContentCache.get(filePath);
+  if (cached && cached.mtimeMs === mtimeMs) {
+    return cached.symbols;
+  }
+  return null;
+}
+
+function setCachedSymbols(filePath: string, mtimeMs: number, symbols: LocalHeaderSymbol[]): void {
+  if (headerContentCache.size >= MAX_HEADER_CACHE_SIZE) {
+    const firstKey = headerContentCache.keys().next().value;
+    if (firstKey !== undefined) {
+      headerContentCache.delete(firstKey);
+    }
+  }
+  headerContentCache.set(filePath, { mtimeMs, symbols });
+}
+
+export function clearHeaderHoverCache(): void {
+  headerContentCache.clear();
+}
+
 /**
- * Statically parses a C++ local header file to extract declared classes, structs, concepts, and functions.
+ * Statically parses C++ header source text to extract declared classes, structs, concepts, and functions.
  */
-export function parseLocalHeaderFile(filePath: string): LocalHeaderSymbol[] {
+export function parseHeaderContent(content: string): LocalHeaderSymbol[] {
   const symbols: LocalHeaderSymbol[] = [];
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
     // Limit parsing to 500KB to maintain sub-millisecond response
     const truncated = content.length > 500000 ? content.slice(0, 500000) : content;
 
@@ -902,10 +931,10 @@ export function parseLocalHeaderFile(filePath: string): LocalHeaderSymbol[] {
 
       // 4. Free or exported functions
       const funcMatch = line.match(
-        /^(?:inline\s+|static\s+|constexpr\s+|consteval\s+|virtual\s+|explicit\s+)*(?:(?:const\s+)?[a-zA-Z0-9_:*&<>]+\s+)+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*(?:const|noexcept|override|final|\s)*;/
+        /^(?:inline\s+|static\s+|constexpr\s+|consteval\s+|virtual\s+|explicit\s+)*([a-zA-Z0-9_:*&<>\s]+?)\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*(?:const|noexcept|override|final|\s)*;/
       );
-      if (funcMatch && funcMatch[1]) {
-        const name = funcMatch[1];
+      if (funcMatch && funcMatch[2]) {
+        const name = funcMatch[2];
         const reserved = new Set([
           'if',
           'while',
@@ -933,6 +962,45 @@ export function parseLocalHeaderFile(filePath: string): LocalHeaderSymbol[] {
   }
 
   return symbols;
+}
+
+/**
+ * Statically parses a C++ local header file to extract declared classes, structs, concepts, and functions.
+ * Uses mtime caching to avoid repeated disk reads.
+ */
+export function parseLocalHeaderFile(filePath: string): LocalHeaderSymbol[] {
+  try {
+    const stat = fs.statSync(filePath);
+    const cached = getCachedSymbols(filePath, stat.mtimeMs);
+    if (cached) {
+      return cached;
+    }
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const symbols = parseHeaderContent(content);
+    setCachedSymbols(filePath, stat.mtimeMs, symbols);
+    return symbols;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Asynchronously parses a C++ local header file with mtime caching, avoiding main thread blocking.
+ */
+export async function parseLocalHeaderFileAsync(filePath: string): Promise<LocalHeaderSymbol[]> {
+  try {
+    const stat = await fs.promises.stat(filePath);
+    const cached = getCachedSymbols(filePath, stat.mtimeMs);
+    if (cached) {
+      return cached;
+    }
+    const content = await fs.promises.readFile(filePath, 'utf-8');
+    const symbols = parseHeaderContent(content);
+    setCachedSymbols(filePath, stat.mtimeMs, symbols);
+    return symbols;
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -1195,7 +1263,7 @@ export class HeaderHoverProvider {
 
     // Local / project header
     const resolved = resolveLocalHeaderPath(includeInfo.headerName, document.uri, resolvedPath);
-    const symbols = resolved ? parseLocalHeaderFile(resolved) : [];
+    const symbols = resolved ? await parseLocalHeaderFileAsync(resolved) : [];
 
     return formatLocalHeaderHover(
       includeInfo.headerName,
