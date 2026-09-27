@@ -67,28 +67,14 @@ The project enforces the strictest TypeScript compiler options in [`tsconfig.jso
 
 Adhere strictly to these constraints when modifying the codebase:
 
-### Static CMake and Build Analysis
-- **Never invoke external `cmake` CLI commands**.
-- Do not spawn child processes or terminals running `cmake` or MSBuild.
-- Extract include paths and preprocessor definitions statically via [`src/cmake/cmake-parser.ts`](src/cmake/cmake-parser.ts).
-
-### Configuration File Generation
-- **Never auto-generate `compile_flags.txt` on startup or profile change**.
-- Only generate `compile_flags.txt` when explicitly invoked via the Command Palette (`novacpp.generateCompileFlags`).
-- Projects lacking a compilation database must use in-memory language server fallback flags.
-
-### Clangd Configuration Safety
-- Do not overwrite existing `.clangd` configuration files destructively.
-- Append new compiler flags or include paths cleanly under `CompileFlags.Add`.
-- Preserve existing comments and sections in `.clangd`.
-
 ### External SDK Discovery
 - Do not inject external SDK flags into projects that do not use them.
 - Verify workspace usage via `ExternalSdkDetector.isSdkUsedInWorkspace` before adding SDK include directories.
 
 ### Confidentiality and Git Hygiene
-- Never stage or commit local handover or context files (e.g., `context.md`, `context*.md`).
 - Ensure all created test files and temporary artifacts clean up after execution.
+- use `git status` and `git diff` commands to verify your changes.
+- If user asks for staging write clean commit messages that describe the changes.
 
 ### Playground Directory Isolation
 - **Never traverse, list, or search the `playground/` directory**:
