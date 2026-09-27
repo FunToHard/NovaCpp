@@ -11,7 +11,8 @@ const buildOptions = {
   outfile: "dist/extension.js",
   external: ["vscode", "@aws-sdk/client-s3"],
   alias: {
-    punycode: require.resolve("punycode/")
+    punycode: require.resolve("punycode/"),
+    "readable-stream": "stream"
   },
   format: "cjs",
   platform: "node",

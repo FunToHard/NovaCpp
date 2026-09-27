@@ -47,7 +47,7 @@ export const InactiveRegionsNotification = new NotificationType<InactiveRegionsP
 export class DaemonManager implements vscode.Disposable {
   private client: LanguageClient | null = null;
   private statusBarItem: vscode.StatusBarItem;
-  private outputChannel: vscode.OutputChannel;
+  private outputChannel: vscode.LogOutputChannel;
   private eventDebouncer: EditorEventDebouncer;
   private disposables: vscode.Disposable[] = [];
   private clientDisposables: vscode.Disposable[] = [];
@@ -76,7 +76,7 @@ export class DaemonManager implements vscode.Disposable {
     private readonly installer: ClangdInstaller,
     private readonly rankingTable: StlRankingTable = new StlRankingTable()
   ) {
-    this.outputChannel = vscode.window.createOutputChannel('NovaCpp Language Server');
+    this.outputChannel = vscode.window.createOutputChannel('NovaCpp Language Server', { log: true });
     this.eventDebouncer = new EditorEventDebouncer();
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Right,

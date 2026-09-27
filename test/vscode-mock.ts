@@ -509,13 +509,21 @@ export const mockVscode: any = {
       hide: () => {},
       dispose: () => {}
     }),
-    createOutputChannel: (name: string) => ({
+    createOutputChannel: (name: string, _options?: any) => ({
       name,
       appendLine: () => {},
       append: () => {},
       clear: () => {},
       show: () => {},
-      dispose: () => {}
+      dispose: () => {},
+      replace: () => {},
+      logLevel: 1,
+      onDidChangeLogLevel: () => ({ dispose: () => {} }),
+      trace: () => {},
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {}
     }),
     showInformationMessage: async () => undefined,
     showErrorMessage: async () => undefined,
