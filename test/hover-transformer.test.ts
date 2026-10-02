@@ -239,5 +239,70 @@ make_unique<geometry::Cube, <double>, 0>(double &&_Args)`;
       assert.ok(content.includes('std::vector<int> numbers = {1, 2, 3, 4};'));
       assert.ok(content.includes('**See Also**:'));
     });
+
+    it('should format user struct definition with memory layout, size, alignment, and field table', () => {
+      const rawCode = `\`\`\`cpp\n// In namespace ide\nstruct GridLength {\n    GridUnitType unit = GridUnitType::Auto;\n    double value = 0.0;\n};\n\`\`\``;
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
+      const transformed = HoverTransformer.transform(inputHover, undefined, 'GridLength');
+
+      assert.ok(transformed);
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      assert.ok(content.includes('### `struct GridLength` *(in namespace `ide`)*'));
+      assert.ok(content.includes('**Size**: `16 bytes`'));
+      assert.ok(content.includes('**Alignment**: `8 bytes`'));
+      assert.ok(content.includes('**Padding**: `4 bytes`'));
+      assert.ok(content.includes('| Offset | Size | Field | Type |'));
+      assert.ok(content.includes('**`unit`**'));
+      assert.ok(content.includes('**`value`**'));
+      assert.ok(content.includes('[Inspect Memory Layout](command:c-cpp-pro.inspectMemoryLayout)'));
+      assert.ok(content.includes('[Find References](command:editor.action.findReferences)'));
+      assert.ok(content.includes('[Switch Header/Source](command:c-cpp-pro.switchSourceHeader)'));
+    });
+
+    it('should cleanly format empty struct declaration without broken namespace comment in heading', () => {
+      const rawCode = `\`\`\`cpp\n// In namespace ide\nstruct GridLength {}\n\`\`\``;
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
+      const transformed = HoverTransformer.transform(inputHover, undefined, 'GridLength');
+
+      assert.ok(transformed);
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      assert.ok(content.includes('### `struct GridLength` *(in namespace `ide`)*'));
+      assert.ok(!content.includes('### `// In namespace'));
+      assert.ok(content.includes('[Inspect Memory Layout](command:c-cpp-pro.inspectMemoryLayout)'));
+    });
+
+    it('should resolve struct layout asynchronously when hovering over struct in document', async () => {
+      const docText = `
+namespace ide {
+struct GridLength {
+    GridUnitType unit = GridUnitType::Auto;
+    double value = 0.0;
+};
+}
+`;
+      const doc = {
+        uri: vscode.Uri.file('/fake/GridLength.h'),
+        getText: () => docText,
+        offsetAt: () => docText.indexOf('GridLength')
+      } as any;
+
+      const rawCode = `\`\`\`cpp\n// In namespace ide\nstruct GridLength {}\n\`\`\``;
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
+      const transformed = await HoverTransformer.transformAsync(
+        inputHover,
+        'GridLength',
+        doc,
+        new vscode.Position(2, 7)
+      );
+
+      assert.ok(transformed);
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      assert.ok(content.includes('### `struct GridLength` *(in namespace `ide`)*'));
+      assert.ok(content.includes('**Size**: `16 bytes`'));
+      assert.ok(content.includes('**Alignment**: `8 bytes`'));
+      assert.ok(content.includes('**Padding**: `4 bytes`'));
+      assert.ok(content.includes('**`unit`**'));
+      assert.ok(content.includes('**`value`**'));
+    });
   });
 });

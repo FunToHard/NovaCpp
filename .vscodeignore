@@ -27,3 +27,8 @@ temp/**
 Cargo.lock
 Cargo.toml
 wiki/**
+.github/**
+.gitignore
+AGENTS.md
+c-cpp-pro.wsb
+scripts/**

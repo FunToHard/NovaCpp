@@ -92,15 +92,15 @@ pub fn resolve_type_info(type_str: &str, data_model: &str) -> TypeInfo {
     let is_llp64 = data_model.eq_ignore_ascii_case("LLP64");
 
     match trimmed {
-        "bool" | "char" | "signed char" | "unsigned char" | "int8_t" | "uint8_t" => TypeInfo {
+        "bool" | "char" | "signed char" | "unsigned char" | "int8_t" | "uint8_t" | "BYTE" | "char8_t" => TypeInfo {
             size: 1,
             alignment: 1,
         },
-        "short" | "unsigned short" | "int16_t" | "uint16_t" => TypeInfo {
+        "short" | "unsigned short" | "int16_t" | "uint16_t" | "WORD" | "char16_t" | "wchar_t" => TypeInfo {
             size: 2,
             alignment: 2,
         },
-        "int" | "unsigned int" | "unsigned" | "int32_t" | "uint32_t" | "float" => TypeInfo {
+        "int" | "unsigned int" | "unsigned" | "int32_t" | "uint32_t" | "float" | "DWORD" | "BOOL" | "char32_t" => TypeInfo {
             size: 4,
             alignment: 4,
         },
@@ -131,14 +131,35 @@ pub fn resolve_type_info(type_str: &str, data_model: &str) -> TypeInfo {
             }
         }
         "long long" | "unsigned long long" | "int64_t" | "uint64_t" | "double" | "size_t"
-        | "uintptr_t" | "intptr_t" | "ptrdiff_t" => TypeInfo {
+        | "uintptr_t" | "intptr_t" | "ptrdiff_t" | "HANDLE" | "HWND" | "HDC" | "HINSTANCE" => TypeInfo {
             size: 8,
             alignment: 8,
         },
-        _ => TypeInfo {
-            size: 8,
-            alignment: 8,
-        },
+        other => {
+            if other.starts_with("enum ")
+                || other.ends_with("Type")
+                || other.ends_with("Kind")
+                || other.ends_with("Mode")
+                || other.ends_with("State")
+                || other.ends_with("Status")
+                || other.ends_with("Action")
+                || other.ends_with("Op")
+                || other.ends_with("Code")
+                || other.ends_with("Flag")
+                || other.ends_with("Flags")
+                || other.ends_with("Enum")
+            {
+                TypeInfo {
+                    size: 4,
+                    alignment: 4,
+                }
+            } else {
+                TypeInfo {
+                    size: 8,
+                    alignment: 8,
+                }
+            }
+        }
     }
 }
 

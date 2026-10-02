@@ -1,6 +1,14 @@
 import * as vscode from 'vscode';
 import { findStlDocumentation, findStlDocumentationAsync, StlDocEntry } from './stl-knowledge-base';
 import { TypedefProvider } from './typedef-provider';
+import {
+  extractStructAtPosition,
+  findStructByName,
+  calculateStructLayout,
+  StructLayout,
+  DataModel
+} from '../inspector/memory-layout-inspector';
+import { NativeBridge } from '../native/native-bridge';
 
 export interface ParameterInfo {
   name: string;
@@ -456,7 +464,8 @@ export class HoverTransformer {
   public static transform(
     hover: vscode.Hover,
     stlDocOverride?: StlDocEntry,
-    hoveredWord?: string
+    hoveredWord?: string,
+    structLayout?: StructLayout | null
   ): vscode.Hover {
     if (!hover || !hover.contents || hover.contents.length === 0) {
       return hover;
@@ -537,16 +546,78 @@ export class HoverTransformer {
       const isStructOrClass =
         codeBlock.includes('class ') || codeBlock.includes('struct ') || codeBlock.includes('union ');
       if (isStructOrClass) {
+        let layout = structLayout;
+        if (!layout && codeBlock.includes('{') && codeBlock.includes('}')) {
+          const openIdx = codeBlock.indexOf('{');
+          const parsed =
+            extractStructAtPosition(codeBlock, openIdx) ??
+            (hoveredWord ? findStructByName(codeBlock, hoveredWord) : null);
+          if (parsed && parsed.fields.length > 0) {
+            const dataModel: DataModel = process.platform === 'win32' ? 'LLP64' : 'LP64';
+            try {
+              layout = calculateStructLayout(parsed.name, parsed.fields, {
+                isPacked: parsed.isPacked,
+                maxPackAlignment: parsed.maxPackAlignment,
+                dataModel
+              });
+            } catch {
+              layout = null;
+            }
+          }
+        }
+
         const md = new vscode.MarkdownString();
         md.isTrusted = true;
-        md.appendMarkdown(`### \`${codeBlock.split('{')[0].trim()}\` *(Type Definition)*\n\n`);
-        md.appendCodeblock(codeBlock, 'cpp');
+        md.supportHtml = true;
+
+        // Clean declaration title: strip leading // In namespace comments or blank lines
+        const cleanCode = codeBlock.replace(/^(?:\s*\/\/[^\n]*\r?\n)+/g, '').trim();
+        const declLine = cleanCode.split('{')[0].replace(/;+$/, '').trim();
+        const namespaceMatch = codeBlock.match(/\/\/\s*In namespace\s+([A-Za-z0-9_:]+)/);
+        const nsBadge = namespaceMatch ? ` *(in namespace \`${namespaceMatch[1]}\`)*` : ' *(Type Definition)*';
+
+        md.appendMarkdown(`### \`${declLine}\`${nsBadge}\n\n`);
+
+        if (layout) {
+          const overheadPct =
+            layout.totalSize > 0
+              ? Math.round((layout.paddingBytes / layout.totalSize) * 100)
+              : 0;
+
+          md.appendMarkdown(
+            `**Size**: \`${layout.totalSize} bytes\` | **Alignment**: \`${layout.alignment} bytes\` | **Padding**: \`${layout.paddingBytes} bytes\` (${overheadPct}%)\n\n`
+          );
+          md.appendMarkdown(
+            `- **Cache Footprint**: \`${layout.cacheLines} cache line${layout.cacheLines > 1 ? 's' : ''} (64B)\` ${layout.cacheLines > 1 ? '*(Warning: Straddles cache boundary)*' : '*(Fits in 1 cache line)*'}\n\n`
+          );
+
+          if (layout.fields.length > 0) {
+            md.appendMarkdown('| Offset | Size | Field | Type |\n');
+            md.appendMarkdown('| :--- | :--- | :--- | :--- |\n');
+            for (const f of layout.fields) {
+              if (f.isPadding) {
+                md.appendMarkdown(`| \`+${f.offset}\` | \`${f.size}B\` | *padding* ░░ | — |\n`);
+              } else {
+                md.appendMarkdown(`| \`+${f.offset}\` | \`${f.size}B\` | **\`${f.name}\`** | \`${f.type}\` |\n`);
+              }
+            }
+            md.appendMarkdown('\n');
+          }
+
+          if (layout.recommendation) {
+            md.appendMarkdown(`> **Optimization Tip**: ${layout.recommendation}\n\n`);
+          }
+        } else {
+          md.appendCodeblock(cleanCode || codeBlock, 'cpp');
+        }
+
         if (docText) {
           md.appendMarkdown(`\n${docText}\n`);
         }
+
         md.appendMarkdown('\n---\n');
         md.appendMarkdown(
-          '[Find References](command:editor.action.findReferences) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader)'
+          '[Inspect Memory Layout](command:c-cpp-pro.inspectMemoryLayout) | [Find References](command:editor.action.findReferences) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader)'
         );
         return new vscode.Hover(md, hover.range);
       }
@@ -749,11 +820,14 @@ export class HoverTransformer {
 
   /**
    * Asynchronously transforms an incoming vscode.Hover from clangd into an enriched hover,
-   * querying both the local ISO C++ knowledge base and remote/system header providers.
+   * querying both the local ISO C++ knowledge base and remote/system header providers,
+   * and calculating struct/class memory layout and alignment.
    */
   public static async transformAsync(
     hover: vscode.Hover,
-    hoveredWord?: string
+    hoveredWord?: string,
+    document?: vscode.TextDocument,
+    position?: vscode.Position
   ): Promise<vscode.Hover> {
     if (!hover || !hover.contents || hover.contents.length === 0) {
       return hover;
@@ -788,10 +862,111 @@ export class HoverTransformer {
           return this.transform(hover, doc, hoveredWord);
         }
       }
+
+      // Check if this is a struct or class to resolve its memory layout
+      const isStructOrClass =
+        codeBlock.includes('class ') || codeBlock.includes('struct ') || codeBlock.includes('union ');
+      if (isStructOrClass) {
+        const layout = await this.resolveStructLayout(codeBlock, hoveredWord, candidate, document, position);
+        return this.transform(hover, undefined, hoveredWord, layout);
+      }
+
       return this.transform(hover, undefined, hoveredWord);
     }
 
     const doc = await findStlDocumentationAsync(sig.name, sig.scope);
     return this.transform(hover, doc ?? undefined, hoveredWord);
+  }
+
+  private static async resolveStructLayout(
+    codeBlock: string,
+    hoveredWord?: string,
+    candidateType?: string,
+    document?: vscode.TextDocument,
+    position?: vscode.Position
+  ): Promise<StructLayout | null> {
+    const rawName = candidateType || hoveredWord || '';
+    const cleanName = rawName.split('::').pop() || rawName;
+
+    let parsed = null;
+
+    // 1. Try cursor position in current document if available
+    if (document && position) {
+      try {
+        const offset = document.offsetAt(position);
+        parsed = extractStructAtPosition(document.getText(), offset);
+      } catch {
+        parsed = null;
+      }
+    }
+
+    // 2. Try finding struct by name in current document
+    if (!parsed && document && cleanName) {
+      try {
+        parsed = findStructByName(document.getText(), cleanName);
+      } catch {
+        parsed = null;
+      }
+    }
+
+    // 3. Try definition provider to locate definition document (e.g. header file)
+    if (!parsed && document && position) {
+      try {
+        const defs = await vscode.commands.executeCommand<vscode.LocationLink[] | vscode.Location[]>(
+          'vscode.executeDefinitionProvider',
+          document.uri,
+          position
+        );
+        if (Array.isArray(defs) && defs.length > 0) {
+          const target = defs[0];
+          const targetUri = 'targetUri' in target ? (target as vscode.LocationLink).targetUri : (target as vscode.Location).uri;
+          const targetRange = 'targetRange' in target ? (target as vscode.LocationLink).targetRange : (target as vscode.Location).range;
+          if (targetUri && targetRange) {
+            let defDoc: vscode.TextDocument | null = null;
+            if (targetUri.toString() === document.uri.toString()) {
+              defDoc = document;
+            } else {
+              try {
+                defDoc = await vscode.workspace.openTextDocument(targetUri);
+              } catch {
+                defDoc = null;
+              }
+            }
+            if (defDoc) {
+              const defOffset = defDoc.offsetAt(targetRange.start);
+              parsed =
+                extractStructAtPosition(defDoc.getText(), defOffset) ??
+                (cleanName ? findStructByName(defDoc.getText(), cleanName) : null);
+            }
+          }
+        }
+      } catch {
+        // Ignore definition lookup failure
+      }
+    }
+
+    // 4. Try parsing directly from codeBlock if it contains a struct body with fields { ... }
+    if (!parsed && codeBlock.includes('{') && codeBlock.includes('}')) {
+      const openIdx = codeBlock.indexOf('{');
+      const closeIdx = codeBlock.lastIndexOf('}');
+      if (closeIdx > openIdx) {
+        parsed = extractStructAtPosition(codeBlock, openIdx);
+      }
+    }
+
+    if (!parsed || parsed.fields.length === 0) {
+      return null;
+    }
+
+    const dataModel: DataModel = process.platform === 'win32' ? 'LLP64' : 'LP64';
+    try {
+      return NativeBridge.calculateStructLayout(parsed.name, parsed.fields, {
+        isPacked: parsed.isPacked,
+        maxPackAlignment: parsed.maxPackAlignment,
+        dataModel
+      });
+    } catch {
+      return null;
+    }
   }
 }

@@ -57,6 +57,7 @@ export class CodeAction {
 }
 
 export class DocumentSymbol {
+  public children: DocumentSymbol[] = [];
   constructor(
     public name: string,
     public detail: string,
@@ -633,6 +634,7 @@ export const mockVscode: any = {
     registerDebugAdapterDescriptorFactory: () => ({ dispose: () => {} })
   },
   languages: {
+    registerCodeLensProvider: () => ({ dispose: () => {} }),
     registerCompletionItemProvider: () => ({ dispose: () => {} }),
     registerCodeActionsProvider: () => ({ dispose: () => {} }),
     registerInlayHintsProvider: () => ({ dispose: () => {} }),

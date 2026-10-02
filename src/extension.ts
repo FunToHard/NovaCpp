@@ -19,6 +19,7 @@ import { PostfixCompletionProvider } from './intelligence/postfix-provider';
 import { PreprocessorDirectiveCompletionProvider } from './intelligence/directive-completion-provider';
 import { CppProCodeActionProvider } from './intelligence/code-actions';
 import { InlayHintManager } from './intelligence/inlay-hints';
+import { ReferenceCountCodeLensProvider } from './intelligence/reference-count-provider';
 import { RunController } from './tasks/run-controller';
 import { StlUsageCollector } from './telemetry/stl-collector';
 import { StlRankingTable } from './telemetry/ranking-table';
@@ -179,8 +180,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const postfixProvider = new PostfixCompletionProvider();
   const codeActionProvider = new CppProCodeActionProvider();
   const inlayHintManager = new InlayHintManager();
+  const referenceCountProvider = new ReferenceCountCodeLensProvider(() => daemonManager);
 
   context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider(cppSelector, referenceCountProvider),
+    referenceCountProvider,
     vscode.languages.registerCompletionItemProvider(
       cppSelector,
       postfixProvider,

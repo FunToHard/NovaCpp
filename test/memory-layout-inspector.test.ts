@@ -5,7 +5,10 @@ import {
   calculateStructLayout,
   generateLayoutAsciiDiagram,
   generateLayoutMarkdown,
-  extractStructAtPosition
+  extractStructAtPosition,
+  findMatchingBrace,
+  parseFieldsFromBody,
+  findStructByName
 } from '../src/inspector/memory-layout-inspector';
 
 describe('Type & Memory Layout Inspector', () => {
@@ -45,6 +48,24 @@ describe('Type & Memory Layout Inspector', () => {
       // Verify LP64 defaults
       assert.strictEqual(resolveTypeInfo('long', 'LP64').size, 8);
       assert.strictEqual(resolveTypeInfo('long double', 'LP64').size, 16);
+    });
+
+    it('should resolve Win32 primitive types', () => {
+      assert.strictEqual(resolveTypeInfo('DWORD').size, 4);
+      assert.strictEqual(resolveTypeInfo('DWORD').alignment, 4);
+      assert.strictEqual(resolveTypeInfo('WORD').size, 2);
+      assert.strictEqual(resolveTypeInfo('BYTE').size, 1);
+      assert.strictEqual(resolveTypeInfo('BOOL').size, 4);
+      assert.strictEqual(resolveTypeInfo('HANDLE').size, 8);
+      assert.strictEqual(resolveTypeInfo('HWND').size, 8);
+    });
+
+    it('should deduce enum and state types as 4-byte integers by heuristic', () => {
+      assert.strictEqual(resolveTypeInfo('GridUnitType').size, 4);
+      assert.strictEqual(resolveTypeInfo('GridUnitType').alignment, 4);
+      assert.strictEqual(resolveTypeInfo('RenderMode').size, 4);
+      assert.strictEqual(resolveTypeInfo('NodeState').size, 4);
+      assert.strictEqual(resolveTypeInfo('TokenKind').size, 4);
     });
   });
 
@@ -236,6 +257,66 @@ int x = 42;
 
       assert.ok(md.value.includes('### Memory Layout: `Simple`'));
       assert.ok(md.value.includes('Offset'));
+    });
+  });
+
+  describe('findMatchingBrace', () => {
+    it('should find matching closing brace across comments and strings', () => {
+      const snippet = '{ int a = 1; /* } */ std::string s = "}"; // }\n }';
+      const openIdx = snippet.indexOf('{');
+      const closeIdx = findMatchingBrace(snippet, openIdx);
+      assert.strictEqual(closeIdx, snippet.length - 1);
+    });
+
+    it('should handle nested braces correctly', () => {
+      const snippet = '{ void fn() { int x = 0; } int y; }';
+      const openIdx = 0;
+      const closeIdx = findMatchingBrace(snippet, openIdx);
+      assert.strictEqual(closeIdx, snippet.length - 1);
+    });
+  });
+
+  describe('parseFieldsFromBody', () => {
+    it('should strip default initializers, inline comments, and attributes', () => {
+      const body = `
+        [[no_unique_address]] GridUnitType unit = GridUnitType::Auto; // comment
+        double value = 0.0;
+        void reset() { value = 0; }
+        public:
+        int flags{0};
+      `;
+      const fields = parseFieldsFromBody(body);
+      assert.strictEqual(fields.length, 3);
+      assert.strictEqual(fields[0].name, 'unit');
+      assert.strictEqual(fields[0].type, 'GridUnitType');
+      assert.strictEqual(fields[1].name, 'value');
+      assert.strictEqual(fields[1].type, 'double');
+      assert.strictEqual(fields[2].name, 'flags');
+      assert.strictEqual(fields[2].type, 'int');
+    });
+  });
+
+  describe('findStructByName', () => {
+    it('should locate struct by identifier anywhere in document text', () => {
+      const code = `
+        namespace ide {
+          struct GridLength {
+            GridUnitType unit = GridUnitType::Auto;
+            double value = 0.0;
+          };
+        }
+      `;
+      const parsed = findStructByName(code, 'GridLength');
+      assert.ok(parsed);
+      assert.strictEqual(parsed?.name, 'GridLength');
+      assert.strictEqual(parsed?.fields.length, 2);
+      assert.strictEqual(parsed?.fields[0].name, 'unit');
+      assert.strictEqual(parsed?.fields[1].name, 'value');
+    });
+
+    it('should return null when struct name does not exist', () => {
+      const code = `struct Other { int x; };`;
+      assert.strictEqual(findStructByName(code, 'GridLength'), null);
     });
   });
 });

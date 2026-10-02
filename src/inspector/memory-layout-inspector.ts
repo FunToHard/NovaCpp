@@ -58,14 +58,27 @@ const TYPE_SPECS_LP64: Record<string, TypeInfo> = {
   'size_t': { size: 8, alignment: 8 },
   'uintptr_t': { size: 8, alignment: 8 },
   'intptr_t': { size: 8, alignment: 8 },
-  'ptrdiff_t': { size: 8, alignment: 8 }
+  'ptrdiff_t': { size: 8, alignment: 8 },
+  'char8_t': { size: 1, alignment: 1 },
+  'char16_t': { size: 2, alignment: 2 },
+  'char32_t': { size: 4, alignment: 4 },
+  'wchar_t': { size: 4, alignment: 4 },
+  'DWORD': { size: 4, alignment: 4 },
+  'WORD': { size: 2, alignment: 2 },
+  'BYTE': { size: 1, alignment: 1 },
+  'BOOL': { size: 4, alignment: 4 },
+  'HANDLE': { size: 8, alignment: 8 },
+  'HWND': { size: 8, alignment: 8 },
+  'HDC': { size: 8, alignment: 8 },
+  'HINSTANCE': { size: 8, alignment: 8 }
 };
 
 const TYPE_SPECS_LLP64: Record<string, TypeInfo> = {
   ...TYPE_SPECS_LP64,
   'long': { size: 4, alignment: 4 },
   'unsigned long': { size: 4, alignment: 4 },
-  'long double': { size: 8, alignment: 8 }
+  'long double': { size: 8, alignment: 8 },
+  'wchar_t': { size: 2, alignment: 2 }
 };
 
 /**
@@ -98,6 +111,14 @@ export function resolveTypeInfo(typeStr: string, dataModel: DataModel = 'LP64'):
   const specs = dataModel === 'LLP64' ? TYPE_SPECS_LLP64 : TYPE_SPECS_LP64;
   if (specs[normalized]) {
     return specs[normalized];
+  }
+
+  // Check for enum types or enum-like identifiers (default to 4-byte int in C++)
+  if (
+    normalized.startsWith('enum ') ||
+    /(?:Type|Kind|Mode|State|Status|Flag|Flags|Code|Id|Unit)$/i.test(normalized)
+  ) {
+    return { size: 4, alignment: 4 };
   }
 
   // Fallback heuristic: word-aligned 8-byte pointer/struct
@@ -317,55 +338,192 @@ function getActivePragmaPack(textBefore: string): number | undefined {
   return currentPack;
 }
 
+export interface ParsedStruct {
+  name: string;
+  isPacked: boolean;
+  maxPackAlignment?: number;
+  fields: { type: string; name: string }[];
+}
+
+/**
+ * Finds the index of the matching closing brace '}' for the open brace at openIndex.
+ * Correctly skips string literals, character literals, and line/block comments.
+ */
+export function findMatchingBrace(text: string, openIndex: number): number {
+  let depth = 1;
+  let inString = false;
+  let inChar = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  for (let i = openIndex + 1; i < text.length; i++) {
+    const ch = text[i];
+    const prev = text[i - 1];
+
+    if (inLineComment) {
+      if (ch === '\n') inLineComment = false;
+      continue;
+    }
+    if (inBlockComment) {
+      if (ch === '/' && prev === '*') inBlockComment = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === '"' && prev !== '\\') inString = false;
+      continue;
+    }
+    if (inChar) {
+      if (ch === '\'' && prev !== '\\') inChar = false;
+      continue;
+    }
+
+    if (ch === '/' && text[i + 1] === '/') {
+      inLineComment = true;
+      i++;
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      inBlockComment = true;
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === '\'') {
+      inChar = true;
+      continue;
+    }
+
+    if (ch === '{') {
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+/**
+ * Parses struct fields from the body text between braces.
+ */
+export function parseFieldsFromBody(body: string): { type: string; name: string }[] {
+  const fields: { type: string; name: string }[] = [];
+
+  // 1. Strip block comments and line comments
+  let cleanBody = body.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+  // 2. Strip member methods with braces: e.g. void reset() { ... }
+  let methodIdx: number;
+  while ((methodIdx = cleanBody.search(/\([^)]*\)[^{;]*\{/)) !== -1) {
+    const openBrace = cleanBody.indexOf('{', methodIdx);
+    const closeBrace = findMatchingBrace(cleanBody, openBrace);
+    if (closeBrace !== -1) {
+      const prevSemi = cleanBody.lastIndexOf(';', methodIdx);
+      const start = prevSemi === -1 ? 0 : prevSemi + 1;
+      cleanBody = cleanBody.substring(0, start) + cleanBody.substring(closeBrace + 1);
+    } else {
+      break;
+    }
+  }
+
+  // 3. Strip access specifiers (public:, private:, protected:)
+  cleanBody = cleanBody.replace(/\b(?:public|protected|private)\s*:/g, '');
+
+  // 4. Split statements by semicolon
+  const lines = cleanBody.split(';');
+
+  for (const line of lines) {
+    let clean = line.trim();
+    if (!clean) continue;
+
+    // Skip declarations with parentheses (e.g. member function declarations, macros)
+    if (clean.includes('(')) continue;
+
+    // Skip static members or friend declarations
+    if (clean.startsWith('static ') || clean.startsWith('friend ')) continue;
+
+    // Strip default initializers: e.g. "double value = 0.0" -> "double value"
+    clean = clean.split('=')[0].trim();
+    // Strip uniform initializers: e.g. "int flags{0}" -> "int flags"
+    clean = clean.replace(/\{[^}]*\}$/, '').trim();
+
+    // Strip C++ attributes like [[no_unique_address]] or alignas(...)
+    clean = clean.replace(/\[\[[^\]]*\]\]/g, '').replace(/alignas\s*\([^)]*\)/g, '').trim();
+
+    const memberMatch = clean.match(/^([\w:*&<>]+(?:\s+[\w:*&<>]+)*)\s+([a-zA-Z_]\w*)((?:\[\d+\])+)?$/);
+    if (memberMatch) {
+      const baseType = memberMatch[1].trim();
+      const name = memberMatch[2].trim();
+      const arraySuffix = memberMatch[3] ? memberMatch[3].trim() : '';
+      fields.push({ type: baseType + arraySuffix, name });
+    }
+  }
+
+  return fields;
+}
+
+export function extractStructFromRange(
+  text: string,
+  startIndex: number,
+  openBraceIndex: number,
+  closeBraceIndex: number,
+  structName: string
+): ParsedStruct {
+  const body = text.substring(openBraceIndex + 1, closeBraceIndex);
+  const textBefore = text.substring(0, startIndex);
+  const structText = text.substring(startIndex, closeBraceIndex + 1);
+
+  const activePack = getActivePragmaPack(textBefore);
+  const hasPackedAttr = /__attribute__\s*\(\s*\(\s*packed\s*\)\s*\)/.test(structText);
+  const isPacked = hasPackedAttr || (activePack !== undefined && activePack <= 1);
+  const maxPackAlignment = activePack;
+
+  const fields = parseFieldsFromBody(body);
+  return { name: structName, isPacked, maxPackAlignment, fields };
+}
+
 export function extractStructAtPosition(
   text: string,
   cursorOffset: number
-): { name: string; isPacked: boolean; maxPackAlignment?: number; fields: { type: string; name: string }[] } | null {
-  // Find struct or class blocks
-  const structRegex = /(?:struct|class)\s+([a-zA-Z_]\w*)\s*(?::\s*[^{]+)?\s*\{([^}]+)\}/g;
+): ParsedStruct | null {
+  const declRegex = /(?:struct|class)\s+([a-zA-Z_]\w*)\s*(?::\s*[^{]+)?\s*\{/g;
   let match: RegExpExecArray | null;
 
-  while ((match = structRegex.exec(text)) !== null) {
+  while ((match = declRegex.exec(text)) !== null) {
     const startIndex = match.index;
-    const endIndex = match.index + match[0].length;
+    const openBraceIndex = match.index + match[0].length - 1;
+    const closeBraceIndex = findMatchingBrace(text, openBraceIndex);
+    if (closeBraceIndex === -1) continue;
 
-    // Check if cursor is within or near the struct definition
-    if (cursorOffset >= startIndex && cursorOffset <= endIndex) {
+    if (cursorOffset >= startIndex && cursorOffset <= closeBraceIndex + 1) {
       const structName = match[1];
-      const body = match[2];
-      const textBefore = text.substring(0, startIndex);
-      const structText = text.substring(startIndex, endIndex);
-
-      const activePack = getActivePragmaPack(textBefore);
-      const hasPackedAttr = /__attribute__\s*\(\s*\(\s*packed\s*\)\s*\)/.test(structText);
-      const isPacked = hasPackedAttr || (activePack !== undefined && activePack <= 1);
-      const maxPackAlignment = activePack;
-
-      const fields: { type: string; name: string }[] = [];
-      const lines = body.split(';');
-
-      for (const line of lines) {
-        const clean = line.trim().replace(/\/\/.*$/g, '');
-        if (!clean || clean.includes('(') || clean.startsWith('public:') || clean.startsWith('private:') || clean.startsWith('protected:')) {
-          continue; // skip methods and access specifiers
-        }
-
-        const memberMatch = clean.match(/^([\w:*&<>]+(?:\s+[\w:*&<>]+)*)\s+([a-zA-Z_]\w*)((?:\[\d+\])+)?$/);
-        if (memberMatch) {
-          const baseType = memberMatch[1].trim();
-          const name = memberMatch[2].trim();
-          const arraySuffix = memberMatch[3] ? memberMatch[3].trim() : '';
-          fields.push({ type: baseType + arraySuffix, name });
-        }
-      }
-
-      if (fields.length > 0) {
-        return { name: structName, isPacked, maxPackAlignment, fields };
-      }
+      return extractStructFromRange(text, startIndex, openBraceIndex, closeBraceIndex, structName);
     }
   }
 
   return null;
+}
+
+export function findStructByName(
+  text: string,
+  name: string
+): ParsedStruct | null {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const declRegex = new RegExp(`(?:struct|class)\\s+${escapedName}\\b\\s*(?::\\s*[^{]+)?\\s*\\{`, 'g');
+  const match = declRegex.exec(text);
+  if (!match) return null;
+
+  const startIndex = match.index;
+  const openBraceIndex = match.index + match[0].length - 1;
+  const closeBraceIndex = findMatchingBrace(text, openBraceIndex);
+  if (closeBraceIndex === -1) return null;
+
+  return extractStructFromRange(text, startIndex, openBraceIndex, closeBraceIndex, name);
 }
 
 /**

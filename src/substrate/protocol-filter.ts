@@ -327,7 +327,7 @@ export function createClangdMiddleware(
           ? document.getWordRangeAtPosition(position)
           : undefined;
       const hoveredWord = wordRange ? document.getText(wordRange) : undefined;
-      return HoverTransformer.transformAsync(hover, hoveredWord);
+      return HoverTransformer.transformAsync(hover, hoveredWord, document, position);
     },
 
     provideDefinition: async (
