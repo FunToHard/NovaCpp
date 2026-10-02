@@ -2,7 +2,7 @@
   "name": "c-cpp-pro",
   "displayName": "C/C++ Pro",
   "description": "High-performance C/C++ language support, debugging, and tooling for Visual Studio Code",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "FunToHard",
   "icon": "media/icon.png",
   "engines": {
@@ -446,6 +446,11 @@
           "type": "boolean",
           "default": true,
           "description": "Display struct field designators in brace initialization."
+        },
+        "c-cpp-pro.referencesCodeLens.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display reference counts above functions, methods, and constructors as CodeLens annotations."
         },
         "c-cpp-pro.telemetry.enabled": {
           "type": "boolean",
