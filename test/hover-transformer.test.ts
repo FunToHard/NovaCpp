@@ -304,5 +304,50 @@ struct GridLength {
       assert.ok(content.includes('**`unit`**'));
       assert.ok(content.includes('**`value`**'));
     });
+
+    it('should resolve inner member struct layout and not leak enclosing class layout', async () => {
+      const docText = `
+struct Rect {
+    float x;
+    float y;
+    float width;
+    float height;
+};
+
+class UIElement {
+public:
+    int id;
+    Rect bounds;
+    double opacity;
+};
+`;
+      const rectOffset = docText.indexOf('Rect bounds');
+      const doc = {
+        uri: vscode.Uri.file('/fake/UIElement.cpp'),
+        getText: () => docText,
+        offsetAt: () => rectOffset
+      } as any;
+
+      const rawCode = `\`\`\`cpp\n// In namespace ui\nstruct Rect {}\n\`\`\``;
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 4));
+      const transformed = await HoverTransformer.transformAsync(
+        inputHover,
+        'Rect',
+        doc,
+        new vscode.Position(10, 4)
+      );
+
+      assert.ok(transformed);
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      assert.ok(content.includes('### `struct Rect` *(in namespace `ui`)*'));
+      assert.ok(content.includes('**Size**: `16 bytes`'));
+      assert.ok(content.includes('**`x`**'));
+      assert.ok(content.includes('**`y`**'));
+      assert.ok(content.includes('**`width`**'));
+      assert.ok(content.includes('**`height`**'));
+      assert.ok(!content.includes('**`id`**'));
+      assert.ok(!content.includes('**`bounds`**'));
+      assert.ok(!content.includes('**`opacity`**'));
+    });
   });
 });

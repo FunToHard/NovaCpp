@@ -542,17 +542,27 @@ export class HoverTransformer {
         return new vscode.Hover(md, hover.range);
       }
 
-      // If not a function signature (e.g. struct/class definition or variable), format cleanly
-      const isStructOrClass =
-        codeBlock.includes('class ') || codeBlock.includes('struct ') || codeBlock.includes('union ');
+      // Clean declaration title: strip leading // In namespace/class comments or blank lines
+      const cleanCode = codeBlock.replace(/^(?:\s*\/\/[^\n]*\r?\n)+/g, '').trim();
+      const isStructOrClassDecl =
+        /^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct|union)\b/m.test(cleanCode);
+      const isStructOrClass = isStructOrClassDecl || (structLayout !== null && structLayout !== undefined);
+
       if (isStructOrClass) {
         let layout = structLayout;
+        const targetName = (hoveredWord || '').split('::').pop();
+
+        if (layout && targetName && layout.name !== targetName && isStructOrClassDecl) {
+          // If layout name does not match the hovered struct declaration, discard it
+          layout = null;
+        }
+
         if (!layout && codeBlock.includes('{') && codeBlock.includes('}')) {
           const openIdx = codeBlock.indexOf('{');
           const parsed =
             extractStructAtPosition(codeBlock, openIdx) ??
-            (hoveredWord ? findStructByName(codeBlock, hoveredWord) : null);
-          if (parsed && parsed.fields.length > 0) {
+            (targetName ? findStructByName(codeBlock, targetName) : null);
+          if (parsed && (!targetName || parsed.name === targetName) && parsed.fields.length > 0) {
             const dataModel: DataModel = process.platform === 'win32' ? 'LLP64' : 'LP64';
             try {
               layout = calculateStructLayout(parsed.name, parsed.fields, {
@@ -570,11 +580,18 @@ export class HoverTransformer {
         md.isTrusted = true;
         md.supportHtml = true;
 
-        // Clean declaration title: strip leading // In namespace comments or blank lines
-        const cleanCode = codeBlock.replace(/^(?:\s*\/\/[^\n]*\r?\n)+/g, '').trim();
         const declLine = cleanCode.split('{')[0].replace(/;+$/, '').trim();
         const namespaceMatch = codeBlock.match(/\/\/\s*In namespace\s+([A-Za-z0-9_:]+)/);
-        const nsBadge = namespaceMatch ? ` *(in namespace \`${namespaceMatch[1]}\`)*` : ' *(Type Definition)*';
+        const classMatch = codeBlock.match(/\/\/\s*In (?:class|struct)\s+([A-Za-z0-9_:]+)/);
+
+        let nsBadge = ' *(Type Definition)*';
+        if (namespaceMatch) {
+          nsBadge = ` *(in namespace \`${namespaceMatch[1]}\`)*`;
+        } else if (classMatch) {
+          nsBadge = ` *(in \`${classMatch[1]}\`)*`;
+        } else if (!isStructOrClassDecl) {
+          nsBadge = ' *(Member Variable)*';
+        }
 
         md.appendMarkdown(`### \`${declLine}\`${nsBadge}\n\n`);
 
@@ -583,6 +600,10 @@ export class HoverTransformer {
             layout.totalSize > 0
               ? Math.round((layout.paddingBytes / layout.totalSize) * 100)
               : 0;
+
+          if (!isStructOrClassDecl) {
+            md.appendMarkdown(`**Type Layout**: \`struct ${layout.name}\`\n\n`);
+          }
 
           md.appendMarkdown(
             `**Size**: \`${layout.totalSize} bytes\` | **Alignment**: \`${layout.alignment} bytes\` | **Padding**: \`${layout.paddingBytes} bytes\` (${overheadPct}%)\n\n`
@@ -846,16 +867,25 @@ export class HoverTransformer {
         return typedefHover;
       }
 
+      // Strip leading comments to inspect the actual declaration code
+      const cleanCode = codeBlock.replace(/^(?:\s*\/\/[^\n]*\r?\n)+/g, '').trim();
+
       let candidate = '';
-      const typeMatch = codeBlock.match(/(?:class|struct|using)\s+([A-Za-z0-9_:]+)/);
-      if (typeMatch) {
-        candidate = typeMatch[1];
+      const declMatch = cleanCode.match(/^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct|union)\s+([A-Za-z0-9_:]+)/m);
+      if (declMatch) {
+        candidate = declMatch[1];
       } else {
-        const words = codeBlock.trim().split(/[\s<({]/);
-        if (words[0]) {
-          candidate = words[0];
+        const varMatch = cleanCode.match(/^([\w:*&<>]+(?:\s+[\w:*&<>]+)*)\s+([a-zA-Z_]\w*)/);
+        if (varMatch) {
+          candidate = varMatch[1].replace(/[*&]+$/, '').trim();
+        } else {
+          const words = cleanCode.trim().split(/[\s<({]/);
+          if (words[0]) {
+            candidate = words[0];
+          }
         }
       }
+
       if (candidate) {
         const doc = await findStlDocumentationAsync(candidate);
         if (doc) {
@@ -863,12 +893,18 @@ export class HoverTransformer {
         }
       }
 
-      // Check if this is a struct or class to resolve its memory layout
-      const isStructOrClass =
-        codeBlock.includes('class ') || codeBlock.includes('struct ') || codeBlock.includes('union ');
-      if (isStructOrClass) {
+      // Check if this is a struct or class declaration, or a variable whose type is a candidate struct
+      const isStructOrClassDecl =
+        /^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct|union)\b/m.test(cleanCode);
+      const isCandidateType =
+        candidate !== '' &&
+        !['int', 'float', 'double', 'bool', 'char', 'void', 'long', 'short', 'auto', 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'int8_t', 'int16_t', 'int32_t', 'int64_t', 'size_t'].includes(candidate);
+
+      if (isStructOrClassDecl || isCandidateType) {
         const layout = await this.resolveStructLayout(codeBlock, hoveredWord, candidate, document, position);
-        return this.transform(hover, undefined, hoveredWord, layout);
+        if (layout || isStructOrClassDecl) {
+          return this.transform(hover, undefined, hoveredWord, layout);
+        }
       }
 
       return this.transform(hover, undefined, hoveredWord);
@@ -890,11 +926,14 @@ export class HoverTransformer {
 
     let parsed = null;
 
-    // 1. Try cursor position in current document if available
+    // 1. Try cursor position in current document if available, ONLY if it matches the target struct
     if (document && position) {
       try {
         const offset = document.offsetAt(position);
-        parsed = extractStructAtPosition(document.getText(), offset);
+        const atCursor = extractStructAtPosition(document.getText(), offset);
+        if (atCursor && (!cleanName || atCursor.name === cleanName)) {
+          parsed = atCursor;
+        }
       } catch {
         parsed = null;
       }
@@ -934,9 +973,12 @@ export class HoverTransformer {
             }
             if (defDoc) {
               const defOffset = defDoc.offsetAt(targetRange.start);
-              parsed =
-                extractStructAtPosition(defDoc.getText(), defOffset) ??
-                (cleanName ? findStructByName(defDoc.getText(), cleanName) : null);
+              const atDef = extractStructAtPosition(defDoc.getText(), defOffset);
+              if (atDef && (!cleanName || atDef.name === cleanName)) {
+                parsed = atDef;
+              } else if (cleanName) {
+                parsed = findStructByName(defDoc.getText(), cleanName);
+              }
             }
           }
         }
@@ -950,11 +992,20 @@ export class HoverTransformer {
       const openIdx = codeBlock.indexOf('{');
       const closeIdx = codeBlock.lastIndexOf('}');
       if (closeIdx > openIdx) {
-        parsed = extractStructAtPosition(codeBlock, openIdx);
+        const fromCode = extractStructAtPosition(codeBlock, openIdx);
+        if (fromCode && (!cleanName || fromCode.name === cleanName)) {
+          parsed = fromCode;
+        } else if (cleanName) {
+          parsed = findStructByName(codeBlock, cleanName);
+        }
       }
     }
 
     if (!parsed || parsed.fields.length === 0) {
+      return null;
+    }
+
+    if (cleanName && parsed.name !== cleanName) {
       return null;
     }
 
