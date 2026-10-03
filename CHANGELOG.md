@@ -5,6 +5,18 @@ All notable changes to the C/C++ Pro extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-10-03
+
+### Fixed
+
+- **Struct Member Variable Hover Layout Isolation**:
+  - Resolved an issue where hovering over a struct type used as a member variable inside an enclosing class (e.g. `Rect` inside `class UIElement`) displayed the enclosing class layout instead of the member struct layout.
+  - Enforced strict symbol and candidate name verification in AST memory layout resolution to prevent enclosing container scopes from leaking into member variable type hover cards.
+
+### Changed
+
+- Promoted `0.3.x` features to the official Stable Release channel following the Visual Studio Code Marketplace even-minor versioning convention.
+
 ## [0.3.0] - 2026-10-02
 
 ### Added
