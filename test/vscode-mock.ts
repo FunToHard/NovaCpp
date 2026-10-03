@@ -355,6 +355,13 @@ export const TaskGroup = {
   Test: { isDefault: false }
 };
 
+export enum TextEditorRevealType {
+  Default = 0,
+  InCenter = 1,
+  InCenterIfOutsideViewport = 2,
+  AtTop = 3
+}
+
 export enum ViewColumn {
   Active = -1,
   Beside = -2,
@@ -584,13 +591,35 @@ export const mockVscode: any = {
           return { dispose: () => { disposeListener = null; } };
         }
       };
+    },
+    showTextDocument: async (doc: any, _options?: any) => {
+      const editor = {
+        document: doc,
+        selection: new Selection(new Position(0, 0), new Position(0, 0)),
+        revealRange: () => {}
+      };
+      (mockVscode.window as any).activeTextEditor = editor;
+      return editor;
     }
   },
   ViewColumn,
+  TextEditorRevealType,
   env: {
     isTelemetryEnabled: true
   },
   workspace: {
+    openTextDocument: async (uriOrPath: any) => {
+      const fsPath = typeof uriOrPath === 'string' ? uriOrPath : uriOrPath?.fsPath ?? String(uriOrPath);
+      const uri = typeof uriOrPath === 'string' ? Uri.file(uriOrPath) : uriOrPath;
+      return {
+        uri,
+        fileName: fsPath,
+        getText: () => '',
+        getWordRangeAtPosition: () => new Range(new Position(0, 0), new Position(0, 5)),
+        lineCount: 1,
+        lineAt: () => ({ text: '' })
+      };
+    },
     getConfiguration: (section?: string) => ({
       get: (key: string, defaultValue?: any) => {
         const fullKey = section ? `${section}.${key}` : key;
@@ -621,8 +650,22 @@ export const mockVscode: any = {
     isTrusted: true
   },
   commands: {
-    registerCommand: (_cmd: string, _callback: any) => ({ dispose: () => {} }),
-    executeCommand: async () => undefined
+    _commands: new Map<string, Function>(),
+    registerCommand: (cmd: string, callback: any) => {
+      (mockVscode.commands as any)._commands.set(cmd, callback);
+      return {
+        dispose: () => {
+          (mockVscode.commands as any)._commands.delete(cmd);
+        }
+      };
+    },
+    executeCommand: async (cmd: string, ...args: any[]) => {
+      const fn = (mockVscode.commands as any)._commands.get(cmd);
+      if (fn) {
+        return fn(...args);
+      }
+      return undefined;
+    }
   },
   tasks: {
     registerTaskProvider: () => ({ dispose: () => {} }),

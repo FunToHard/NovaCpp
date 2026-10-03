@@ -222,6 +222,11 @@
         "category": "C/C++"
       },
       {
+        "command": "c-cpp-pro.findReferences",
+        "title": "C/C++ Pro: Find References",
+        "category": "C/C++"
+      },
+      {
         "command": "c-cpp-pro.installClangd",
         "title": "C/C++ Pro: Download and Install clangd",
         "category": "C/C++"

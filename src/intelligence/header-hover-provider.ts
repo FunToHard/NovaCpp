@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getStlEntriesByHeader, StlDocEntry } from './stl-knowledge-base';
 import { StlRemoteProvider } from './stl-remote-provider';
+import { makeFindReferencesLink } from './command-links';
 
 export interface ParsedIncludeDirective {
   headerText: string;
@@ -1172,7 +1173,9 @@ export function formatLocalHeaderHover(
   headerName: string,
   symbols: LocalHeaderSymbol[],
   resolvedPath?: string,
-  range?: vscode.Range
+  range?: vscode.Range,
+  docUri?: vscode.Uri,
+  pos?: vscode.Position
 ): vscode.Hover {
   const md = new vscode.MarkdownString();
   md.isTrusted = true;
@@ -1222,8 +1225,9 @@ export function formatLocalHeaderHover(
 
   if (resolvedPath) {
     md.appendMarkdown('---\n');
+    const findRefLink = makeFindReferencesLink(docUri, pos);
     md.appendMarkdown(
-      `[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+      `[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | ${findRefLink}`
     );
   }
 
@@ -1239,7 +1243,7 @@ export class HeaderHoverProvider {
    */
   public static async provideHeaderHover(
     document: vscode.TextDocument,
-    _position: vscode.Position,
+    position: vscode.Position,
     includeInfo: ParsedIncludeDirective,
     resolvedPath?: string
   ): Promise<vscode.Hover | null> {
@@ -1268,7 +1272,9 @@ export class HeaderHoverProvider {
       includeInfo.headerName,
       symbols,
       resolved,
-      includeInfo.range
+      includeInfo.range,
+      document.uri,
+      position
     );
   }
 }

@@ -50,7 +50,7 @@ export interface CommandRegistryContext {
 }
 
 /**
- * Registers all 40 C/C++ Pro user-facing commands and returns their disposables.
+ * Registers all 41 C/C++ Pro user-facing commands and returns their disposables.
  */
 export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposable[] {
   const {
@@ -141,6 +141,78 @@ export function registerAllCommands(ctx: CommandRegistryContext): vscode.Disposa
         await daemonManager.switchSourceHeader();
       }
     }),
+    vscode.commands.registerCommand(
+      'c-cpp-pro.findReferences',
+      async (uriOrArgs?: unknown, line?: number, character?: number): Promise<void> => {
+        let targetUri: vscode.Uri | undefined;
+        let targetPosition: vscode.Position | undefined;
+
+        if (typeof uriOrArgs === 'string') {
+          targetUri = vscode.Uri.parse(uriOrArgs);
+          if (typeof line === 'number' && typeof character === 'number') {
+            targetPosition = new vscode.Position(line, character);
+          }
+        } else if (Array.isArray(uriOrArgs) && uriOrArgs.length >= 3) {
+          const first = uriOrArgs[0];
+          targetUri = typeof first === 'string' ? vscode.Uri.parse(first) : (first instanceof vscode.Uri ? first : undefined);
+          targetPosition = new vscode.Position(Number(uriOrArgs[1]), Number(uriOrArgs[2]));
+        } else if (uriOrArgs && typeof uriOrArgs === 'object') {
+          if (uriOrArgs instanceof vscode.Uri) {
+            targetUri = uriOrArgs;
+            if (typeof line === 'number' && typeof character === 'number') {
+              targetPosition = new vscode.Position(line, character);
+            }
+          } else {
+            const argObj = uriOrArgs as {
+              uri?: unknown;
+              line?: unknown;
+              character?: unknown;
+              position?: { line?: unknown; character?: unknown };
+            };
+            if (argObj.uri) {
+              targetUri =
+                typeof argObj.uri === 'string'
+                  ? vscode.Uri.parse(argObj.uri)
+                  : argObj.uri instanceof vscode.Uri
+                  ? argObj.uri
+                  : undefined;
+              if (typeof argObj.line === 'number' && typeof argObj.character === 'number') {
+                targetPosition = new vscode.Position(argObj.line, argObj.character);
+              } else if (
+                argObj.position &&
+                typeof argObj.position.line === 'number' &&
+                typeof argObj.position.character === 'number'
+              ) {
+                targetPosition = new vscode.Position(argObj.position.line, argObj.position.character);
+              }
+            }
+          }
+        }
+
+        try {
+          if (targetUri) {
+            const doc = await vscode.workspace.openTextDocument(targetUri);
+            const editor = await vscode.window.showTextDocument(doc, { preserveFocus: false });
+            if (targetPosition) {
+              editor.selection = new vscode.Selection(targetPosition, targetPosition);
+              editor.revealRange(
+                new vscode.Range(targetPosition, targetPosition),
+                vscode.TextEditorRevealType.InCenterIfOutsideViewport
+              );
+            }
+            await vscode.commands.executeCommand('editor.action.findReferences');
+            return;
+          }
+        } catch {
+          // Fall through to active editor fallback
+        }
+
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+          await vscode.commands.executeCommand('editor.action.findReferences');
+        }
+      }
+    ),
     vscode.commands.registerCommand('c-cpp-pro.installClangd', async () => {
       try {
         await installer?.installLatest();

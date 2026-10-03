@@ -255,8 +255,21 @@ make_unique<geometry::Cube, <double>, 0>(double &&_Args)`;
       assert.ok(content.includes('**`unit`**'));
       assert.ok(content.includes('**`value`**'));
       assert.ok(content.includes('[Inspect Memory Layout](command:c-cpp-pro.inspectMemoryLayout)'));
-      assert.ok(content.includes('[Find References](command:editor.action.findReferences)'));
+      assert.ok(content.includes('[Find References](command:c-cpp-pro.findReferences)'));
       assert.ok(content.includes('[Switch Header/Source](command:c-cpp-pro.switchSourceHeader)'));
+    });
+
+    it('should generate position-encoded Find References link when document uri and position are provided', () => {
+      const rawCode = `\`\`\`cpp\n// In namespace ide\nstruct GridLength {\n    double value = 0.0;\n};\n\`\`\``;
+      const inputHover = new vscode.Hover([rawCode], new vscode.Range(0, 0, 0, 10));
+      const fileUri = vscode.Uri.file('/path/to/test.cpp');
+      const pos = new vscode.Position(42, 7);
+      const transformed = HoverTransformer.transform(inputHover, undefined, 'GridLength', undefined, fileUri, pos);
+
+      assert.ok(transformed);
+      const content = (transformed.contents[0] as vscode.MarkdownString).value;
+      const expectedArgs = encodeURIComponent(JSON.stringify([fileUri.toString(), 42, 7]));
+      assert.ok(content.includes(`[Find References](command:c-cpp-pro.findReferences?${expectedArgs})`));
     });
 
     it('should cleanly format empty struct declaration without broken namespace comment in heading', () => {

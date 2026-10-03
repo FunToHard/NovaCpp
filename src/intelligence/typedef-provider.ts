@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { makeFindReferencesLink } from './command-links';
 
 export interface TypedefInfo {
   name: string;
@@ -897,7 +898,9 @@ export function lookupTypedef(symbol: string): TypedefInfo | null {
 export function formatTypedefHover(
   info: TypedefInfo,
   codeBlock?: string,
-  range?: vscode.Range
+  range?: vscode.Range,
+  docUri?: vscode.Uri,
+  pos?: vscode.Position
 ): vscode.Hover {
   const md = new vscode.MarkdownString();
   md.isTrusted = true;
@@ -941,8 +944,9 @@ export function formatTypedefHover(
   md.appendMarkdown('\n---\n');
 
   const docLink = info.docUrl ? `[cppreference: ${info.name}](${info.docUrl}) | ` : '';
+  const findRefLink = makeFindReferencesLink(docUri, pos);
   md.appendMarkdown(
-    `${docLink}[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+    `${docLink}[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | ${findRefLink}`
   );
 
   return new vscode.Hover(md, range);
@@ -955,7 +959,9 @@ export function formatUserTypedefHover(
   name: string,
   underlyingType: string,
   codeBlock: string,
-  range?: vscode.Range
+  range?: vscode.Range,
+  docUri?: vscode.Uri,
+  pos?: vscode.Position
 ): vscode.Hover {
   const md = new vscode.MarkdownString();
   md.isTrusted = true;
@@ -967,8 +973,9 @@ export function formatUserTypedefHover(
   md.appendMarkdown(`- **Underlying Type**: \`${underlyingType}\`\n`);
 
   md.appendMarkdown('\n---\n');
+  const findRefLink = makeFindReferencesLink(docUri, pos);
   md.appendMarkdown(
-    '[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)'
+    `[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | ${findRefLink}`
   );
 
   return new vscode.Hover(md, range);
@@ -984,7 +991,9 @@ export class TypedefProvider {
   public static provideTypedefHover(
     codeBlock: string,
     hoveredWord?: string,
-    range?: vscode.Range
+    range?: vscode.Range,
+    docUri?: vscode.Uri,
+    pos?: vscode.Position
   ): vscode.Hover | null {
     const parsed = parseTypedefCodeBlock(codeBlock);
 
@@ -992,7 +1001,7 @@ export class TypedefProvider {
     if (hoveredWord) {
       const info = lookupTypedef(hoveredWord);
       if (info) {
-        return formatTypedefHover(info, codeBlock, range);
+        return formatTypedefHover(info, codeBlock, range, docUri, pos);
       }
     }
 
@@ -1000,11 +1009,11 @@ export class TypedefProvider {
     if (parsed) {
       const info = lookupTypedef(parsed.name);
       if (info) {
-        return formatTypedefHover(info, codeBlock, range);
+        return formatTypedefHover(info, codeBlock, range, docUri, pos);
       }
 
       // 3. Fallback to structured user-defined typedef card
-      return formatUserTypedefHover(parsed.name, parsed.underlyingType, codeBlock, range);
+      return formatUserTypedefHover(parsed.name, parsed.underlyingType, codeBlock, range, docUri, pos);
     }
 
     return null;

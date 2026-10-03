@@ -9,6 +9,8 @@ import {
   DataModel
 } from '../inspector/memory-layout-inspector';
 import { NativeBridge } from '../native/native-bridge';
+import { makeFindReferencesLink } from './command-links';
+export { makeFindReferencesLink } from './command-links';
 
 export interface ParameterInfo {
   name: string;
@@ -465,7 +467,9 @@ export class HoverTransformer {
     hover: vscode.Hover,
     stlDocOverride?: StlDocEntry,
     hoveredWord?: string,
-    structLayout?: StructLayout | null
+    structLayout?: StructLayout | null,
+    documentUri?: vscode.Uri,
+    position?: vscode.Position
   ): vscode.Hover {
     if (!hover || !hover.contents || hover.contents.length === 0) {
       return hover;
@@ -536,8 +540,9 @@ export class HoverTransformer {
         }
 
         md.appendMarkdown('---\n');
+        const findRefLink = makeFindReferencesLink(documentUri, position);
         md.appendMarkdown(
-          `[cppreference: ${typeStlDoc.symbol}](${typeStlDoc.docUrl}) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+          `[cppreference: ${typeStlDoc.symbol}](${typeStlDoc.docUrl}) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | ${findRefLink}`
         );
         return new vscode.Hover(md, hover.range);
       }
@@ -637,8 +642,9 @@ export class HoverTransformer {
         }
 
         md.appendMarkdown('\n---\n');
+        const findRefLink = makeFindReferencesLink(documentUri, position);
         md.appendMarkdown(
-          '[Inspect Memory Layout](command:c-cpp-pro.inspectMemoryLayout) | [Find References](command:editor.action.findReferences) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader)'
+          `[Inspect Memory Layout](command:c-cpp-pro.inspectMemoryLayout) | ${findRefLink} | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader)`
         );
         return new vscode.Hover(md, hover.range);
       }
@@ -754,8 +760,9 @@ export class HoverTransformer {
 
       // Documentation & Action links
       md.appendMarkdown('---\n');
+      const findRefLink = makeFindReferencesLink(documentUri, position);
       md.appendMarkdown(
-        `[cppreference: ${stlDoc.symbol}](${stlDoc.docUrl}) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences)`
+        `[cppreference: ${stlDoc.symbol}](${stlDoc.docUrl}) | [Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | ${findRefLink}`
       );
     } else {
       // --- User-Defined Function AST Card ---
@@ -831,8 +838,9 @@ export class HoverTransformer {
 
       // Interactive Action Links
       md.appendMarkdown('---\n');
+      const findRefLink = makeFindReferencesLink(documentUri, position);
       md.appendMarkdown(
-        '[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | [Find References](command:editor.action.findReferences) | [Open Docs (cppreference)](command:c-cpp-pro.openDocs)'
+        `[Switch Header/Source](command:c-cpp-pro.switchSourceHeader) | ${findRefLink} | [Open Docs (cppreference)](command:c-cpp-pro.openDocs)`
       );
     }
 
@@ -862,7 +870,13 @@ export class HoverTransformer {
     const sig = parseSignature(codeBlock);
     if (!sig) {
       // 1. Check if this hover corresponds to a known or user-defined typedef / type alias
-      const typedefHover = TypedefProvider.provideTypedefHover(codeBlock, hoveredWord, hover.range);
+      const typedefHover = TypedefProvider.provideTypedefHover(
+        codeBlock,
+        hoveredWord,
+        hover.range,
+        document?.uri,
+        position
+      );
       if (typedefHover) {
         return typedefHover;
       }
@@ -889,7 +903,7 @@ export class HoverTransformer {
       if (candidate) {
         const doc = await findStlDocumentationAsync(candidate);
         if (doc) {
-          return this.transform(hover, doc, hoveredWord);
+          return this.transform(hover, doc, hoveredWord, undefined, document?.uri, position);
         }
       }
 
@@ -903,15 +917,15 @@ export class HoverTransformer {
       if (isStructOrClassDecl || isCandidateType) {
         const layout = await this.resolveStructLayout(codeBlock, hoveredWord, candidate, document, position);
         if (layout || isStructOrClassDecl) {
-          return this.transform(hover, undefined, hoveredWord, layout);
+          return this.transform(hover, undefined, hoveredWord, layout, document?.uri, position);
         }
       }
 
-      return this.transform(hover, undefined, hoveredWord);
+      return this.transform(hover, undefined, hoveredWord, undefined, document?.uri, position);
     }
 
     const doc = await findStlDocumentationAsync(sig.name, sig.scope);
-    return this.transform(hover, doc ?? undefined, hoveredWord);
+    return this.transform(hover, doc ?? undefined, hoveredWord, undefined, document?.uri, position);
   }
 
   private static async resolveStructLayout(
