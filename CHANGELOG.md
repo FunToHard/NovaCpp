@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resolved an issue where hovering over a struct type used as a member variable inside an enclosing class (e.g. `Rect` inside `class UIElement`) displayed the enclosing class layout instead of the member struct layout.
   - Enforced strict symbol and candidate name verification in AST memory layout resolution to prevent enclosing container scopes from leaking into member variable type hover cards.
 
+- **Position-Targeted "Find References" in Hover Cards**:
+  - Resolved an issue where clicking the "Find References" link in hover cards failed or operated at a stale cursor position.
+  - Introduced the `c-cpp-pro.findReferences` command, encoding symbol coordinates into hover action links to ensure the editor caret navigates to the hovered symbol before initiating reference search.
+
 ### Changed
 
 - Promoted `0.3.x` features to the official Stable Release channel following the Visual Studio Code Marketplace even-minor versioning convention.
